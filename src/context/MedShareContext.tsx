@@ -1,0 +1,245 @@
+'use client';
+
+import React, { createContext, useContext, useSyncExternalStore } from 'react';
+import { Medication, UserProfile } from '@/types/medshare';
+import { DEFAULT_USERS, INITIAL_MEDICATIONS } from '@/lib/seed';
+
+const MEDS_STORAGE_KEY = 'medshare_medications_v1';
+const USERS_STORAGE_KEY = 'medshare_users_v1';
+const CURRENT_USER_ID_KEY = 'medshare_current_user_id_v1';
+
+export interface NewMedicationInput {
+  medicineName: string;
+  strength: string;
+  quantity: string;
+  expiryDate: string;
+  location: string;
+}
+
+interface MedShareContextType {
+  medications: Medication[];
+  currentUser: UserProfile;
+  allUsers: UserProfile[];
+  switchUser: (userId: string) => void;
+  addMedication: (data: NewMedicationInput) => Medication;
+  claimMedication: (medicationId: string, prescriptionRef?: string) => void;
+  markAsCollected: (medicationId: string) => void;
+  verifyCurrentUser: () => void;
+  resetDemoData: () => void;
+}
+
+// In-memory synced state
+let cachedMeds: Medication[] = INITIAL_MEDICATIONS;
+let cachedUsers: UserProfile[] = DEFAULT_USERS;
+let cachedUserId: string = DEFAULT_USERS[0].id;
+let isLoaded = false;
+
+const listeners = new Set<() => void>();
+
+function notify() {
+  listeners.forEach((listener) => listener());
+}
+
+function loadInitialData() {
+  if (isLoaded || typeof window === 'undefined') return;
+  try {
+    const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
+    if (storedUsers) {
+      cachedUsers = JSON.parse(storedUsers);
+    } else {
+      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(DEFAULT_USERS));
+    }
+
+    const storedCurrentId = localStorage.getItem(CURRENT_USER_ID_KEY);
+    if (storedCurrentId && cachedUsers.some((u) => u.id === storedCurrentId)) {
+      cachedUserId = storedCurrentId;
+    } else {
+      cachedUserId = cachedUsers[0]?.id || DEFAULT_USERS[0].id;
+      localStorage.setItem(CURRENT_USER_ID_KEY, cachedUserId);
+    }
+
+    const storedMeds = localStorage.getItem(MEDS_STORAGE_KEY);
+    if (storedMeds) {
+      cachedMeds = JSON.parse(storedMeds);
+    } else {
+      localStorage.setItem(MEDS_STORAGE_KEY, JSON.stringify(INITIAL_MEDICATIONS));
+    }
+  } catch (err) {
+    console.error('Error initializing MedShare store from localStorage:', err);
+  }
+  isLoaded = true;
+}
+
+const subscribe = (listener: () => void) => {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+};
+
+const getMedsSnapshot = () => {
+  loadInitialData();
+  return cachedMeds;
+};
+const getMedsServerSnapshot = () => INITIAL_MEDICATIONS;
+
+const getUsersSnapshot = () => {
+  loadInitialData();
+  return cachedUsers;
+};
+const getUsersServerSnapshot = () => DEFAULT_USERS;
+
+const getCurrentUserIdSnapshot = () => {
+  loadInitialData();
+  return cachedUserId;
+};
+const getCurrentUserIdServerSnapshot = () => DEFAULT_USERS[0].id;
+
+const switchUser = (userId: string) => {
+  if (cachedUsers.some((u) => u.id === userId)) {
+    cachedUserId = userId;
+    try {
+      localStorage.setItem(CURRENT_USER_ID_KEY, userId);
+    } catch (err) {
+      console.error('Error saving active user to localStorage:', err);
+    }
+    notify();
+  }
+};
+
+const addMedication = (data: NewMedicationInput): Medication => {
+  const currentUser = cachedUsers.find((u) => u.id === cachedUserId) || cachedUsers[0];
+  const newMed: Medication = {
+    id: `med-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    ...data,
+    donorId: currentUser.id,
+    donorName: currentUser.name,
+    donorPhone: currentUser.phone,
+    status: 'available',
+    createdAt: new Date().toISOString(),
+  };
+
+  cachedMeds = [newMed, ...cachedMeds];
+  try {
+    localStorage.setItem(MEDS_STORAGE_KEY, JSON.stringify(cachedMeds));
+  } catch (err) {
+    console.error('Error saving medications to localStorage:', err);
+  }
+  notify();
+  return newMed;
+};
+
+const claimMedication = (medicationId: string, prescriptionRef?: string) => {
+  const currentUser = cachedUsers.find((u) => u.id === cachedUserId) || cachedUsers[0];
+  cachedMeds = cachedMeds.map((med) => {
+    if (med.id === medicationId) {
+      return {
+        ...med,
+        status: 'claimed' as const,
+        claimedById: currentUser.id,
+        claimedByName: currentUser.name,
+        claimedByRole: currentUser.role,
+        prescriptionRef: prescriptionRef || med.prescriptionRef,
+      };
+    }
+    return med;
+  });
+
+  try {
+    localStorage.setItem(MEDS_STORAGE_KEY, JSON.stringify(cachedMeds));
+  } catch (err) {
+    console.error('Error updating claim status in localStorage:', err);
+  }
+  notify();
+};
+
+const markAsCollected = (medicationId: string) => {
+  cachedMeds = cachedMeds.map((med) => {
+    if (med.id === medicationId) {
+      return {
+        ...med,
+        status: 'collected' as const,
+      };
+    }
+    return med;
+  });
+
+  try {
+    localStorage.setItem(MEDS_STORAGE_KEY, JSON.stringify(cachedMeds));
+  } catch (err) {
+    console.error('Error marking medication as collected in localStorage:', err);
+  }
+  notify();
+};
+
+const verifyCurrentUser = () => {
+  cachedUsers = cachedUsers.map((user) => {
+    if (user.id === cachedUserId) {
+      return { ...user, isVerified: true };
+    }
+    return user;
+  });
+
+  try {
+    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(cachedUsers));
+  } catch (err) {
+    console.error('Error verifying current user in localStorage:', err);
+  }
+  notify();
+};
+
+const resetDemoData = () => {
+  cachedMeds = INITIAL_MEDICATIONS;
+  cachedUsers = DEFAULT_USERS;
+  cachedUserId = DEFAULT_USERS[0].id;
+
+  try {
+    localStorage.setItem(MEDS_STORAGE_KEY, JSON.stringify(INITIAL_MEDICATIONS));
+    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(DEFAULT_USERS));
+    localStorage.setItem(CURRENT_USER_ID_KEY, DEFAULT_USERS[0].id);
+  } catch (err) {
+    console.error('Error resetting demo data:', err);
+  }
+  notify();
+};
+
+const MedShareContext = createContext<MedShareContextType | undefined>(undefined);
+
+export function MedShareProvider({ children }: { children: React.ReactNode }) {
+  const medications = useSyncExternalStore(subscribe, getMedsSnapshot, getMedsServerSnapshot);
+  const allUsers = useSyncExternalStore(subscribe, getUsersSnapshot, getUsersServerSnapshot);
+  const currentUserId = useSyncExternalStore(
+    subscribe,
+    getCurrentUserIdSnapshot,
+    getCurrentUserIdServerSnapshot
+  );
+
+  const currentUser =
+    allUsers.find((u) => u.id === currentUserId) || allUsers[0] || DEFAULT_USERS[0];
+
+  return (
+    <MedShareContext.Provider
+      value={{
+        medications,
+        currentUser,
+        allUsers,
+        switchUser,
+        addMedication,
+        claimMedication,
+        markAsCollected,
+        verifyCurrentUser,
+        resetDemoData,
+      }}
+    >
+      {children}
+    </MedShareContext.Provider>
+  );
+}
+
+export function useMedShare() {
+  const context = useContext(MedShareContext);
+  if (!context) {
+    throw new Error('useMedShare must be used within a MedShareProvider');
+  }
+  return context;
+}
