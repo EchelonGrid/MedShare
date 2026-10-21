@@ -2,7 +2,16 @@
 
 import React from 'react';
 import { useMedShare } from '@/context/MedShareContext';
-import { Pill, ShieldCheck, ShieldAlert, RotateCcw, User, Building2, HeartHandshake } from 'lucide-react';
+import {
+  Pill,
+  ShieldCheck,
+  ShieldAlert,
+  RotateCcw,
+  User,
+  Building2,
+  HeartHandshake,
+  PlusCircle,
+} from 'lucide-react';
 import { UserRole } from '@/types/medshare';
 
 const ROLE_LABELS: Record<UserRole, { label: string; icon: React.ReactNode; badgeClass: string }> = {
@@ -24,7 +33,7 @@ const ROLE_LABELS: Record<UserRole, { label: string; icon: React.ReactNode; badg
 };
 
 export default function Navbar() {
-  const { currentUser, allUsers, switchUser, resetDemoData } = useMedShare();
+  const { currentUser, allUsers, switchUser, resetDemoData, openDonateModal } = useMedShare();
   const currentRoleMeta = ROLE_LABELS[currentUser.role] || ROLE_LABELS.donor;
 
   return (
@@ -41,11 +50,11 @@ export default function Navbar() {
               <div className="flex items-center gap-2">
                 <span className="font-extrabold text-xl tracking-tight text-white">MedShare</span>
                 <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded bg-teal-800/80 border border-teal-500/40 text-teal-200">
-                  Step 1
+                  Step 3 Live
                 </span>
               </div>
               <p className="text-xs text-teal-100/90 font-medium">
-                Rescuing unexpired medication for rural clinics & families
+                Rescuing unexpired medication for rural clinics &amp; families
               </p>
             </div>
           </div>
@@ -53,6 +62,17 @@ export default function Navbar() {
           {/* Right Section: Active User Status & Quick Demo Controls */}
           <div className="flex flex-wrap items-center gap-3 justify-between md:justify-end">
             
+            {/* Quick Donate Button */}
+            <button
+              type="button"
+              onClick={openDonateModal}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-teal-600 hover:bg-teal-500 active:bg-teal-800 text-white shadow-sm border border-teal-400/40 transition cursor-pointer"
+              title="Donate unused unexpired medicines"
+            >
+              <PlusCircle className="w-3.5 h-3.5 text-teal-200" />
+              <span>Donate</span>
+            </button>
+
             {/* Active User Badges */}
             <div className="flex items-center gap-2 bg-teal-800/90 rounded-lg px-3 py-1.5 border border-teal-600/50">
               <div className="text-right hidden sm:block">

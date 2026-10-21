@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useSyncExternalStore } from 'react';
+import React, { createContext, useContext, useState, useSyncExternalStore } from 'react';
 import { Medication, UserProfile } from '@/types/medshare';
 import { DEFAULT_USERS, INITIAL_MEDICATIONS } from '@/lib/seed';
 
@@ -14,6 +14,7 @@ export interface NewMedicationInput {
   quantity: string;
   expiryDate: string;
   location: string;
+  donorPhone?: string;
 }
 
 interface MedShareContextType {
@@ -26,6 +27,9 @@ interface MedShareContextType {
   markAsCollected: (medicationId: string) => void;
   verifyCurrentUser: () => void;
   resetDemoData: () => void;
+  isDonateOpen: boolean;
+  openDonateModal: () => void;
+  closeDonateModal: () => void;
 }
 
 // In-memory synced state
@@ -111,10 +115,14 @@ const addMedication = (data: NewMedicationInput): Medication => {
   const currentUser = cachedUsers.find((u) => u.id === cachedUserId) || cachedUsers[0];
   const newMed: Medication = {
     id: `med-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-    ...data,
+    medicineName: data.medicineName.trim(),
+    strength: data.strength.trim(),
+    quantity: data.quantity.trim(),
+    expiryDate: data.expiryDate,
+    location: data.location.trim(),
     donorId: currentUser.id,
     donorName: currentUser.name,
-    donorPhone: currentUser.phone,
+    donorPhone: data.donorPhone?.trim() || currentUser.phone,
     status: 'available',
     createdAt: new Date().toISOString(),
   };
@@ -206,6 +214,8 @@ const resetDemoData = () => {
 const MedShareContext = createContext<MedShareContextType | undefined>(undefined);
 
 export function MedShareProvider({ children }: { children: React.ReactNode }) {
+  const [isDonateOpen, setIsDonateOpen] = useState(false);
+
   const medications = useSyncExternalStore(subscribe, getMedsSnapshot, getMedsServerSnapshot);
   const allUsers = useSyncExternalStore(subscribe, getUsersSnapshot, getUsersServerSnapshot);
   const currentUserId = useSyncExternalStore(
@@ -216,6 +226,9 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
 
   const currentUser =
     allUsers.find((u) => u.id === currentUserId) || allUsers[0] || DEFAULT_USERS[0];
+
+  const openDonateModal = () => setIsDonateOpen(true);
+  const closeDonateModal = () => setIsDonateOpen(false);
 
   return (
     <MedShareContext.Provider
@@ -229,6 +242,9 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
         markAsCollected,
         verifyCurrentUser,
         resetDemoData,
+        isDonateOpen,
+        openDonateModal,
+        closeDonateModal,
       }}
     >
       {children}

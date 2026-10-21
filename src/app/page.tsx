@@ -5,6 +5,7 @@ import { useMedShare } from '@/context/MedShareContext';
 import { getDaysUntilExpiry } from '@/lib/seed';
 import { useIsMounted } from '@/lib/useIsMounted';
 import MedicationFeed from '@/components/MedicationFeed';
+import DonateModal from '@/components/DonateModal';
 import { Medication } from '@/types/medshare';
 import {
   Pill,
@@ -20,7 +21,7 @@ import {
 } from 'lucide-react';
 
 export default function HomePage() {
-  const { medications } = useMedShare();
+  const { medications, isDonateOpen, openDonateModal, closeDonateModal } = useMedShare();
   const mounted = useIsMounted();
   const [notification, setNotification] = useState<string | null>(null);
 
@@ -33,9 +34,7 @@ export default function HomePage() {
   const collectedCount = medications.filter((m) => m.status === 'collected').length;
 
   const handleDonateClick = () => {
-    setNotification(
-      '✨ Donate Medicine: The complete donation listing & batch verification modal will be unlocked in Step 3!'
-    );
+    openDonateModal();
   };
 
   const handleClaimClick = (medication: Medication) => {
@@ -52,7 +51,7 @@ export default function HomePage() {
           <div className="max-w-3xl space-y-4">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/20 border border-teal-400/30 text-teal-200 text-xs font-medium">
               <Sparkles className="w-3.5 h-3.5 text-teal-300" />
-              <span>Step 2: Live Medication Feed &amp; Expiry Filters</span>
+              <span>Step 3: Donate Medicine Text Listing &amp; Safety Checklist</span>
             </div>
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-white leading-tight">
               Bridge the Gap Between Surplus Medicine &amp; Rural Healthcare
@@ -184,6 +183,15 @@ export default function HomePage() {
         <MedicationFeed onClaimClick={handleClaimClick} />
 
       </section>
+
+      {/* Donate Medicine Modal */}
+      {isDonateOpen && (
+        <DonateModal
+          isOpen={isDonateOpen}
+          onClose={closeDonateModal}
+          onSuccess={(msg) => setNotification(msg)}
+        />
+      )}
     </div>
   );
 }
