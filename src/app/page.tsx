@@ -10,8 +10,10 @@ import VerifyModal from '@/components/VerifyModal';
 import ClaimModal from '@/components/ClaimModal';
 import AuthModal from '@/components/AuthModal';
 import UserPortal from '@/components/UserPortal';
+import RequestsBoard from '@/components/RequestsBoard';
+import RequestMedicineModal from '@/components/RequestMedicineModal';
 import ToastContainer from '@/components/Toast';
-import { Medication } from '@/types/medshare';
+import { Medication, MedicineRequest } from '@/types/medshare';
 import {
   Pill,
   Clock,
@@ -24,11 +26,14 @@ import {
   X,
   Info,
   LayoutDashboard,
+  HeartHandshake,
 } from 'lucide-react';
 
 export default function HomePage() {
   const {
     medications,
+    requests,
+    openRequestsCount,
     currentUser,
     toasts,
     dismissToast,
@@ -45,6 +50,11 @@ export default function HomePage() {
     authNotice,
     openAuthModal,
     closeAuthModal,
+    isRequestModalOpen,
+    openRequestModal,
+    closeRequestModal,
+    prefillRequestForDonation,
+    openDonateWithRequest,
     activeMainTab,
     setActiveMainTab,
   } = useMedShare();
@@ -111,6 +121,30 @@ export default function HomePage() {
     showToast(msg, 'success', 'Verification');
   };
 
+  const handlePostRequestClick = () => {
+    if (!currentUser) {
+      openAuthModal('login', 'Please sign in or create an account to post an urgent medicine request.');
+      return;
+    }
+    if (currentUser.role === 'donor') {
+      setNotification('Donors list surplus medicines. To post urgent medicine shortages, please switch to or register a Clinic or Recipient account.');
+      return;
+    }
+    if (!currentUser.isVerified) {
+      openVerifyModal('Please verify your collector credentials (NID or Clinic License) to broadcast urgent medicine requests.');
+      return;
+    }
+    openRequestModal();
+  };
+
+  const handleFulfillClick = (req: MedicineRequest) => {
+    if (!currentUser) {
+      openAuthModal('login', 'Please sign in or create an account to donate and fulfill this request.');
+      return;
+    }
+    openDonateWithRequest(req);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-between">
       {/* Floating Global Toast Notifications */}
@@ -146,10 +180,10 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* 3 Live Stat Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-10">
+            {/* 4 Live Stat Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 mt-10">
               {/* Card 1: Available Medicines */}
-              <div className="bg-slate-800/80 backdrop-blur border border-teal-500/30 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-teal-400/60 transition">
+              <div className="bg-slate-800/80 backdrop-blur border border-teal-500/30 rounded-2xl p-5 sm:p-6 shadow-xl relative overflow-hidden group hover:border-teal-400/60 transition">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-teal-200">Available Medicines</span>
                   <div className="w-10 h-10 rounded-xl bg-teal-500/20 flex items-center justify-center text-teal-300">
@@ -157,26 +191,26 @@ export default function HomePage() {
                   </div>
                 </div>
                 <div className="mt-4 flex items-baseline gap-2">
-                  <span className="text-4xl font-extrabold text-white tracking-tight">{availableCount}</span>
-                  <span className="text-xs text-slate-400">units in inventory</span>
+                  <span className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">{availableCount}</span>
+                  <span className="text-xs text-slate-400">in inventory</span>
                 </div>
                 <p className="text-xs text-slate-300 mt-2">
-                  Unopened, valid medications ready for charity or patient claiming.
+                  Unopened, valid medications ready for clinic or patient claiming.
                 </p>
                 <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-teal-500 to-emerald-400" />
               </div>
 
               {/* Card 2: Expiring Soon */}
-              <div className="bg-slate-800/80 backdrop-blur border border-amber-500/30 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-amber-400/60 transition">
+              <div className="bg-slate-800/80 backdrop-blur border border-amber-500/30 rounded-2xl p-5 sm:p-6 shadow-xl relative overflow-hidden group hover:border-amber-400/60 transition">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-amber-200">Expiring Soon (≤ 60 Days)</span>
+                  <span className="text-sm font-medium text-amber-200">Expiring Soon (≤ 60d)</span>
                   <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-300">
                     <AlertTriangle className="w-5 h-5" />
                   </div>
                 </div>
                 <div className="mt-4 flex items-baseline gap-2">
-                  <span className="text-4xl font-extrabold text-amber-300 tracking-tight">{expiringSoonCount}</span>
-                  <span className="text-xs text-slate-400">priority rescue items</span>
+                  <span className="text-3xl sm:text-4xl font-extrabold text-amber-300 tracking-tight">{expiringSoonCount}</span>
+                  <span className="text-xs text-slate-400">priority items</span>
                 </div>
                 <p className="text-xs text-slate-300 mt-2">
                   Nearing expiry window requiring immediate allocation to prevent waste.
@@ -184,8 +218,29 @@ export default function HomePage() {
                 <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 to-orange-400" />
               </div>
 
-              {/* Card 3: Medicines Collected */}
-              <div className="bg-slate-800/80 backdrop-blur border border-sky-500/30 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-sky-400/60 transition">
+              {/* Card 3: Urgent Requests Board */}
+              <div
+                onClick={() => setActiveMainTab('requests')}
+                className="bg-slate-800/80 backdrop-blur border border-rose-500/30 rounded-2xl p-5 sm:p-6 shadow-xl relative overflow-hidden group hover:border-rose-400/60 transition cursor-pointer"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-rose-200">Urgent Requests</span>
+                  <div className="w-10 h-10 rounded-xl bg-rose-500/20 flex items-center justify-center text-rose-300">
+                    <HeartHandshake className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="mt-4 flex items-baseline gap-2">
+                  <span className="text-3xl sm:text-4xl font-extrabold text-rose-300 tracking-tight">{openRequestsCount}</span>
+                  <span className="text-xs text-slate-400">open shortages</span>
+                </div>
+                <p className="text-xs text-slate-300 mt-2">
+                  Shortages posted by rural clinics and patients waiting for donors.
+                </p>
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-500 to-amber-400" />
+              </div>
+
+              {/* Card 4: Medicines Collected */}
+              <div className="bg-slate-800/80 backdrop-blur border border-sky-500/30 rounded-2xl p-5 sm:p-6 shadow-xl relative overflow-hidden group hover:border-sky-400/60 transition">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-sky-200">Medicines Collected</span>
                   <div className="w-10 h-10 rounded-xl bg-sky-500/20 flex items-center justify-center text-sky-300">
@@ -193,7 +248,7 @@ export default function HomePage() {
                   </div>
                 </div>
                 <div className="mt-4 flex items-baseline gap-2">
-                  <span className="text-4xl font-extrabold text-white tracking-tight">{collectedCount}</span>
+                  <span className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">{collectedCount}</span>
                   <span className="text-xs text-slate-400">redistributed batches</span>
                 </div>
                 <p className="text-xs text-slate-300 mt-2">
@@ -228,7 +283,7 @@ export default function HomePage() {
             </div>
           )}
 
-          {/* Dedicated View Navigation: Live Medicine Feed vs Collector & Donor Portal */}
+          {/* Dedicated View Navigation: Live Medicine Feed vs Urgent Requests vs Collector & Donor Portal */}
           <div className="flex items-center justify-between border-b border-slate-200 gap-4">
             <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto">
               <button
@@ -244,6 +299,22 @@ export default function HomePage() {
                 <span>Live Medicine Feed</span>
                 <span className="text-[11px] px-2 py-0.5 rounded-full font-extrabold bg-slate-100 text-slate-700">
                   {availableCount}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveMainTab('requests')}
+                className={`pb-3.5 px-3 text-xs sm:text-sm font-bold flex items-center gap-2 border-b-2 transition cursor-pointer shrink-0 ${
+                  activeMainTab === 'requests'
+                    ? 'border-rose-600 text-rose-900'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <HeartHandshake className="w-4 h-4 text-rose-600" />
+                <span>Urgent Requests Board</span>
+                <span className="text-[11px] px-2 py-0.5 rounded-full font-extrabold bg-rose-100 text-rose-800">
+                  {openRequestsCount}
                 </span>
               </button>
 
@@ -286,6 +357,19 @@ export default function HomePage() {
                 </button>
               </div>
             )}
+
+            {activeMainTab === 'requests' && (
+              <div className="hidden sm:block shrink-0 pb-2">
+                <button
+                  type="button"
+                  onClick={handlePostRequestClick}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs shadow-sm transition cursor-pointer"
+                >
+                  <PlusCircle className="w-4 h-4 text-teal-200" />
+                  <span>Post Urgent Request</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* VIEW 1: LIVE MEDICINE RESCUE FEED */}
@@ -322,7 +406,15 @@ export default function HomePage() {
             </div>
           )}
 
-          {/* VIEW 2: COLLECTOR & DONOR PORTAL */}
+          {/* VIEW 2: URGENT MEDICINE REQUESTS BOARD */}
+          {activeMainTab === 'requests' && (
+            <RequestsBoard
+              onPostRequestClick={handlePostRequestClick}
+              onFulfillClick={handleFulfillClick}
+            />
+          )}
+
+          {/* VIEW 3: COLLECTOR & DONOR PORTAL */}
           {activeMainTab === 'portal' && (
             <UserPortal onBackToFeed={() => setActiveMainTab('feed')} />
           )}
@@ -336,6 +428,20 @@ export default function HomePage() {
           isOpen={isDonateOpen}
           onClose={closeDonateModal}
           onSuccess={(msg) => setNotification(msg)}
+          prefillRequest={prefillRequestForDonation}
+        />
+      )}
+
+      {/* Urgent Request Medicine Modal */}
+      {isRequestModalOpen && (
+        <RequestMedicineModal
+          isOpen={isRequestModalOpen}
+          onClose={closeRequestModal}
+          onSuccess={(msg) => {
+            setNotification(msg);
+            showToast(msg, 'success', 'Request Broadcasted');
+            setActiveMainTab('requests');
+          }}
         />
       )}
 

@@ -1,4 +1,4 @@
-import { Medication, UserProfile, UrgencyLevel } from '@/types/medshare';
+import { Medication, UserProfile, UrgencyLevel, MedicineRequest } from '@/types/medshare';
 
 export function getDaysUntilExpiry(expiryDate?: string | null, baseDate?: Date): number {
   if (!expiryDate || typeof expiryDate !== 'string') return 0;
@@ -169,5 +169,72 @@ export const INITIAL_MEDICATIONS: Medication[] = [
     claimedByName: 'Nurse Michael Chang (Rural Hope)',
     claimedByRole: 'clinic_charity',
     createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+];
+
+export const INITIAL_REQUESTS: MedicineRequest[] = [
+  {
+    id: 'req-1',
+    medicineName: 'Insulin (Mixtard 30/70)',
+    genericName: 'Biphasic Isophane Insulin',
+    strength: '100 IU/ml (10ml Vial)',
+    quantityNeeded: '3 sealed vials',
+    urgency: 'critical',
+    location: 'Jaleswaritola, Bogura',
+    requesterId: 'user-clinic-1',
+    requesterName: 'Nurse Michael Chang (Rural Hope)',
+    requesterRole: 'clinic_charity',
+    requesterPhone: '+880 1712-876543',
+    reasonOrPrescription: 'Emergency rural clinic stockout: 8 low-income diabetic patients awaiting urgent insulin dosage.',
+    status: 'open',
+    createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'req-2',
+    medicineName: 'Azithromycin',
+    genericName: 'Azithromycin Dihydrate',
+    strength: '500mg',
+    quantityNeeded: '4 strips (24 tablets)',
+    urgency: 'critical',
+    location: 'Pabna Sadar, Pabna',
+    requesterId: 'user-individual-1',
+    requesterName: 'Rahim Chowdhury',
+    requesterRole: 'individual',
+    requesterPhone: '+880 1819-334455',
+    reasonOrPrescription: 'Dr. S. K. Roy Rx #PB-2841 - Mandatory 7-day post-operative pulmonary antibiotic course.',
+    status: 'open',
+    createdAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'req-3',
+    medicineName: 'Amdocal',
+    genericName: 'Amlodipine Besilate',
+    strength: '5mg',
+    quantityNeeded: '10 strips (100 tablets)',
+    urgency: 'high',
+    location: 'Mirpur 10, Dhaka',
+    requesterId: 'user-clinic-1',
+    requesterName: 'Bogura Free Rural Health Relief',
+    requesterRole: 'clinic_charity',
+    requesterPhone: '+880 1712-876543',
+    reasonOrPrescription: 'Monthly free geriatric hypertension outreach camp for elderly rural destitute patients.',
+    status: 'open',
+    createdAt: new Date(Date.now() - 20 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'req-4',
+    medicineName: 'Monas',
+    genericName: 'Montelukast Sodium',
+    strength: '10mg',
+    quantityNeeded: '5 strips (50 chewable tablets)',
+    urgency: 'routine',
+    location: 'Jaleswaritola, Bogura',
+    requesterId: 'user-clinic-1',
+    requesterName: 'Nurse Michael Chang (Rural Hope)',
+    requesterRole: 'clinic_charity',
+    requesterPhone: '+880 1712-876543',
+    reasonOrPrescription: 'Seasonal asthma and bronchospasm relief refill for low-income agricultural day-laborers.',
+    status: 'open',
+    createdAt: new Date(Date.now() - 36 * 60 * 60 * 1000).toISOString(),
   },
 ];

@@ -8,8 +8,21 @@ import React, {
   useCallback,
   useMemo,
 } from 'react';
-import { Medication, UserProfile, VerificationStatus, UserRole } from '@/types/medshare';
-import { DEFAULT_USERS, INITIAL_MEDICATIONS, getDaysUntilExpiry } from '@/lib/seed';
+import {
+  Medication,
+  UserProfile,
+  VerificationStatus,
+  UserRole,
+  MedicineRequest,
+  RequestUrgency,
+  RequestStatus,
+} from '@/types/medshare';
+import {
+  DEFAULT_USERS,
+  INITIAL_MEDICATIONS,
+  INITIAL_REQUESTS,
+  getDaysUntilExpiry,
+} from '@/lib/seed';
 import {
   supabase,
   isSupabaseConfigured,
@@ -23,6 +36,7 @@ import { ToastItem } from '@/components/Toast';
 const MEDS_STORAGE_KEY = 'medshare_v2_medications';
 const USERS_STORAGE_KEY = 'medshare_v2_users';
 const CURRENT_USER_ID_KEY = 'medshare_v2_current_user_id';
+const REQUESTS_STORAGE_KEY = 'medshare_prod_requests_v1';
 
 export interface NewMedicationInput {
   medicineName: string;
@@ -32,6 +46,17 @@ export interface NewMedicationInput {
   expiryDate: string;
   location: string;
   donorPhone?: string;
+}
+
+export interface NewMedicineRequestInput {
+  medicineName: string;
+  genericName?: string;
+  strength: string;
+  quantityNeeded: string;
+  urgency: RequestUrgency;
+  location: string;
+  requesterPhone?: string;
+  reasonOrPrescription: string;
 }
 
 export interface VerificationDetails {
@@ -56,6 +81,8 @@ export interface RegisterData {
 
 interface MedShareContextType {
   medications: Medication[];
+  requests: MedicineRequest[];
+  openRequestsCount: number;
   currentUser: UserProfile | null;
   allUsers: UserProfile[];
   isDbConnected: boolean;
@@ -72,6 +99,8 @@ interface MedShareContextType {
   addMedication: (data: NewMedicationInput) => Promise<Medication>;
   claimMedication: (medicationId: string, prescriptionRef?: string) => Promise<void>;
   markAsCollected: (medicationId: string) => Promise<void>;
+  addMedicineRequest: (data: NewMedicineRequestInput) => Promise<MedicineRequest>;
+  fulfillMedicineRequest: (requestId: string, donorName?: string) => Promise<void>;
   verifyCurrentUser: (details?: VerificationDetails) => Promise<void>;
   submitVerification: (details: VerificationDetails) => Promise<void>;
   approveVerification: (userId: string) => Promise<void>;
@@ -90,8 +119,14 @@ interface MedShareContextType {
   authNotice: string | null;
   openAuthModal: (mode?: 'login' | 'register', notice?: string) => void;
   closeAuthModal: () => void;
-  activeMainTab: 'feed' | 'portal';
-  setActiveMainTab: (tab: 'feed' | 'portal') => void;
+  isRequestModalOpen: boolean;
+  openRequestModal: () => void;
+  closeRequestModal: () => void;
+  prefillRequestForDonation: MedicineRequest | null;
+  setPrefillRequestForDonation: (req: MedicineRequest | null) => void;
+  openDonateWithRequest: (req: MedicineRequest) => void;
+  activeMainTab: 'feed' | 'requests' | 'portal';
+  setActiveMainTab: (tab: 'feed' | 'requests' | 'portal') => void;
 }
 
 const MedShareContext = createContext<MedShareContextType | undefined>(undefined);
@@ -99,6 +134,7 @@ const MedShareContext = createContext<MedShareContextType | undefined>(undefined
 export function MedShareProvider({ children }: { children: React.ReactNode }) {
   // State
   const [medications, setMedications] = useState<Medication[]>(INITIAL_MEDICATIONS);
+  const [requests, setRequests] = useState<MedicineRequest[]>(INITIAL_REQUESTS);
   const [allUsers, setAllUsers] = useState<UserProfile[]>(DEFAULT_USERS);
   const [currentUserId, setCurrentUserId] = useState<string | null>(DEFAULT_USERS[0].id);
   const [isDbConnected, setIsDbConnected] = useState<boolean>(false);
@@ -113,7 +149,9 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [authNotice, setAuthNotice] = useState<string | null>(null);
-  const [activeMainTab, setActiveMainTab] = useState<'feed' | 'portal'>('feed');
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+  const [prefillRequestForDonation, setPrefillRequestForDonation] = useState<MedicineRequest | null>(null);
+  const [activeMainTab, setActiveMainTab] = useState<'feed' | 'requests' | 'portal'>('feed');
 
   // Toast Helpers
   const dismissToast = useCallback((id: string) => {
@@ -140,6 +178,14 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem(MEDS_STORAGE_KEY, JSON.stringify(items));
     } catch (e) {
       console.error('Error saving medications to localStorage', e);
+    }
+  }, []);
+
+  const saveRequestsToLocal = useCallback((items: MedicineRequest[]) => {
+    try {
+      localStorage.setItem(REQUESTS_STORAGE_KEY, JSON.stringify(items));
+    } catch (e) {
+      console.error('Error saving requests to localStorage', e);
     }
   }, []);
 
@@ -211,6 +257,20 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
     }
     setMedications(initialLocalMeds);
 
+    let initialLocalRequests = INITIAL_REQUESTS;
+    const storedRequests = localStorage.getItem(REQUESTS_STORAGE_KEY);
+    if (storedRequests) {
+      try {
+        const parsedRequests = JSON.parse(storedRequests);
+        if (Array.isArray(parsedRequests) && parsedRequests.length > 0 && parsedRequests[0]?.medicineName) {
+          initialLocalRequests = parsedRequests;
+        }
+      } catch (e) {
+        console.warn('Failed parsing stored requests', e);
+      }
+    }
+    setRequests(initialLocalRequests);
+
     // If Supabase is configured, connect to live database
     const sb = supabase;
     if (isSupabaseConfigured && sb) {
@@ -238,7 +298,7 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
         }
       })();
 
-      // Supabase Real-time Subscription
+      // Supabase Real-time Subscription for medications
       const channel = sb
         .channel('public:medications')
         .on(
@@ -262,6 +322,39 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
         )
         .subscribe();
 
+      // Gracefully check for medicine_requests table in Supabase
+      (async () => {
+        try {
+          const { data: reqData, error: reqErr } = await sb
+            .from('medicine_requests')
+            .select('*')
+            .order('created_at', { ascending: false });
+          if (!reqErr && reqData && reqData.length > 0) {
+            const mappedReqs: MedicineRequest[] = reqData.map((r: any) => ({
+              id: r.id,
+              medicineName: r.medicine_name || r.medicineName,
+              genericName: r.generic_name || r.genericName || undefined,
+              strength: r.strength,
+              quantityNeeded: r.quantity_needed || r.quantityNeeded,
+              urgency: r.urgency,
+              location: r.location,
+              requesterId: r.requester_id || r.requesterId,
+              requesterName: r.requester_name || r.requesterName,
+              requesterRole: r.requester_role || r.requesterRole,
+              requesterPhone: r.requester_phone || r.requesterPhone,
+              reasonOrPrescription: r.reason_or_prescription || r.reasonOrPrescription,
+              status: r.status,
+              fulfilledByName: r.fulfilled_by_name || r.fulfilledByName || undefined,
+              createdAt: r.created_at || r.createdAt,
+            }));
+            setRequests(mappedReqs);
+            saveRequestsToLocal(mappedReqs);
+          }
+        } catch {
+          // Graceful fallback to local requests
+        }
+      })();
+
       return () => {
         sb.removeChannel(channel);
       };
@@ -269,7 +362,7 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
       setDbMode('local');
       setIsDbConnected(false);
     }
-  }, [saveMedsToLocal]);
+  }, [saveMedsToLocal, saveRequestsToLocal]);
 
   // Derived current user
   const currentUser = useMemo(() => {
@@ -277,10 +370,14 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
     return allUsers.find((u) => u.id === currentUserId) || null;
   }, [allUsers, currentUserId]);
 
-  // Derived pending verifications list
+  // Derived counts and pending verifications
   const pendingVerifications = useMemo(() => {
     return allUsers.filter((u) => u.verificationStatus === 'pending');
   }, [allUsers]);
+
+  const openRequestsCount = useMemo(() => {
+    return requests.filter((r) => r.status === 'open').length;
+  }, [requests]);
 
   // Auth & User Methods
   const switchUser = useCallback(
@@ -340,7 +437,6 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
           }
 
           if (authData.user) {
-            // Fetch profile
             const { data: profileData } = await supabase
               .from('profiles')
               .select('*')
@@ -403,7 +499,6 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
 
         let newUserId = `user-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
-        // Attempt Supabase Auth signUp if configured
         if (isSupabaseConfigured && supabase && data.password) {
           const { data: authData, error: authErr } = await supabase.auth.signUp({
             email: cleanEmail,
@@ -420,7 +515,6 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
 
           if (!authErr && authData.user) {
             newUserId = authData.user.id;
-            // Upsert profile in DB
             await supabase.from('profiles').upsert({
               id: newUserId,
               name: data.name.trim(),
@@ -519,7 +613,6 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
       if (isSupabaseConfigured && supabase) {
         try {
           const dbRow = mapAppMedicationToDb(newMed);
-          // Omit tempId if let Supabase generate UUID, or keep if UUID
           const { data: inserted, error } = await supabase
             .from('medications')
             .insert(dbRow)
@@ -564,7 +657,6 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
       const claimer = currentUser;
       const claimedAt = new Date().toISOString();
 
-      // Optimistic update
       setMedications((prev) => {
         const updated = prev.map((med) => {
           if (med.id === medicationId) {
@@ -584,7 +676,6 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
         return updated;
       });
 
-      // Persist to Supabase if configured
       if (isSupabaseConfigured && supabase) {
         try {
           await supabase
@@ -618,7 +709,6 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
       setActionLoading(medicationId);
       const collectedAt = new Date().toISOString();
 
-      // Optimistic update
       setMedications((prev) => {
         const updated = prev.map((med) => {
           if (med.id === medicationId) {
@@ -634,7 +724,6 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
         return updated;
       });
 
-      // Supabase update
       if (isSupabaseConfigured && supabase) {
         try {
           await supabase
@@ -654,6 +743,118 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
     },
     [saveMedsToLocal, showToast]
   );
+
+  // Medicine Requests (Reverse Marketplace)
+  const addMedicineRequest = useCallback(
+    async (data: NewMedicineRequestInput): Promise<MedicineRequest> => {
+      setActionLoading('requesting');
+      const tempId = `req-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      const reqUser = currentUser;
+
+      const newRequest: MedicineRequest = {
+        id: tempId,
+        medicineName: data.medicineName.trim(),
+        genericName: data.genericName?.trim() || undefined,
+        strength: data.strength.trim(),
+        quantityNeeded: data.quantityNeeded.trim(),
+        urgency: data.urgency,
+        location: data.location.trim(),
+        requesterId: reqUser?.id || 'guest-collector',
+        requesterName: reqUser?.name || 'Verified Community Collector',
+        requesterRole: reqUser?.role || 'individual',
+        requesterPhone: data.requesterPhone?.trim() || reqUser?.phone || '+880 1700-000000',
+        reasonOrPrescription: data.reasonOrPrescription.trim(),
+        status: 'open',
+        createdAt: new Date().toISOString(),
+      };
+
+      setRequests((prev) => {
+        const updated = [newRequest, ...prev];
+        saveRequestsToLocal(updated);
+        return updated;
+      });
+
+      if (isSupabaseConfigured && supabase) {
+        try {
+          await supabase.from('medicine_requests').insert({
+            id: newRequest.id,
+            medicine_name: newRequest.medicineName,
+            generic_name: newRequest.genericName || null,
+            strength: newRequest.strength,
+            quantity_needed: newRequest.quantityNeeded,
+            urgency: newRequest.urgency,
+            location: newRequest.location,
+            requester_id: newRequest.requesterId,
+            requester_name: newRequest.requesterName,
+            requester_role: newRequest.requesterRole,
+            requester_phone: newRequest.requesterPhone,
+            reason_or_prescription: newRequest.reasonOrPrescription,
+            status: newRequest.status,
+          });
+        } catch (e) {
+          console.warn('Supabase medicine_requests insert fallback to local:', e);
+        }
+      }
+
+      setActionLoading(null);
+      showToast(
+        `Urgent request for "${newRequest.medicineName}" posted to board!`,
+        'success',
+        'Request Broadcasted'
+      );
+      return newRequest;
+    },
+    [currentUser, saveRequestsToLocal, showToast]
+  );
+
+  const fulfillMedicineRequest = useCallback(
+    async (requestId: string, donorName?: string) => {
+      setActionLoading(requestId);
+      const name = donorName || currentUser?.name || 'Community Donor';
+
+      setRequests((prev) => {
+        const updated = prev.map((req) => {
+          if (req.id === requestId) {
+            return {
+              ...req,
+              status: 'fulfilled' as const,
+              fulfilledByName: name,
+            };
+          }
+          return req;
+        });
+        saveRequestsToLocal(updated);
+        return updated;
+      });
+
+      if (isSupabaseConfigured && supabase) {
+        try {
+          await supabase
+            .from('medicine_requests')
+            .update({
+              status: 'fulfilled',
+              fulfilled_by_name: name,
+            })
+            .eq('id', requestId);
+        } catch (e) {
+          console.warn('Supabase fulfill request fallback to local:', e);
+        }
+      }
+
+      setActionLoading(null);
+      showToast(
+        `Urgent request marked as fulfilled by ${name}!`,
+        'success',
+        'Request Fulfilled'
+      );
+    },
+    [currentUser, saveRequestsToLocal, showToast]
+  );
+
+  const openDonateWithRequest = useCallback((req: MedicineRequest) => {
+    setPrefillRequestForDonation(req);
+    setIsDonateOpen(true);
+  }, []);
 
   // Verification Methods (3-Stage Workflow)
   const submitVerification = useCallback(
@@ -688,7 +889,6 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
       setAllUsers(updatedUsers);
       saveUsersToLocal(updatedUsers);
 
-      // Supabase profile update if configured
       if (isSupabaseConfigured && supabase) {
         try {
           await supabase.from('profiles').update({
@@ -717,7 +917,6 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
 
   const verifyCurrentUser = useCallback(
     async (details?: VerificationDetails) => {
-      // Direct verification / auto-approval convenience helper
       await submitVerification({
         ...details,
         autoApprove: true,
@@ -802,11 +1001,13 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
 
   const resetDemoData = useCallback(async () => {
     setMedications(INITIAL_MEDICATIONS);
+    setRequests(INITIAL_REQUESTS);
     setAllUsers(DEFAULT_USERS);
     setCurrentUserId(DEFAULT_USERS[0].id);
 
     try {
       localStorage.setItem(MEDS_STORAGE_KEY, JSON.stringify(INITIAL_MEDICATIONS));
+      localStorage.setItem(REQUESTS_STORAGE_KEY, JSON.stringify(INITIAL_REQUESTS));
       localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(DEFAULT_USERS));
       localStorage.setItem(CURRENT_USER_ID_KEY, DEFAULT_USERS[0].id);
     } catch (err) {
@@ -816,8 +1017,14 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
   }, [showToast]);
 
   // Modal open/close helpers
-  const openDonateModal = () => setIsDonateOpen(true);
-  const closeDonateModal = () => setIsDonateOpen(false);
+  const openDonateModal = () => {
+    setPrefillRequestForDonation(null);
+    setIsDonateOpen(true);
+  };
+  const closeDonateModal = () => {
+    setIsDonateOpen(false);
+    setPrefillRequestForDonation(null);
+  };
 
   const openVerifyModal = (notice?: string) => {
     setVerifyNotice(notice || null);
@@ -838,10 +1045,15 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
     setAuthNotice(null);
   };
 
+  const openRequestModal = () => setIsRequestModalOpen(true);
+  const closeRequestModal = () => setIsRequestModalOpen(false);
+
   return (
     <MedShareContext.Provider
       value={{
         medications,
+        requests,
+        openRequestsCount,
         currentUser,
         allUsers,
         isDbConnected,
@@ -858,6 +1070,8 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
         addMedication,
         claimMedication,
         markAsCollected,
+        addMedicineRequest,
+        fulfillMedicineRequest,
         verifyCurrentUser,
         submitVerification,
         approveVerification,
@@ -876,6 +1090,12 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
         authNotice,
         openAuthModal,
         closeAuthModal,
+        isRequestModalOpen,
+        openRequestModal,
+        closeRequestModal,
+        prefillRequestForDonation,
+        setPrefillRequestForDonation,
+        openDonateWithRequest,
         activeMainTab,
         setActiveMainTab,
       }}

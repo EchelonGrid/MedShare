@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { MedicineRequest } from '@/types/medshare';
 import { useMedShare } from '@/context/MedShareContext';
 import { getDaysUntilExpiry, getUrgencyLevel } from '@/lib/seed';
 import { useIsMounted } from '@/lib/useIsMounted';
@@ -15,16 +16,23 @@ import {
   Package,
   CheckCircle2,
   Clock,
+  Sparkles,
 } from 'lucide-react';
 
 interface DonateModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (message: string) => void;
+  prefillRequest?: MedicineRequest | null;
 }
 
-export default function DonateModal({ isOpen, onClose, onSuccess }: DonateModalProps) {
-  const { currentUser, addMedication, actionLoading } = useMedShare();
+export default function DonateModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  prefillRequest,
+}: DonateModalProps) {
+  const { currentUser, addMedication, fulfillMedicineRequest, actionLoading } = useMedShare();
   const mounted = useIsMounted();
 
   const [medicineName, setMedicineName] = useState('');
@@ -55,6 +63,31 @@ export default function DonateModal({ isOpen, onClose, onSuccess }: DonateModalP
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
+  // Populate from prefillRequest or reset on open
+  useEffect(() => {
+    if (isOpen) {
+      if (prefillRequest) {
+        setMedicineName(prefillRequest.medicineName);
+        setGenericName(prefillRequest.genericName || '');
+        setStrength(prefillRequest.strength);
+        setQuantity(prefillRequest.quantityNeeded);
+        setLocation(prefillRequest.location);
+      } else {
+        setMedicineName('');
+        setGenericName('');
+        setStrength('');
+        setQuantity('');
+        setLocation(currentUser?.location || '');
+      }
+      setPhone(currentUser?.phone || '');
+      setExpiryDate('');
+      setSafety1(false);
+      setSafety2(false);
+      setSafety3(false);
+      setTouched(false);
+    }
+  }, [isOpen, prefillRequest, currentUser]);
+
   if (!isOpen || !currentUser) return null;
 
   // Compute minDate and daysRemaining safely once mounted
@@ -78,13 +111,13 @@ export default function DonateModal({ isOpen, onClose, onSuccess }: DonateModalP
     phone.trim().length > 0 &&
     isSafetyConfirmed;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setTouched(true);
 
     if (!isFormValid) return;
 
-    addMedication({
+    await addMedication({
       medicineName: medicineName.trim(),
       genericName: genericName.trim() || undefined,
       strength: strength.trim(),
@@ -93,6 +126,10 @@ export default function DonateModal({ isOpen, onClose, onSuccess }: DonateModalP
       location: location.trim(),
       donorPhone: phone.trim(),
     });
+
+    if (prefillRequest) {
+      await fulfillMedicineRequest(prefillRequest.id, currentUser.name);
+    }
 
     // Reset fields
     setMedicineName('');
@@ -106,7 +143,11 @@ export default function DonateModal({ isOpen, onClose, onSuccess }: DonateModalP
     setTouched(false);
 
     onClose();
-    onSuccess('Medicine listed successfully! It is now visible to verified collectors.');
+    if (prefillRequest) {
+      onSuccess(`Urgent request for ${prefillRequest.requesterName} fulfilled! Medicine listed for rescue.`);
+    } else {
+      onSuccess('Medicine listed successfully! It is now visible to verified collectors.');
+    }
   };
 
   return (
@@ -161,6 +202,22 @@ export default function DonateModal({ isOpen, onClose, onSuccess }: DonateModalP
             {currentUser.role.replace('_', ' ')}
           </span>
         </div>
+
+        {/* Fulfilling Urgent Request Banner */}
+        {prefillRequest && (
+          <div className="bg-sky-50 border-b border-sky-200 px-6 py-3 flex items-start gap-2.5 text-xs text-sky-950 animate-in fade-in">
+            <Sparkles className="w-4 h-4 text-sky-600 shrink-0 mt-0.5" />
+            <div className="space-y-0.5">
+              <div className="font-bold text-sky-900">
+                Fulfilling Urgent Request for {prefillRequest.requesterName}
+              </div>
+              <p className="text-sky-800 leading-snug">
+                Needed: <strong>{prefillRequest.quantityNeeded}</strong> in <strong>{prefillRequest.location}</strong>. 
+                Upon submitting, this request will automatically be marked as fulfilled on the board.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
