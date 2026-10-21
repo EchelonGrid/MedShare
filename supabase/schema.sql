@@ -1,12 +1,12 @@
 -- ==============================================================================
 -- MedShare - Robust Supabase Migration & Schema Script
--- Safe to run in Supabase SQL Editor (handles missing tables & permissions)
+-- Safe to run in Supabase SQL Editor (handles UUID columns, enums, & permissions)
 -- ==============================================================================
 
 -- 1. Ensure UUID Extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 2. Ensure medications table exists with basic columns first
+-- 2. Ensure medications table exists with correct schema
 CREATE TABLE IF NOT EXISTS public.medications (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   medicine_name text NOT NULL,
@@ -15,11 +15,11 @@ CREATE TABLE IF NOT EXISTS public.medications (
   quantity text NOT NULL,
   expiry_date date NOT NULL,
   location text NOT NULL,
-  donor_id text,
+  donor_id uuid,
   donor_name text NOT NULL,
   donor_phone text NOT NULL,
   status text NOT NULL DEFAULT 'available',
-  claimed_by_id text,
+  claimed_by_id uuid,
   claimed_by_name text,
   claimed_by_role text,
   prescription_ref text,
@@ -39,11 +39,6 @@ ALTER TABLE public.medications
   ADD COLUMN IF NOT EXISTS claims jsonb DEFAULT '[]'::jsonb,
   ADD COLUMN IF NOT EXISTS handover_pin text,
   ADD COLUMN IF NOT EXISTS claim_expires_at timestamptz;
-
--- Reconcile donor ID for seed row if Dr. Farhana Rahman has null donor_id
-UPDATE public.medications
-SET donor_id = 'user-donor-1'
-WHERE donor_name = 'Dr. Farhana Rahman' AND (donor_id IS NULL OR donor_id = '');
 
 -- 4. Create public.medicine_requests table (Reverse Marketplace)
 CREATE TABLE IF NOT EXISTS public.medicine_requests (

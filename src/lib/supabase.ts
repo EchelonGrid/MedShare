@@ -198,19 +198,24 @@ export function mapAppMedicationToDb(app: Omit<Medication, 'id' | 'createdAt'> &
     pickupNoteText: app.pickupNote,
   };
 
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const safeId = app.id && uuidRegex.test(app.id) ? app.id : undefined;
+  const safeDonorId = app.donorId && uuidRegex.test(app.donorId) ? app.donorId : null;
+  const safeClaimedById = app.claimedById && uuidRegex.test(app.claimedById) ? app.claimedById : null;
+
   return {
-    ...(app.id && { id: app.id }),
+    ...(safeId && { id: safeId }),
     medicine_name: app.medicineName,
     generic_name: app.genericName || null,
     strength: app.strength,
     quantity: app.quantity,
     expiry_date: app.expiryDate,
     location: app.location,
-    donor_id: app.donorId || null,
+    donor_id: safeDonorId,
     donor_name: app.donorName,
     donor_phone: app.donorPhone,
     status: app.status,
-    claimed_by_id: app.claimedById || null,
+    claimed_by_id: safeClaimedById,
     claimed_by_name: app.claimedByName || null,
     claimed_by_role: app.claimedByRole || null,
     prescription_ref: app.prescriptionRef || null,
