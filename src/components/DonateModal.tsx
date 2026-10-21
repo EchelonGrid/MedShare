@@ -31,8 +31,8 @@ export default function DonateModal({ isOpen, onClose, onSuccess }: DonateModalP
   const [strength, setStrength] = useState('');
   const [quantity, setQuantity] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
-  const [location, setLocation] = useState(currentUser.location || '');
-  const [phone, setPhone] = useState(currentUser.phone || '');
+  const [location, setLocation] = useState(currentUser?.location || '');
+  const [phone, setPhone] = useState(currentUser?.phone || '');
 
   // 3 Mandatory Safety Checkboxes
   const [safety1, setSafety1] = useState(false);
@@ -54,7 +54,7 @@ export default function DonateModal({ isOpen, onClose, onSuccess }: DonateModalP
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !currentUser) return null;
 
   // Compute minDate and daysRemaining safely once mounted
   const minDate = mounted ? (() => {

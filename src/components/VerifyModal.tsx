@@ -29,17 +29,17 @@ export default function VerifyModal({
 }: VerifyModalProps) {
   const { currentUser, verifyCurrentUser, verifyNotice } = useMedShare();
 
-  const [orgName, setOrgName] = useState(currentUser.organizationName || '');
-  const [regOrNid, setRegOrNid] = useState(currentUser.registrationOrNid || '');
-  const [fullName, setFullName] = useState(currentUser.name || '');
-  const [phone, setPhone] = useState(currentUser.phone || '');
-  const [location, setLocation] = useState(currentUser.location || '');
+  const [orgName, setOrgName] = useState(currentUser?.organizationName || '');
+  const [regOrNid, setRegOrNid] = useState(currentUser?.registrationOrNid || '');
+  const [fullName, setFullName] = useState(currentUser?.name || '');
+  const [phone, setPhone] = useState(currentUser?.phone || '');
+  const [location, setLocation] = useState(currentUser?.location || '');
   const [confirmed, setConfirmed] = useState(false);
   const [touched, setTouched] = useState(false);
 
   // Sync state whenever the modal opens or currentUser switches
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && currentUser) {
       setOrgName(currentUser.organizationName || '');
       setRegOrNid(currentUser.registrationOrNid || '');
       setFullName(currentUser.name || '');
@@ -63,7 +63,7 @@ export default function VerifyModal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !currentUser) return null;
 
   const displayNotice = notice || verifyNotice;
   const isClinic = currentUser.role === 'clinic_charity';

@@ -7,6 +7,8 @@ export type UrgencyLevel = 'critical' | 'priority' | 'normal';
 export interface UserProfile {
   id: string;
   name: string;
+  email: string;
+  password?: string;
   role: UserRole;
   phone: string;
   location: string;

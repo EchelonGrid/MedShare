@@ -25,11 +25,26 @@ export interface VerificationDetails {
   registrationOrNid?: string;
 }
 
+export interface RegisterData {
+  name: string;
+  email: string;
+  password?: string;
+  role: 'donor' | 'clinic_charity' | 'individual';
+  phone: string;
+  location: string;
+  organizationName?: string;
+  registrationOrNid?: string;
+}
+
 interface MedShareContextType {
   medications: Medication[];
-  currentUser: UserProfile;
+  currentUser: UserProfile | null;
   allUsers: UserProfile[];
   switchUser: (userId: string) => void;
+  login: (email: string, password?: string) => { success: boolean; error?: string };
+  register: (data: RegisterData) => { success: boolean; error?: string };
+  logout: () => void;
+  loginAsDemo: (userId: string) => void;
   addMedication: (data: NewMedicationInput) => Medication;
   claimMedication: (medicationId: string, prescriptionRef?: string) => void;
   markAsCollected: (medicationId: string) => void;
@@ -42,12 +57,19 @@ interface MedShareContextType {
   verifyNotice: string | null;
   openVerifyModal: (notice?: string) => void;
   closeVerifyModal: () => void;
+  isAuthOpen: boolean;
+  authMode: 'login' | 'register';
+  authNotice: string | null;
+  openAuthModal: (mode?: 'login' | 'register', notice?: string) => void;
+  closeAuthModal: () => void;
+  activeMainTab: 'feed' | 'portal';
+  setActiveMainTab: (tab: 'feed' | 'portal') => void;
 }
 
 // In-memory synced state
 let cachedMeds: Medication[] = INITIAL_MEDICATIONS;
 let cachedUsers: UserProfile[] = DEFAULT_USERS;
-let cachedUserId: string = DEFAULT_USERS[0].id;
+let cachedUserId: string | null = DEFAULT_USERS[0].id;
 let isLoaded = false;
 
 const listeners = new Set<() => void>();
@@ -79,11 +101,15 @@ function loadInitialData() {
     }
 
     const storedCurrentId = localStorage.getItem(CURRENT_USER_ID_KEY);
-    if (storedCurrentId && cachedUsers.some((u) => u.id === storedCurrentId)) {
+    if (storedCurrentId === 'guest') {
+      cachedUserId = null;
+    } else if (storedCurrentId && cachedUsers.some((u) => u.id === storedCurrentId)) {
       cachedUserId = storedCurrentId;
+    } else if (storedCurrentId === null) {
+      cachedUserId = DEFAULT_USERS[0].id;
+      localStorage.setItem(CURRENT_USER_ID_KEY, DEFAULT_USERS[0].id);
     } else {
-      cachedUserId = cachedUsers[0]?.id || DEFAULT_USERS[0].id;
-      localStorage.setItem(CURRENT_USER_ID_KEY, cachedUserId);
+      cachedUserId = DEFAULT_USERS[0]?.id || null;
     }
 
     const storedMeds = localStorage.getItem(MEDS_STORAGE_KEY);
@@ -157,8 +183,91 @@ const switchUser = (userId: string) => {
   }
 };
 
+const login = (email: string, password?: string): { success: boolean; error?: string } => {
+  loadInitialData();
+  const user = cachedUsers.find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
+  if (!user) {
+    return { success: false, error: 'No account found with this email address.' };
+  }
+  if (password && user.password && user.password !== password) {
+    return { success: false, error: 'Incorrect password. Please try again.' };
+  }
+  cachedUserId = user.id;
+  try {
+    localStorage.setItem(CURRENT_USER_ID_KEY, user.id);
+  } catch (err) {
+    console.error('Error saving current user in localStorage:', err);
+  }
+  notify();
+  return { success: true };
+};
+
+const register = (data: RegisterData): { success: boolean; error?: string } => {
+  loadInitialData();
+  const existing = cachedUsers.find(
+    (u) => u.email.toLowerCase() === data.email.trim().toLowerCase()
+  );
+  if (existing) {
+    return { success: false, error: 'An account with this email address already exists.' };
+  }
+
+  const isVerifiedInitial =
+    data.role === 'donor'
+      ? true
+      : Boolean(data.registrationOrNid && data.registrationOrNid.trim().length > 0);
+
+  const newUser: UserProfile = {
+    id: `user-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: data.name.trim(),
+    email: data.email.toLowerCase().trim(),
+    password: data.password || 'password123',
+    role: data.role,
+    phone: data.phone.trim(),
+    location: data.location.trim(),
+    organizationName: data.organizationName?.trim(),
+    registrationOrNid: data.registrationOrNid?.trim(),
+    isVerified: isVerifiedInitial,
+  };
+
+  cachedUsers = [newUser, ...cachedUsers];
+  cachedUserId = newUser.id;
+
+  try {
+    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(cachedUsers));
+    localStorage.setItem(CURRENT_USER_ID_KEY, newUser.id);
+  } catch (err) {
+    console.error('Error saving new user in localStorage:', err);
+  }
+  notify();
+  return { success: true };
+};
+
+const logout = () => {
+  cachedUserId = null;
+  try {
+    localStorage.setItem(CURRENT_USER_ID_KEY, 'guest');
+  } catch (err) {
+    console.error('Error saving logout state:', err);
+  }
+  notify();
+};
+
+const loginAsDemo = (userId: string) => {
+  loadInitialData();
+  const user = cachedUsers.find((u) => u.id === userId);
+  if (user) {
+    cachedUserId = user.id;
+    try {
+      localStorage.setItem(CURRENT_USER_ID_KEY, user.id);
+    } catch (err) {
+      console.error('Error saving demo user:', err);
+    }
+    notify();
+  }
+};
+
 const addMedication = (data: NewMedicationInput): Medication => {
-  const currentUser = cachedUsers.find((u) => u.id === cachedUserId) || cachedUsers[0];
+  const currentUser = cachedUsers.find((u) => u.id === cachedUserId) || null;
   const newMed: Medication = {
     id: `med-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     medicineName: data.medicineName.trim(),
@@ -166,9 +275,9 @@ const addMedication = (data: NewMedicationInput): Medication => {
     quantity: data.quantity.trim(),
     expiryDate: data.expiryDate,
     location: data.location.trim(),
-    donorId: currentUser.id,
-    donorName: currentUser.name,
-    donorPhone: data.donorPhone?.trim() || currentUser.phone,
+    donorId: currentUser?.id || 'donor-anon',
+    donorName: currentUser?.name || 'Community Donor',
+    donorPhone: data.donorPhone?.trim() || currentUser?.phone || '+1 (555) 000-0000',
     status: 'available',
     createdAt: new Date().toISOString(),
   };
@@ -184,15 +293,15 @@ const addMedication = (data: NewMedicationInput): Medication => {
 };
 
 const claimMedication = (medicationId: string, prescriptionRef?: string) => {
-  const currentUser = cachedUsers.find((u) => u.id === cachedUserId) || cachedUsers[0];
+  const currentUser = cachedUsers.find((u) => u.id === cachedUserId) || null;
   cachedMeds = cachedMeds.map((med) => {
     if (med.id === medicationId) {
       return {
         ...med,
         status: 'claimed' as const,
-        claimedById: currentUser.id,
-        claimedByName: currentUser.name,
-        claimedByRole: currentUser.role,
+        claimedById: currentUser?.id,
+        claimedByName: currentUser?.name || 'Verified Collector',
+        claimedByRole: currentUser?.role || 'individual',
         prescriptionRef: prescriptionRef || med.prescriptionRef,
       };
     }
@@ -272,6 +381,12 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
   const [isVerifyOpen, setIsVerifyOpen] = useState(false);
   const [verifyNotice, setVerifyNotice] = useState<string | null>(null);
 
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [authNotice, setAuthNotice] = useState<string | null>(null);
+
+  const [activeMainTab, setActiveMainTab] = useState<'feed' | 'portal'>('feed');
+
   const medications = useSyncExternalStore(subscribe, getMedsSnapshot, getMedsServerSnapshot);
   const allUsers = useSyncExternalStore(subscribe, getUsersSnapshot, getUsersServerSnapshot);
   const currentUserId = useSyncExternalStore(
@@ -280,8 +395,9 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
     getCurrentUserIdServerSnapshot
   );
 
-  const currentUser =
-    allUsers.find((u) => u.id === currentUserId) || allUsers[0] || DEFAULT_USERS[0];
+  const currentUser = currentUserId
+    ? allUsers.find((u) => u.id === currentUserId) || null
+    : null;
 
   const openDonateModal = () => setIsDonateOpen(true);
   const closeDonateModal = () => setIsDonateOpen(false);
@@ -295,6 +411,16 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
     setVerifyNotice(null);
   };
 
+  const openAuthModal = (mode: 'login' | 'register' = 'login', notice?: string) => {
+    setAuthMode(mode);
+    setAuthNotice(notice || null);
+    setIsAuthOpen(true);
+  };
+  const closeAuthModal = () => {
+    setIsAuthOpen(false);
+    setAuthNotice(null);
+  };
+
   return (
     <MedShareContext.Provider
       value={{
@@ -302,6 +428,10 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
         currentUser,
         allUsers,
         switchUser,
+        login,
+        register,
+        logout,
+        loginAsDemo,
         addMedication,
         claimMedication,
         markAsCollected,
@@ -314,6 +444,13 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
         verifyNotice,
         openVerifyModal,
         closeVerifyModal,
+        isAuthOpen,
+        authMode,
+        authNotice,
+        openAuthModal,
+        closeAuthModal,
+        activeMainTab,
+        setActiveMainTab,
       }}
     >
       {children}

@@ -37,10 +37,10 @@ export default function MedicationCard({ medication, onClaimClick }: MedicationC
   const daysRemaining = mounted ? getDaysUntilExpiry(medication.expiryDate) : null;
   const urgency = daysRemaining !== null ? getUrgencyLevel(daysRemaining) : 'normal';
 
-  const isDonorOfThis = currentUser.id === medication.donorId;
-  const isClaimerOfThis = currentUser.id === medication.claimedById;
+  const isDonorOfThis = currentUser ? currentUser.id === medication.donorId : false;
+  const isClaimerOfThis = currentUser ? currentUser.id === medication.claimedById : false;
   const canViewPickupContact = isDonorOfThis || isClaimerOfThis;
-  const isDonorRole = currentUser.role === 'donor';
+  const isDonorRole = currentUser ? currentUser.role === 'donor' : false;
 
   // Urgency badge & card border styling
   let urgencyBadge = (

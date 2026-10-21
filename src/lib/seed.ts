@@ -46,6 +46,8 @@ export const DEFAULT_USERS: UserProfile[] = [
   {
     id: 'user-donor-1',
     name: 'Dr. Sarah Jenkins',
+    email: 'sarah@medshare.org',
+    password: 'password123',
     role: 'donor',
     phone: '+1 (555) 234-5678',
     location: 'North Hill, Sector 7',
@@ -54,6 +56,8 @@ export const DEFAULT_USERS: UserProfile[] = [
   {
     id: 'user-clinic-1',
     name: 'Nurse Michael Chang (Rural Hope)',
+    email: 'michael@ruralhope.org',
+    password: 'password123',
     role: 'clinic_charity',
     phone: '+1 (555) 876-5432',
     location: 'Valley Plains Community Center',
@@ -64,6 +68,8 @@ export const DEFAULT_USERS: UserProfile[] = [
   {
     id: 'user-individual-1',
     name: 'Rahim Chowdhury',
+    email: 'rahim@gmail.com',
+    password: 'password123',
     role: 'individual',
     phone: '+1 (555) 432-1098',
     location: 'East Lake View, Block B',

@@ -8,6 +8,8 @@ import MedicationFeed, { FilterTab } from '@/components/MedicationFeed';
 import DonateModal from '@/components/DonateModal';
 import VerifyModal from '@/components/VerifyModal';
 import ClaimModal from '@/components/ClaimModal';
+import AuthModal from '@/components/AuthModal';
+import UserPortal from '@/components/UserPortal';
 import { Medication } from '@/types/medshare';
 import {
   Pill,
@@ -20,6 +22,7 @@ import {
   PlusCircle,
   X,
   Info,
+  LayoutDashboard,
 } from 'lucide-react';
 
 export default function HomePage() {
@@ -33,6 +36,13 @@ export default function HomePage() {
     verifyNotice,
     openVerifyModal,
     closeVerifyModal,
+    isAuthOpen,
+    authMode,
+    authNotice,
+    openAuthModal,
+    closeAuthModal,
+    activeMainTab,
+    setActiveMainTab,
   } = useMedShare();
   const mounted = useIsMounted();
   const [notification, setNotification] = useState<string | null>(null);
@@ -51,19 +61,29 @@ export default function HomePage() {
   const collectedCount = medications.filter((m) => m.status === 'collected').length;
 
   const handleDonateClick = () => {
+    if (!currentUser) {
+      openAuthModal('register', 'Please create an account or sign in to list unused medicines for donation.');
+      return;
+    }
     openDonateModal();
   };
 
   const handleClaimClick = (medication: Medication) => {
-    // 1. If currentUser.role === 'donor', prompt them to switch to a Collector profile in top navbar
+    // 1. If not logged in, prompt AuthModal
+    if (!currentUser) {
+      openAuthModal('login', 'Please sign in or create a Collector account to claim medications.');
+      return;
+    }
+
+    // 2. If currentUser.role === 'donor', prompt them to switch or log into a Collector profile
     if (currentUser.role === 'donor') {
       setNotification(
-        'Donors cannot claim medicines. Please switch to a Collector profile (Rural Clinic or Individual Recipient) in the top navbar to claim.'
+        'Donors list medicines for donation. To claim medicines for yourself or a clinic, please log in with or register a Collector account.'
       );
       return;
     }
 
-    // 2. If !currentUser.isVerified, automatically open <VerifyModal /> with required notice
+    // 3. If !currentUser.isVerified, automatically open <VerifyModal /> with required notice
     if (!currentUser.isVerified) {
       openVerifyModal(
         'Verification Required: Please verify your collector account first to claim this medicine.'
@@ -71,13 +91,14 @@ export default function HomePage() {
       return;
     }
 
-    // 3. If currentUser.isVerified is true, open <ClaimModal /> for that specific medication
+    // 4. If currentUser.isVerified is true, open <ClaimModal /> for that specific medication
     setSelectedMedicationForClaim(medication);
   };
 
   const handleClaimSuccess = (msg: string) => {
     setNotification(msg);
-    setActiveFeedTab('claimed_collected');
+    // Switch to portal so user can immediately view unlocked donor contact details and coordinate pickup
+    setActiveMainTab('portal');
   };
 
   const handleVerifySuccess = (msg: string) => {
@@ -176,7 +197,7 @@ export default function HomePage() {
         </section>
 
         {/* Main Content Area */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
           
           {/* Step Preview Toast / Banner */}
           {notification && (
@@ -198,35 +219,104 @@ export default function HomePage() {
             </div>
           )}
 
-          {/* Section Header with Donate Medicine Button */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-                Live Medication Rescue Feed
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                Browse available unexpired medicines sorted first-to-expire. Filter by urgency or nearby location.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3">
+          {/* Dedicated View Navigation: Live Medicine Feed vs Collector & Donor Portal */}
+          <div className="flex items-center justify-between border-b border-slate-200 gap-4">
+            <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto">
               <button
                 type="button"
-                onClick={handleDonateClick}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 active:bg-teal-900 text-white font-semibold text-xs sm:text-sm shadow-sm transition hover:shadow cursor-pointer"
+                onClick={() => setActiveMainTab('feed')}
+                className={`pb-3.5 px-3 text-xs sm:text-sm font-bold flex items-center gap-2 border-b-2 transition cursor-pointer shrink-0 ${
+                  activeMainTab === 'feed'
+                    ? 'border-teal-600 text-teal-900'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
               >
-                <PlusCircle className="w-4 h-4 text-teal-200" />
-                <span>Donate Medicine</span>
+                <Pill className="w-4 h-4" />
+                <span>Live Medicine Feed</span>
+                <span className="text-[11px] px-2 py-0.5 rounded-full font-extrabold bg-slate-100 text-slate-700">
+                  {availableCount}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (!currentUser) {
+                    openAuthModal('login', 'Please sign in or create an account to access the Collector & Donor Portal.');
+                    return;
+                  }
+                  setActiveMainTab('portal');
+                }}
+                className={`pb-3.5 px-3 text-xs sm:text-sm font-bold flex items-center gap-2 border-b-2 transition cursor-pointer shrink-0 ${
+                  activeMainTab === 'portal'
+                    ? 'border-teal-600 text-teal-900'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                <span>Collector &amp; Donor Portal</span>
+                {currentUser && (
+                  <span className="text-[11px] px-2 py-0.5 rounded-full font-extrabold bg-teal-100 text-teal-800">
+                    {currentUser.role === 'donor'
+                      ? medications.filter((m) => m.donorId === currentUser.id).length
+                      : medications.filter((m) => m.claimedById === currentUser.id && m.status === 'claimed').length}
+                  </span>
+                )}
               </button>
             </div>
+
+            {activeMainTab === 'feed' && (
+              <div className="hidden sm:block shrink-0 pb-2">
+                <button
+                  type="button"
+                  onClick={handleDonateClick}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs shadow-sm transition cursor-pointer"
+                >
+                  <PlusCircle className="w-4 h-4 text-teal-200" />
+                  <span>Donate Medicine</span>
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* Live Filterable Feed */}
-          <MedicationFeed
-            onClaimClick={handleClaimClick}
-            activeTab={activeFeedTab}
-            onTabChange={setActiveFeedTab}
-          />
+          {/* VIEW 1: LIVE MEDICINE RESCUE FEED */}
+          {activeMainTab === 'feed' && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+                    Live Medication Rescue Feed
+                  </h2>
+                  <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                    Browse available unexpired medicines sorted first-to-expire (FEFO). Filter by urgency or nearby location.
+                  </p>
+                </div>
+
+                <div className="sm:hidden">
+                  <button
+                    type="button"
+                    onClick={handleDonateClick}
+                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs shadow-sm transition cursor-pointer"
+                  >
+                    <PlusCircle className="w-4 h-4 text-teal-200" />
+                    <span>Donate Medicine</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Live Filterable Feed */}
+              <MedicationFeed
+                onClaimClick={handleClaimClick}
+                activeTab={activeFeedTab}
+                onTabChange={setActiveFeedTab}
+              />
+            </div>
+          )}
+
+          {/* VIEW 2: COLLECTOR & DONOR PORTAL */}
+          {activeMainTab === 'portal' && (
+            <UserPortal onBackToFeed={() => setActiveMainTab('feed')} />
+          )}
 
         </section>
       </div>
@@ -258,8 +348,19 @@ export default function HomePage() {
           onClose={() => setSelectedMedicationForClaim(null)}
           onSuccess={handleClaimSuccess}
           onViewClaimed={() => {
-            setActiveFeedTab('claimed_collected');
+            setActiveMainTab('portal');
           }}
+        />
+      )}
+
+      {/* Authentication Modal */}
+      {isAuthOpen && (
+        <AuthModal
+          isOpen={isAuthOpen}
+          mode={authMode}
+          notice={authNotice}
+          onClose={closeAuthModal}
+          onSuccess={(msg) => setNotification(msg)}
         />
       )}
 
