@@ -12,15 +12,27 @@ export type FilterTab = 'available' | 'expiring_soon' | 'urgent' | 'claimed_coll
 
 interface MedicationFeedProps {
   onClaimClick?: (medication: Medication) => void;
+  activeTab?: FilterTab;
+  onTabChange?: (tab: FilterTab) => void;
 }
 
-export default function MedicationFeed({ onClaimClick }: MedicationFeedProps) {
+export default function MedicationFeed({
+  onClaimClick,
+  activeTab: controlledTab,
+  onTabChange,
+}: MedicationFeedProps) {
   const { medications } = useMedShare();
   const mounted = useIsMounted();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLocation, setSelectedLocation] = useState('All Locations');
-  const [activeTab, setActiveTab] = useState<FilterTab>('available');
+  const [internalTab, setInternalTab] = useState<FilterTab>('available');
+
+  const activeTab = controlledTab !== undefined ? controlledTab : internalTab;
+  const setActiveTab = (tab: FilterTab) => {
+    setInternalTab(tab);
+    onTabChange?.(tab);
+  };
 
   // Dynamic list of unique locations
   const locations = useMemo(() => {

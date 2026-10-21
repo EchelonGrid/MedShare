@@ -33,7 +33,14 @@ const ROLE_LABELS: Record<UserRole, { label: string; icon: React.ReactNode; badg
 };
 
 export default function Navbar() {
-  const { currentUser, allUsers, switchUser, resetDemoData, openDonateModal } = useMedShare();
+  const {
+    currentUser,
+    allUsers,
+    switchUser,
+    resetDemoData,
+    openDonateModal,
+    openVerifyModal,
+  } = useMedShare();
   const currentRoleMeta = ROLE_LABELS[currentUser.role] || ROLE_LABELS.donor;
 
   return (
@@ -50,7 +57,7 @@ export default function Navbar() {
               <div className="flex items-center gap-2">
                 <span className="font-extrabold text-xl tracking-tight text-white">MedShare</span>
                 <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded bg-teal-800/80 border border-teal-500/40 text-teal-200">
-                  Step 3 Live
+                  Step 4 Complete
                 </span>
               </div>
               <p className="text-xs text-teal-100/90 font-medium">
@@ -92,17 +99,28 @@ export default function Navbar() {
                 <span>{currentRoleMeta.label}</span>
               </span>
 
-              {/* Verification Badge */}
+              {/* Verification Badge & Action */}
               {currentUser.isVerified ? (
                 <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-400/50">
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-300" />
                   <span>Verified</span>
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-200 border border-amber-400/50">
-                  <ShieldAlert className="w-3.5 h-3.5 text-amber-300" />
-                  <span>Unverified</span>
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-200 border border-amber-400/50">
+                    <ShieldAlert className="w-3.5 h-3.5 text-amber-300" />
+                    <span>Unverified</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => openVerifyModal()}
+                    className="inline-flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-md bg-amber-400 hover:bg-amber-300 active:bg-amber-500 text-slate-900 shadow-sm transition cursor-pointer"
+                    title="Verify collector account to unlock claiming"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5 text-slate-900" />
+                    <span>Verify Account</span>
+                  </button>
+                </div>
               )}
             </div>
 

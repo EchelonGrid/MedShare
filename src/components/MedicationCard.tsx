@@ -171,9 +171,16 @@ export default function MedicationCard({ medication, onClaimClick }: MedicationC
 
             {/* Revealed Pickup Contact */}
             {canViewPickupContact ? (
-              <div className="flex items-center gap-1.5 text-teal-800 font-medium pt-1 border-t border-sky-200/60">
-                <Phone className="w-3.5 h-3.5 text-teal-600 shrink-0" />
-                <span>Donor Contact for Pickup: <strong className="font-semibold">{medication.donorPhone}</strong></span>
+              <div className="space-y-1 pt-1 border-t border-sky-200/60">
+                <div className="flex items-center gap-1.5 text-teal-800 font-medium">
+                  <Phone className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                  <span>Donor Contact for Pickup: <strong className="font-semibold">{medication.donorPhone}</strong></span>
+                </div>
+                {medication.prescriptionRef && (
+                  <div className="text-[11px] text-slate-600 pl-5">
+                    <span className="font-medium text-slate-700">Ref:</span> {medication.prescriptionRef}
+                  </div>
+                )}
               </div>
             ) : (
               <div className="flex items-center gap-1 text-[11px] text-slate-500 pt-1 border-t border-sky-200/60">
@@ -206,13 +213,14 @@ export default function MedicationCard({ medication, onClaimClick }: MedicationC
               <div className="space-y-1.5">
                 <button
                   type="button"
-                  disabled
-                  className="w-full py-2 px-3 text-xs font-semibold rounded-xl bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200"
+                  onClick={() => onClaimClick?.(medication)}
+                  className="w-full py-2.5 px-4 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 transition border border-slate-300 flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                  title="Click to learn how to claim as a collector"
                 >
-                  Claim Medicine
+                  <span>Claim Medicine (Collectors Only)</span>
                 </button>
                 <p className="text-[11px] text-center text-slate-500 italic">
-                  Switch to a Collector profile (Clinic/Charity or Individual) to claim
+                  Switch to a Collector profile in top navbar to claim
                 </p>
               </div>
             ) : (

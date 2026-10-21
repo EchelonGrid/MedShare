@@ -17,6 +17,14 @@ export interface NewMedicationInput {
   donorPhone?: string;
 }
 
+export interface VerificationDetails {
+  name?: string;
+  phone?: string;
+  location?: string;
+  organizationName?: string;
+  registrationOrNid?: string;
+}
+
 interface MedShareContextType {
   medications: Medication[];
   currentUser: UserProfile;
@@ -25,11 +33,15 @@ interface MedShareContextType {
   addMedication: (data: NewMedicationInput) => Medication;
   claimMedication: (medicationId: string, prescriptionRef?: string) => void;
   markAsCollected: (medicationId: string) => void;
-  verifyCurrentUser: () => void;
+  verifyCurrentUser: (details?: VerificationDetails) => void;
   resetDemoData: () => void;
   isDonateOpen: boolean;
   openDonateModal: () => void;
   closeDonateModal: () => void;
+  isVerifyOpen: boolean;
+  verifyNotice: string | null;
+  openVerifyModal: (notice?: string) => void;
+  closeVerifyModal: () => void;
 }
 
 // In-memory synced state
@@ -180,10 +192,18 @@ const markAsCollected = (medicationId: string) => {
   notify();
 };
 
-const verifyCurrentUser = () => {
+const verifyCurrentUser = (details?: VerificationDetails) => {
   cachedUsers = cachedUsers.map((user) => {
     if (user.id === cachedUserId) {
-      return { ...user, isVerified: true };
+      return {
+        ...user,
+        ...(details?.name !== undefined && { name: details.name.trim() }),
+        ...(details?.phone !== undefined && { phone: details.phone.trim() }),
+        ...(details?.location !== undefined && { location: details.location.trim() }),
+        ...(details?.organizationName !== undefined && { organizationName: details.organizationName.trim() }),
+        ...(details?.registrationOrNid !== undefined && { registrationOrNid: details.registrationOrNid.trim() }),
+        isVerified: true,
+      };
     }
     return user;
   });
@@ -215,6 +235,8 @@ const MedShareContext = createContext<MedShareContextType | undefined>(undefined
 
 export function MedShareProvider({ children }: { children: React.ReactNode }) {
   const [isDonateOpen, setIsDonateOpen] = useState(false);
+  const [isVerifyOpen, setIsVerifyOpen] = useState(false);
+  const [verifyNotice, setVerifyNotice] = useState<string | null>(null);
 
   const medications = useSyncExternalStore(subscribe, getMedsSnapshot, getMedsServerSnapshot);
   const allUsers = useSyncExternalStore(subscribe, getUsersSnapshot, getUsersServerSnapshot);
@@ -229,6 +251,15 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
 
   const openDonateModal = () => setIsDonateOpen(true);
   const closeDonateModal = () => setIsDonateOpen(false);
+
+  const openVerifyModal = (notice?: string) => {
+    setVerifyNotice(notice || null);
+    setIsVerifyOpen(true);
+  };
+  const closeVerifyModal = () => {
+    setIsVerifyOpen(false);
+    setVerifyNotice(null);
+  };
 
   return (
     <MedShareContext.Provider
@@ -245,6 +276,10 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
         isDonateOpen,
         openDonateModal,
         closeDonateModal,
+        isVerifyOpen,
+        verifyNotice,
+        openVerifyModal,
+        closeVerifyModal,
       }}
     >
       {children}
