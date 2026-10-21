@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Medication } from '@/types/medshare';
 import { useMedShare } from '@/context/MedShareContext';
 import { getDaysUntilExpiry, getUrgencyLevel, parseQuantity } from '@/lib/seed';
@@ -15,7 +15,6 @@ import {
   Phone,
   Package,
   CheckCircle2,
-  AlertTriangle,
   Building2,
   FileText,
   Copy,
@@ -82,6 +81,14 @@ export default function ClaimModal({
     }
   }, [isOpen, medication]);
 
+  const handleModalClose = useCallback(() => {
+    if (isSubmitted && medication) {
+      onSuccess(`"${medication.medicineName}" claimed! Coordinate pickup with the donor.`);
+      onViewClaimed?.(medication.id);
+    }
+    onClose();
+  }, [isSubmitted, medication, onSuccess, onViewClaimed, onClose]);
+
   // Close on Escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -93,7 +100,7 @@ export default function ClaimModal({
       window.addEventListener('keydown', handleKeyDown);
     }
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen]);
+  }, [isOpen, handleModalClose]);
 
   if (!isOpen || !medication || !currentUser) return null;
 
@@ -125,14 +132,6 @@ export default function ClaimModal({
       setAssignedPin(res.pin);
     }
     setIsSubmitted(true);
-  };
-
-  const handleModalClose = () => {
-    if (isSubmitted) {
-      onSuccess(`"${medication.medicineName}" claimed! Coordinate pickup with the donor.`);
-      onViewClaimed?.(medication.id);
-    }
-    onClose();
   };
 
   const handleCopyPhone = () => {
@@ -599,19 +598,28 @@ export default function ClaimModal({
             </div>
 
             {/* Bottom Actions */}
-            <div className="pt-2 flex items-center justify-between gap-3 border-t border-slate-100">
+            <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-slate-100">
               <span className="text-xs text-slate-500">
-                Card moved to <strong>"Claimed &amp; Collected"</strong> tab
+                Card updated on <strong>&quot;Claimed &amp; Collected&quot;</strong> feed
               </span>
 
-              <button
-                type="button"
-                onClick={handleDoneAndSwitch}
-                className="px-5 py-2.5 text-xs sm:text-sm font-bold rounded-xl bg-teal-700 hover:bg-teal-800 active:bg-teal-900 text-white shadow-md hover:shadow transition flex items-center gap-2 cursor-pointer"
-              >
-                <span>Done &amp; View in Feed</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2 self-end sm:self-auto">
+                <button
+                  type="button"
+                  onClick={handleModalClose}
+                  className="px-3.5 py-2 text-xs font-semibold rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer"
+                >
+                  Stay on Feed
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDoneAndSwitch}
+                  className="px-4 py-2 text-xs sm:text-sm font-bold rounded-xl bg-teal-700 hover:bg-teal-800 active:bg-teal-900 text-white shadow-md hover:shadow transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>Go to My Portal</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
         )}

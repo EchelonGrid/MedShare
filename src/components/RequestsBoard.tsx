@@ -32,6 +32,16 @@ interface RequestsBoardProps {
   onFulfillClick: (request: MedicineRequest) => void;
 }
 
+function formatTimeAgo(isoDate: string): string {
+  const diffMs = Date.now() - new Date(isoDate).getTime();
+  const hours = Math.floor(diffMs / (1000 * 60 * 60));
+  if (hours < 1) return 'Just now';
+  if (hours === 1) return '1 hour ago';
+  if (hours < 24) return `${hours} hours ago`;
+  const days = Math.floor(hours / 24);
+  return days === 1 ? '1 day ago' : `${days} days ago`;
+}
+
 export default function RequestsBoard({
   onPostRequestClick,
   onFulfillClick,
@@ -175,16 +185,6 @@ export default function RequestsBoard({
     selectedLocation !== 'All Locations' ||
     selectedCategory !== 'All Categories' ||
     activeTab !== 'all_open';
-
-  const formatTimeAgo = (isoDate: string) => {
-    const diffMs = Date.now() - new Date(isoDate).getTime();
-    const hours = Math.floor(diffMs / (1000 * 60 * 60));
-    if (hours < 1) return 'Just now';
-    if (hours === 1) return '1 hour ago';
-    if (hours < 24) return `${hours} hours ago`;
-    const days = Math.floor(hours / 24);
-    return days === 1 ? '1 day ago' : `${days} days ago`;
-  };
 
   return (
     <div className="space-y-6">

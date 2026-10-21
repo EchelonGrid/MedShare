@@ -32,7 +32,6 @@ import {
 export default function HomePage() {
   const {
     medications,
-    requests,
     openRequestsCount,
     currentUser,
     toasts,
@@ -339,7 +338,11 @@ export default function HomePage() {
                   <span className="text-[11px] px-2 py-0.5 rounded-full font-extrabold bg-teal-100 text-teal-800">
                     {currentUser.role === 'donor'
                       ? medications.filter((m) => m.donorId === currentUser.id).length
-                      : medications.filter((m) => m.claimedById === currentUser.id && m.status === 'claimed').length}
+                      : medications.filter(
+                          (m) =>
+                            (m.claimedById === currentUser.id && m.status === 'claimed') ||
+                            (m.claims || []).some((c) => c.claimerId === currentUser.id && c.status === 'claimed')
+                        ).length}
                   </span>
                 )}
               </button>

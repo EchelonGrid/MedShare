@@ -5,7 +5,7 @@ import { parseQuantity } from '@/lib/seed';
  * Escapes a cell value for standard CSV compatibility (RFC 4180).
  * Handles quotes, commas, newlines, and nulls.
  */
-function escapeCSV(val: any): string {
+function escapeCSV(val: unknown): string {
   if (val === null || val === undefined) return '""';
   const str = String(val).replace(/\r\n/g, ' ').replace(/[\r\n]/g, ' ');
   // If string contains comma, quote, or semicolon, wrap in quotes and escape internal quotes

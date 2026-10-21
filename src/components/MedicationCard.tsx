@@ -20,6 +20,7 @@ import {
   Lock,
   Sparkles,
   Package,
+  KeyRound,
 } from 'lucide-react';
 
 interface MedicationCardProps {
@@ -41,7 +42,7 @@ export default function MedicationCard({
   searchedTerm,
   isGenericMatch,
 }: MedicationCardProps) {
-  const { currentUser, markAsCollected, actionLoading } = useMedShare();
+  const { currentUser, setActiveMainTab, actionLoading } = useMedShare();
   const mounted = useIsMounted();
 
   const daysRemaining = mounted ? getDaysUntilExpiry(medication.expiryDate) : null;
@@ -306,7 +307,12 @@ export default function MedicationCard({
       <div className="mt-5 pt-3.5 border-t border-slate-100">
         {medication.status === 'available' && (
           <div>
-            {isDonorRole ? (
+            {daysRemaining !== null && daysRemaining <= 0 ? (
+              <div className="text-center py-2 px-3 text-xs font-semibold rounded-xl bg-slate-100 text-slate-500 border border-slate-200 flex items-center justify-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 text-slate-400" />
+                <span>Expired ({medication.expiryDate}) • Safe Disposal Required</span>
+              </div>
+            ) : isDonorRole ? (
               <div className="space-y-1.5">
                 <button
                   type="button"
@@ -333,19 +339,40 @@ export default function MedicationCard({
         )}
 
         {medication.status === 'claimed' && (
-          <button
-            type="button"
-            onClick={() => markAsCollected(medication.id)}
-            className="w-full py-2 px-3 text-xs font-semibold rounded-xl bg-sky-600 hover:bg-sky-700 active:bg-sky-800 text-white transition shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
-          >
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>Mark as Collected</span>
-          </button>
+          <div>
+            {isDonorOfThis ? (
+              <button
+                type="button"
+                onClick={() => setActiveMainTab('portal')}
+                className="w-full py-2 px-3 text-xs font-bold rounded-xl bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-slate-950 transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                title="Go to Donor Portal to verify collector PIN"
+              >
+                <KeyRound className="w-3.5 h-3.5" />
+                <span>Verify Collector PIN in My Portal</span>
+              </button>
+            ) : isClaimerOfThis ? (
+              <div className="bg-sky-50 border border-sky-200 rounded-xl p-2.5 text-center space-y-1">
+                <div className="text-xs font-bold text-sky-950 flex items-center justify-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-sky-700" />
+                  <span>Reserved for You</span>
+                </div>
+                <p className="text-[11px] text-sky-800">
+                  Provide your 4-digit PIN <strong className="font-mono text-amber-950 bg-amber-100 px-1 py-0.5 rounded border border-amber-300">{medication.handoverPin || '4829'}</strong> to donor upon pickup.
+                </p>
+              </div>
+            ) : (
+              <div className="text-center py-2 px-3 text-xs font-semibold rounded-xl bg-slate-100 text-slate-600 border border-slate-200 flex items-center justify-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-slate-500" />
+                <span>Claimed • In Handover Coordination</span>
+              </div>
+            )}
+          </div>
         )}
 
         {medication.status === 'collected' && (
-          <div className="text-center py-1 text-xs text-emerald-700 font-medium">
-            Handover completed safely
+          <div className="text-center py-1.5 text-xs text-emerald-800 font-semibold bg-emerald-50 rounded-xl border border-emerald-200 flex items-center justify-center gap-1.5">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Handover Verified &amp; Completed</span>
           </div>
         )}
       </div>

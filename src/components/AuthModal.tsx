@@ -17,7 +17,6 @@ import {
   AlertCircle,
   CheckCircle2,
   ArrowRight,
-  ShieldCheck,
   Sparkles,
 } from 'lucide-react';
 

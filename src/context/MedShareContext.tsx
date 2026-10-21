@@ -44,6 +44,49 @@ const USERS_STORAGE_KEY = 'medshare_v2_users';
 const CURRENT_USER_ID_KEY = 'medshare_v2_current_user_id';
 const REQUESTS_STORAGE_KEY = 'medshare_prod_requests_v1';
 
+/**
+ * Intelligently reconciles incoming Supabase cloud rows with local state.
+ * Preserves user-created donations, partial claims, handover PINs, and donor ID associations.
+ */
+function reconcileMedsWithCloud(cloudData: DbMedication[], localMeds: Medication[]): Medication[] {
+  const matchedLocalIds = new Set<string>();
+
+  const reconciledCloud = cloudData.map((dbRow) => {
+    // Match by exact ID or by title + location
+    const localMatch = localMeds.find(
+      (m) =>
+        m.id === dbRow.id ||
+        (m.medicineName.toLowerCase() === dbRow.medicine_name.toLowerCase() &&
+          m.location.toLowerCase() === dbRow.location.toLowerCase())
+    );
+
+    if (localMatch) {
+      matchedLocalIds.add(localMatch.id);
+    }
+
+    return mapDbMedicationToApp(dbRow, localMatch);
+  });
+
+  // Retain any user-donated or locally seeded medications not present in the cloud database
+  const localOnly = localMeds.filter((m) => {
+    if (matchedLocalIds.has(m.id)) return false;
+    const existsInCloud = cloudData.some(
+      (c) =>
+        c.id === m.id ||
+        (c.medicine_name.toLowerCase() === m.medicineName.toLowerCase() &&
+          c.location.toLowerCase() === m.location.toLowerCase())
+    );
+    return !existsInCloud;
+  });
+
+  return [...reconciledCloud, ...localOnly].sort((a, b) => {
+    const timeA = new Date(a.expiryDate).getTime();
+    const timeB = new Date(b.expiryDate).getTime();
+    if (timeA !== timeB) return timeA - timeB;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+}
+
 export interface NewMedicationInput {
   medicineName: string;
   genericName?: string;
@@ -319,9 +362,11 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
             .order('expiry_date', { ascending: true });
 
           if (!error && data && data.length > 0) {
-            const mapped = data.map((d: DbMedication) => mapDbMedicationToApp(d));
-            setMedications(mapped);
-            saveMedsToLocal(mapped);
+            setMedications((prev) => {
+              const reconciled = reconcileMedsWithCloud(data, prev.length > 0 ? prev : initialLocalMeds);
+              saveMedsToLocal(reconciled);
+              return reconciled;
+            });
             setIsDbConnected(true);
           } else {
             setIsDbConnected(true);
@@ -346,9 +391,11 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
                 .select('*')
                 .order('expiry_date', { ascending: true });
               if (data) {
-                const mapped = data.map((d: DbMedication) => mapDbMedicationToApp(d));
-                setMedications(mapped);
-                saveMedsToLocal(mapped);
+                setMedications((prev) => {
+                  const reconciled = reconcileMedsWithCloud(data, prev);
+                  saveMedsToLocal(reconciled);
+                  return reconciled;
+                });
               }
             } catch (err) {
               console.warn('Supabase realtime payload error:', err);
@@ -535,32 +582,38 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
         let newUserId = `user-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
         if (isSupabaseConfigured && supabase && data.password) {
-          const { data: authData, error: authErr } = await supabase.auth.signUp({
-            email: cleanEmail,
-            password: data.password,
-            options: {
-              data: {
+          try {
+            const { data: authData, error: authErr } = await supabase.auth.signUp({
+              email: cleanEmail,
+              password: data.password,
+              options: {
+                data: {
+                  name: data.name.trim(),
+                  role: data.role,
+                  phone: data.phone.trim(),
+                  location: data.location.trim(),
+                },
+              },
+            });
+
+            if (!authErr && authData.user) {
+              newUserId = authData.user.id;
+              await supabase.from('profiles').upsert({
+                id: newUserId,
                 name: data.name.trim(),
+                email: cleanEmail,
                 role: data.role,
                 phone: data.phone.trim(),
                 location: data.location.trim(),
-              },
-            },
-          });
-
-          if (!authErr && authData.user) {
-            newUserId = authData.user.id;
-            await supabase.from('profiles').upsert({
-              id: newUserId,
-              name: data.name.trim(),
-              email: cleanEmail,
-              role: data.role,
-              phone: data.phone.trim(),
-              location: data.location.trim(),
-              organization_name: data.organizationName?.trim() || null,
-              registration_or_nid: data.registrationOrNid?.trim() || null,
-              verification_status: initialStatus,
-            });
+                organization_name: data.organizationName?.trim() || null,
+                registration_or_nid: data.registrationOrNid?.trim() || null,
+                verification_status: initialStatus,
+              });
+            } else if (authErr) {
+              console.warn('Supabase auth signup notice (fallback to local account):', authErr.message);
+            }
+          } catch (e: any) {
+            console.warn('Supabase signup exception (fallback to local account):', e);
           }
         }
 
@@ -711,6 +764,7 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
 
       let feedbackToastMsg = `Medicine claimed! Your 4-Digit Handover PIN is ${pin}. Pick up within 48 hours.`;
       let feedbackToastTitle = 'Claim Successful';
+      let isFullClaimDetermined = true;
 
       setMedications((prev) => {
         const updated = prev.map((med) => {
@@ -727,6 +781,7 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
             );
             const newRemaining = Math.max(0, currentRemaining - amountToClaim);
             const isFullClaim = newRemaining <= 0;
+            isFullClaimDetermined = isFullClaim;
 
             const newClaim: BatchClaim = {
               id: `claim-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
@@ -775,17 +830,19 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
 
       if (isSupabaseConfigured && supabase) {
         try {
-          await supabase
-            .from('medications')
-            .update({
-              status: 'claimed',
-              claimed_by_id: claimer?.id || null,
-              claimed_by_name: claimer?.name || 'Verified Collector',
-              claimed_by_role: claimer?.role || 'individual',
-              prescription_ref: prescriptionRef || null,
-              claimed_at: claimedAt,
-            })
-            .eq('id', medicationId);
+          if (isFullClaimDetermined) {
+            await supabase
+              .from('medications')
+              .update({
+                status: 'claimed',
+                claimed_by_id: claimer?.id || null,
+                claimed_by_name: claimer?.name || 'Verified Collector',
+                claimed_by_role: claimer?.role || 'individual',
+                prescription_ref: prescriptionRef || null,
+                claimed_at: claimedAt,
+              })
+              .eq('id', medicationId);
+          }
         } catch (err) {
           console.warn('Supabase claim update error; maintained local state:', err);
         }

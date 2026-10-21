@@ -22,7 +22,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 
-export type FilterTab = 'available' | 'expiring_soon' | 'urgent' | 'claimed_collected';
+export type FilterTab = 'available' | 'expiring_soon' | 'urgent' | 'claimed_collected' | 'expired';
 
 interface MedicationFeedProps {
   onClaimClick?: (medication: Medication) => void;
@@ -70,6 +70,7 @@ export default function MedicationFeed({
     let soon = 0;
     let urg = 0;
     let claimedOrDone = 0;
+    let exp = 0;
 
     medications.forEach((m) => {
       if (m.status === 'claimed' || m.status === 'collected') {
@@ -83,6 +84,8 @@ export default function MedicationFeed({
           avail += 1;
           if (days <= 60) soon += 1;
           if (days <= 30) urg += 1;
+        } else {
+          exp += 1;
         }
       }
     });
@@ -92,6 +95,7 @@ export default function MedicationFeed({
       expiring_soon: soon,
       urgent: urg,
       claimed_collected: claimedOrDone,
+      expired: exp,
     };
   }, [medications, mounted]);
 
@@ -108,6 +112,7 @@ export default function MedicationFeed({
       if (activeTab === 'expiring_soon' && (m.status !== 'available' || days <= 0 || days > 60)) return;
       if (activeTab === 'urgent' && (m.status !== 'available' || days <= 0 || days > 30)) return;
       if (activeTab === 'claimed_collected' && m.status !== 'claimed' && m.status !== 'collected') return;
+      if (activeTab === 'expired' && (m.status !== 'available' || days > 0)) return;
 
       counts['All Categories'] += 1;
       const cat = m.category || inferCategory(m.medicineName, m.genericName);
@@ -136,6 +141,8 @@ export default function MedicationFeed({
           if (med.status !== 'available' || daysRemaining <= 0 || daysRemaining > 30) return false;
         } else if (activeTab === 'claimed_collected') {
           if (med.status !== 'claimed' && med.status !== 'collected') return false;
+        } else if (activeTab === 'expired') {
+          if (med.status !== 'available' || daysRemaining > 0) return false;
         }
 
         // 2. Location filter
@@ -154,12 +161,14 @@ export default function MedicationFeed({
         // 4. Search query filter (matches medicineName, strength, genericName, or equivalent brands)
         if (searchQuery.trim() !== '') {
           const q = searchQuery.toLowerCase().trim();
+          const qCompact = q.replace(/\s+/g, '');
           const medName = med.medicineName.toLowerCase();
           const medGeneric = (med.genericName || '').toLowerCase();
           const medStrength = med.strength.toLowerCase();
+          const medStrengthCompact = medStrength.replace(/\s+/g, '');
 
           const matchesName = medName.includes(q);
-          const matchesStrength = medStrength.includes(q);
+          const matchesStrength = medStrength.includes(q) || medStrengthCompact.includes(qCompact);
           const matchesGeneric = medGeneric.includes(q);
 
           let matchesEquivalent = false;
@@ -339,6 +348,21 @@ export default function MedicationFeed({
                 {tabCounts.claimed_collected}
               </span>
             </button>
+
+            {/* Expired Tab (if any uncollected medications reached expiry) */}
+            {tabCounts.expired > 0 && (
+              <button
+                type="button"
+                onClick={() => setActiveTab('expired')}
+                className={`px-3 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 cursor-pointer ${
+                  activeTab === 'expired'
+                    ? 'bg-slate-700 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                }`}
+              >
+                <span>Expired ({tabCounts.expired})</span>
+              </button>
+            )}
 
           </div>
 

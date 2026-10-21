@@ -125,8 +125,11 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
     }
   };
 
+  const currentUserId = currentUser?.id;
+  const isDonor = currentUser?.role === 'donor';
   const isClinic = currentUser?.role === 'clinic_charity';
   const isIndividual = currentUser?.role === 'individual';
+  const isCollector = isClinic || isIndividual;
 
   const isInlineIdValid = isClinic
     ? validateClinicRegistration(inlineRegId)
@@ -144,6 +147,116 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
       autoApprove: inlineFastTrack,
     });
   };
+
+  // Filtered lists with partial split claim support (hooks must be unconditional)
+  const myClaimedPending = useMemo(() => {
+    if (!currentUserId) return [];
+    const list: {
+      medication: Medication;
+      claimId?: string;
+      claimedQuantity: number;
+      unitName: string;
+      totalBatchQuantity: number;
+      prescriptionRef?: string;
+      isPartial: boolean;
+      handoverPin?: string;
+      claimExpiresAt?: string;
+    }[] = [];
+
+    medications.forEach((med) => {
+      const parsed = parseQuantity(med.quantity);
+      const total = med.totalNumericQuantity ?? parsed.total;
+      const unit = med.unitName || parsed.unit;
+
+      const userClaims = (med.claims || []).filter(
+        (c) => c.claimerId === currentUserId && c.status === 'claimed'
+      );
+
+      if (userClaims.length > 0) {
+        userClaims.forEach((c) => {
+          list.push({
+            medication: med,
+            claimId: c.id,
+            claimedQuantity: c.claimedQuantity,
+            unitName: c.unitName || unit,
+            totalBatchQuantity: total,
+            prescriptionRef: c.prescriptionRef || med.prescriptionRef,
+            isPartial: c.claimedQuantity < total,
+            handoverPin: c.handoverPin || med.handoverPin || '4829',
+            claimExpiresAt: c.claimExpiresAt || med.claimExpiresAt,
+          });
+        });
+      } else if (med.claimedById === currentUserId && med.status === 'claimed') {
+        const claimedQty = med.claimedQuantity ?? total;
+        list.push({
+          medication: med,
+          claimedQuantity: claimedQty,
+          unitName: unit,
+          totalBatchQuantity: total,
+          prescriptionRef: med.prescriptionRef,
+          isPartial: claimedQty < total,
+          handoverPin: med.handoverPin || '4829',
+          claimExpiresAt: med.claimExpiresAt,
+        });
+      }
+    });
+
+    return list;
+  }, [medications, currentUserId]);
+
+  const myCollectionHistory = useMemo(() => {
+    if (!currentUserId) return [];
+    const list: {
+      medication: Medication;
+      claimId?: string;
+      claimedQuantity: number;
+      unitName: string;
+      totalBatchQuantity: number;
+      collectedAt?: string;
+      isPartial: boolean;
+    }[] = [];
+
+    medications.forEach((med) => {
+      const parsed = parseQuantity(med.quantity);
+      const total = med.totalNumericQuantity ?? parsed.total;
+      const unit = med.unitName || parsed.unit;
+
+      const userCollected = (med.claims || []).filter(
+        (c) => c.claimerId === currentUserId && c.status === 'collected'
+      );
+
+      if (userCollected.length > 0) {
+        userCollected.forEach((c) => {
+          list.push({
+            medication: med,
+            claimId: c.id,
+            claimedQuantity: c.claimedQuantity,
+            unitName: c.unitName || unit,
+            totalBatchQuantity: total,
+            collectedAt: c.collectedAt || med.collectedAt,
+            isPartial: c.claimedQuantity < total,
+          });
+        });
+      } else if (med.claimedById === currentUserId && med.status === 'collected') {
+        const claimedQty = med.claimedQuantity ?? total;
+        list.push({
+          medication: med,
+          claimedQuantity: claimedQty,
+          unitName: unit,
+          totalBatchQuantity: total,
+          collectedAt: med.collectedAt,
+          isPartial: claimedQty < total,
+        });
+      }
+    });
+
+    return list;
+  }, [medications, currentUserId]);
+
+  const myDonations = useMemo(() => {
+    if (!currentUserId) return [];
+    return medications.filter((m) => m.donorId === currentUserId);
+  }, [medications, currentUserId]);
 
   // If visitor is logged out
   if (!currentUser) {
@@ -179,114 +292,6 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
       </div>
     );
   }
-
-  const isDonor = currentUser.role === 'donor';
-  const isCollector = isClinic || isIndividual;
-
-  // Filtered lists with partial split claim support
-  const myClaimedPending = useMemo(() => {
-    const list: {
-      medication: Medication;
-      claimId?: string;
-      claimedQuantity: number;
-      unitName: string;
-      totalBatchQuantity: number;
-      prescriptionRef?: string;
-      isPartial: boolean;
-      handoverPin?: string;
-      claimExpiresAt?: string;
-    }[] = [];
-
-    medications.forEach((med) => {
-      const parsed = parseQuantity(med.quantity);
-      const total = med.totalNumericQuantity ?? parsed.total;
-      const unit = med.unitName || parsed.unit;
-
-      const userClaims = (med.claims || []).filter(
-        (c) => c.claimerId === currentUser.id && c.status === 'claimed'
-      );
-
-      if (userClaims.length > 0) {
-        userClaims.forEach((c) => {
-          list.push({
-            medication: med,
-            claimId: c.id,
-            claimedQuantity: c.claimedQuantity,
-            unitName: c.unitName || unit,
-            totalBatchQuantity: total,
-            prescriptionRef: c.prescriptionRef || med.prescriptionRef,
-            isPartial: c.claimedQuantity < total,
-            handoverPin: c.handoverPin || med.handoverPin || '4829',
-            claimExpiresAt: c.claimExpiresAt || med.claimExpiresAt,
-          });
-        });
-      } else if (med.claimedById === currentUser.id && med.status === 'claimed') {
-        const claimedQty = med.claimedQuantity ?? total;
-        list.push({
-          medication: med,
-          claimedQuantity: claimedQty,
-          unitName: unit,
-          totalBatchQuantity: total,
-          prescriptionRef: med.prescriptionRef,
-          isPartial: claimedQty < total,
-          handoverPin: med.handoverPin || '4829',
-          claimExpiresAt: med.claimExpiresAt,
-        });
-      }
-    });
-
-    return list;
-  }, [medications, currentUser.id]);
-
-  const myCollectionHistory = useMemo(() => {
-    const list: {
-      medication: Medication;
-      claimId?: string;
-      claimedQuantity: number;
-      unitName: string;
-      totalBatchQuantity: number;
-      collectedAt?: string;
-      isPartial: boolean;
-    }[] = [];
-
-    medications.forEach((med) => {
-      const parsed = parseQuantity(med.quantity);
-      const total = med.totalNumericQuantity ?? parsed.total;
-      const unit = med.unitName || parsed.unit;
-
-      const userCollected = (med.claims || []).filter(
-        (c) => c.claimerId === currentUser.id && c.status === 'collected'
-      );
-
-      if (userCollected.length > 0) {
-        userCollected.forEach((c) => {
-          list.push({
-            medication: med,
-            claimId: c.id,
-            claimedQuantity: c.claimedQuantity,
-            unitName: c.unitName || unit,
-            totalBatchQuantity: total,
-            collectedAt: c.collectedAt || med.collectedAt,
-            isPartial: c.claimedQuantity < total,
-          });
-        });
-      } else if (med.claimedById === currentUser.id && med.status === 'collected') {
-        const claimedQty = med.claimedQuantity ?? total;
-        list.push({
-          medication: med,
-          claimedQuantity: claimedQty,
-          unitName: unit,
-          totalBatchQuantity: total,
-          collectedAt: med.collectedAt,
-          isPartial: claimedQty < total,
-        });
-      }
-    });
-
-    return list;
-  }, [medications, currentUser.id]);
-
-  const myDonations = medications.filter((m) => m.donorId === currentUser.id);
 
   const handleExportCSV = () => {
     if (!currentUser) return;
@@ -401,7 +406,11 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                 </div>
                 <div className="bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-2.5 text-center">
                   <div className="text-2xl font-extrabold text-emerald-900">
-                    {myDonations.filter((m) => m.status === 'collected').length}
+                    {myDonations.reduce((acc, m) => {
+                      if (m.status === 'collected') return acc + 1;
+                      const collectedClaims = (m.claims || []).filter((c) => c.status === 'collected').length;
+                      return acc + collectedClaims;
+                    }, 0)}
                   </div>
                   <div className="text-[11px] font-semibold text-emerald-700">Handed Over</div>
                 </div>
@@ -771,6 +780,15 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
 
                       {/* Action buttons */}
                       <div className="pt-2 space-y-2">
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-2.5 text-center text-xs text-amber-950">
+                          <p className="font-semibold">
+                            🤝 In-Person Handover Protocol:
+                          </p>
+                          <p className="text-[11px] text-amber-900 mt-0.5">
+                            Show your 4-digit PIN (<strong className="font-mono text-amber-950 font-black">{item.handoverPin || '4829'}</strong>) to the donor. The donor will enter it in their portal to verify and complete the handover.
+                          </p>
+                        </div>
+
                         <button
                           type="button"
                           onClick={() => markAsCollected(med.id, undefined, item.claimId)}
@@ -782,7 +800,7 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                           ) : (
                             <CheckCircle2 className="w-4 h-4" />
                           )}
-                          <span>Confirm Pickup &amp; Mark Collected ({item.claimedQuantity} {item.unitName})</span>
+                          <span>Collector Self-Confirmation ({item.claimedQuantity} {item.unitName})</span>
                         </button>
 
                         <button
