@@ -3,7 +3,7 @@
 import React from 'react';
 import { Medication, UserRole } from '@/types/medshare';
 import { useMedShare } from '@/context/MedShareContext';
-import { getDaysUntilExpiry, getUrgencyLevel, parseQuantity } from '@/lib/seed';
+import { getDaysUntilExpiry, getUrgencyLevel, parseQuantity, getPickupTimeRemaining } from '@/lib/seed';
 import { useIsMounted } from '@/lib/useIsMounted';
 import { inferCategory } from '@/lib/medicine-dictionary';
 import {
@@ -115,11 +115,25 @@ export default function MedicationCard({
     </span>
   );
   if (medication.status === 'claimed') {
+    const pickupHold = getPickupTimeRemaining(medication.claimExpiresAt);
     statusBadge = (
-      <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 border border-sky-200">
-        <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
-        Claimed
-      </span>
+      <div className="flex flex-col sm:flex-row items-end sm:items-center gap-1.5">
+        <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 border border-sky-200">
+          <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
+          Claimed
+        </span>
+        <span
+          className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md ${
+            pickupHold.isExpired
+              ? 'bg-rose-100 text-rose-800 border border-rose-300'
+              : 'bg-amber-100 text-amber-900 border border-amber-300'
+          }`}
+          title="48-hour anti-ghosting pickup window"
+        >
+          <Clock className="w-3 h-3 text-amber-700" />
+          <span>{pickupHold.label}</span>
+        </span>
+      </div>
     );
   } else if (medication.status === 'collected') {
     statusBadge = (
@@ -229,13 +243,36 @@ export default function MedicationCard({
               )}
             </div>
 
+            {/* 48-Hour Pickup Window Countdown */}
+            {(() => {
+              const hold = getPickupTimeRemaining(medication.claimExpiresAt);
+              return (
+                <div
+                  className={`mt-1.5 p-2 rounded-lg text-[11px] font-semibold flex items-center gap-1.5 ${
+                    hold.isExpired
+                      ? 'bg-rose-100/90 text-rose-800 border border-rose-200'
+                      : 'bg-amber-100/80 text-amber-900 border border-amber-200'
+                  }`}
+                >
+                  <Clock className="w-3.5 h-3.5 shrink-0 text-amber-700" />
+                  <span>Pickup Hold: {hold.label} (48h window)</span>
+                </div>
+              );
+            })()}
+
             {/* Revealed Pickup Contact */}
             {canViewPickupContact ? (
-              <div className="space-y-1 pt-1 border-t border-sky-200/60">
+              <div className="space-y-1.5 pt-1 border-t border-sky-200/60">
                 <div className="flex items-center gap-1.5 text-teal-800 font-medium">
                   <Phone className="w-3.5 h-3.5 text-teal-600 shrink-0" />
                   <span>Donor Contact for Pickup: <strong className="font-semibold">{medication.donorPhone}</strong></span>
                 </div>
+                {isClaimerOfThis && medication.handoverPin && (
+                  <div className="flex items-center justify-between bg-white px-2.5 py-1 rounded-lg border border-amber-200 text-xs">
+                    <span className="text-amber-900 font-medium">Your Handover PIN:</span>
+                    <span className="font-mono font-black text-amber-950 tracking-widest">{medication.handoverPin}</span>
+                  </div>
+                )}
                 {medication.prescriptionRef && (
                   <div className="text-[11px] text-slate-600 pl-5">
                     <span className="font-medium text-slate-700">Ref:</span> {medication.prescriptionRef}

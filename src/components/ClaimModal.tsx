@@ -21,6 +21,8 @@ import {
   Copy,
   Check,
   ArrowRight,
+  KeyRound,
+  Clock,
 } from 'lucide-react';
 
 interface ClaimModalProps {
@@ -45,6 +47,7 @@ export default function ClaimModal({
   const [pickupNote, setPickupNote] = useState('');
   const [claimAmount, setClaimAmount] = useState<number>(1);
   const [inspectionConfirmed, setInspectionConfirmed] = useState(false);
+  const [assignedPin, setAssignedPin] = useState<string>('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [copiedPhone, setCopiedPhone] = useState(false);
   const [touched, setTouched] = useState(false);
@@ -71,6 +74,7 @@ export default function ClaimModal({
       setPrescriptionRef('');
       setPickupNote('');
       setClaimAmount(Math.max(1, remaining));
+      setAssignedPin('');
       setInspectionConfirmed(false);
       setIsSubmitted(false);
       setCopiedPhone(false);
@@ -104,7 +108,7 @@ export default function ClaimModal({
   const isClaimAmountValid = claimAmount > 0 && claimAmount <= remainingQty;
   const isFormValid = isPrescriptionValid && isClaimAmountValid && inspectionConfirmed;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setTouched(true);
 
@@ -116,7 +120,10 @@ export default function ClaimModal({
       ? `Pickup Note: ${pickupNote.trim()}`
       : undefined;
 
-    claimMedication(medication.id, refString, claimAmount);
+    const res = await claimMedication(medication.id, refString, claimAmount);
+    if (res && res.pin) {
+      setAssignedPin(res.pin);
+    }
     setIsSubmitted(true);
   };
 
@@ -507,6 +514,24 @@ export default function ClaimModal({
               </div>
             )}
 
+            {/* 4-Digit Handover PIN Card */}
+            <div className="bg-gradient-to-br from-amber-50 via-amber-100/70 to-orange-50 border-2 border-amber-300 rounded-2xl p-4.5 text-center space-y-2.5 shadow-xs">
+              <div className="flex items-center justify-center gap-1.5 text-xs font-black uppercase tracking-wider text-amber-900">
+                <KeyRound className="w-4 h-4 text-amber-700" />
+                <span>Your 4-Digit Handover PIN</span>
+              </div>
+              <div className="inline-block bg-white px-8 py-2 rounded-2xl border-2 border-amber-400 font-mono text-3xl sm:text-4xl font-black text-amber-950 tracking-[0.3em] shadow-inner">
+                {assignedPin || medication.handoverPin || '4829'}
+              </div>
+              <p className="text-xs text-amber-900 max-w-sm mx-auto leading-relaxed font-medium">
+                Share this 4-digit PIN with the donor when you meet in person. The donor will enter it to verify and complete the handover.
+              </p>
+              <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-amber-900 bg-amber-200/80 py-1 px-3 rounded-full border border-amber-300">
+                <Clock className="w-3.5 h-3.5 text-amber-800" />
+                <span>⏳ 48-Hour Pickup Window: Please collect within 48 hours to avoid claim expiry</span>
+              </div>
+            </div>
+
             {/* Revealed Donor Contact Card */}
             <div className="bg-gradient-to-br from-teal-50 to-emerald-50 border-2 border-teal-300/80 rounded-2xl p-4.5 space-y-3.5 shadow-xs">
               <div className="flex items-center justify-between text-xs font-bold text-teal-950 uppercase tracking-wider">
@@ -567,7 +592,8 @@ export default function ClaimModal({
                   <li>Call donor to arrange a mutual time and pickup spot.</li>
                   <li>Verify the factory blister strip is unopened and intact.</li>
                   <li>Check that the expiry date stamped on the foil matches or exceeds record.</li>
-                  <li>After handover, click <strong>"Mark as Collected"</strong> on the card.</li>
+                  <li>Share your 4-digit Handover PIN with the donor to verify collection.</li>
+                  <li>After handover, the card status transitions to <strong>Collected</strong>.</li>
                 </ul>
               </div>
             </div>

@@ -102,6 +102,60 @@ export function parseQuantity(quantityStr?: string | null): { total: number; uni
   return { total: 10, unit: 'units' };
 }
 
+/**
+ * Generates a random 4-digit numeric handover PIN between "1000" and "9999".
+ */
+export function generateHandoverPin(): string {
+  const pin = Math.floor(1000 + Math.random() * 9000);
+  return pin.toString();
+}
+
+/**
+ * Calculates remaining pickup hold time within a 48-hour anti-ghosting window.
+ */
+export function getPickupTimeRemaining(claimExpiresAt?: string | null): {
+  hours: number;
+  minutes: number;
+  isExpired: boolean;
+  label: string;
+} {
+  if (!claimExpiresAt) {
+    return { hours: 48, minutes: 0, isExpired: false, label: '⏳ 48h hold active' };
+  }
+
+  const expiryTime = new Date(claimExpiresAt).getTime();
+  const now = Date.now();
+  const diffMs = expiryTime - now;
+
+  if (isNaN(expiryTime) || diffMs <= 0) {
+    return {
+      hours: 0,
+      minutes: 0,
+      isExpired: true,
+      label: '⚠️ 48h Pickup Window Expired',
+    };
+  }
+
+  const hours = Math.floor(diffMs / (1000 * 60 * 60));
+  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+  if (hours > 0) {
+    return {
+      hours,
+      minutes,
+      isExpired: false,
+      label: `⏳ ${hours}h ${minutes}m left to pick up`,
+    };
+  }
+
+  return {
+    hours: 0,
+    minutes,
+    isExpired: false,
+    label: `⏳ ${minutes}m left to pick up`,
+  };
+}
+
 export const DEFAULT_USERS: UserProfile[] = [
   {
     id: 'user-donor-1',
@@ -234,8 +288,10 @@ export const INITIAL_MEDICATIONS: Medication[] = [
         claimerRole: 'clinic_charity',
         claimedQuantity: 6,
         unitName: 'tablets',
+        handoverPin: '4829',
         prescriptionRef: 'Emergency pediatric respiratory clinic refill',
-        claimedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+        claimedAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+        claimExpiresAt: new Date(Date.now() + 44 * 60 * 60 * 1000).toISOString(),
         status: 'claimed',
       },
     ],
@@ -258,6 +314,10 @@ export const INITIAL_MEDICATIONS: Medication[] = [
     unitName: 'tablets',
     remainingNumericQuantity: 0,
     claimedQuantity: 20,
+    handoverPin: '2841',
+    claimedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+    claimExpiresAt: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
+    collectedAt: new Date(Date.now() - 13 * 24 * 60 * 60 * 1000).toISOString(),
     claims: [
       {
         id: 'claim-seed-6',
@@ -267,7 +327,9 @@ export const INITIAL_MEDICATIONS: Medication[] = [
         claimerRole: 'clinic_charity',
         claimedQuantity: 20,
         unitName: 'tablets',
+        handoverPin: '2841',
         claimedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+        claimExpiresAt: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
         collectedAt: new Date(Date.now() - 13 * 24 * 60 * 60 * 1000).toISOString(),
         status: 'collected',
       },

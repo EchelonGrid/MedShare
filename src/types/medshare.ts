@@ -62,8 +62,10 @@ export interface BatchClaim {
   claimerRole: UserRole;
   claimedQuantity: number;
   unitName: string;
+  handoverPin?: string; // 4-digit code e.g. "4829"
   prescriptionRef?: string;
   claimedAt: string;
+  claimExpiresAt?: string; // ISO timestamp (claimedAt + 48 hours)
   collectedAt?: string;
   status: 'claimed' | 'collected';
 }
@@ -89,9 +91,11 @@ export interface Medication {
   claimedByRole?: UserRole;
   claimedQuantity?: number; // amount claimed in primary or final claim
   claims?: BatchClaim[]; // partial claims log for split batches
+  handoverPin?: string; // 4-digit code e.g. "4829"
   prescriptionRef?: string; // for individual collectors
   pickupNote?: string;
   claimedAt?: string;
+  claimExpiresAt?: string; // ISO timestamp (claimedAt + 48 hours)
   collectedAt?: string;
   createdAt: string;
 }
