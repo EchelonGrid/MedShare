@@ -113,45 +113,45 @@ export default function MedicationCard({ medication, onClaimClick }: MedicationC
 
         {/* Medicine Name and Strength */}
         <div className="flex items-start justify-between gap-2">
-          <h3 className="font-bold text-slate-900 text-base sm:text-lg leading-snug tracking-tight">
-            {medication.medicineName}
+          <h3 className="font-extrabold text-slate-900 text-base sm:text-lg leading-snug tracking-tight">
+            {medication.medicineName || 'Unnamed Medicine'}
           </h3>
-          <span className="shrink-0 text-xs font-bold px-2.5 py-1 rounded-md bg-teal-50 text-teal-800 border border-teal-200 font-mono">
+          <span className="shrink-0 text-xs font-bold px-2.5 py-1 rounded-md bg-teal-100 text-teal-900 border border-teal-300 font-mono shadow-2xs">
             {medication.strength}
           </span>
         </div>
 
         {/* Sealed & Unexpired indicator tag */}
         <div className="mt-2 flex items-center gap-2">
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-            <ShieldCheck className="w-3 h-3 text-emerald-600" />
+          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-300">
+            <ShieldCheck className="w-3 h-3 text-emerald-700" />
             ✓ Sealed &amp; Unexpired
           </span>
-          <span className="text-xs text-slate-600 font-medium truncate">
+          <span className="text-xs text-slate-700 font-medium truncate">
             {medication.quantity}
           </span>
         </div>
 
         {/* Metadata Details: Expiry, Location, Donor */}
-        <div className="mt-4 pt-3 border-t border-slate-100 space-y-2 text-xs text-slate-600">
+        <div className="mt-4 pt-3 border-t border-slate-100 space-y-2 text-xs text-slate-700">
           <div className="flex items-center gap-2">
-            <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+            <Calendar className="w-3.5 h-3.5 text-slate-500 shrink-0" />
             <span>
-              Expiry Date: <strong className="font-semibold text-slate-700">{medication.expiryDate}</strong>
+              Expiry Date: <strong className="font-bold text-slate-900">{medication.expiryDate}</strong>
             </span>
           </div>
 
           <div className="flex items-center gap-2">
-            <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-            <span className="truncate" title={medication.location}>
+            <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+            <span className="truncate text-slate-800 font-medium" title={medication.location}>
               {medication.location}
             </span>
           </div>
 
           <div className="flex items-center gap-2">
-            <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-            <span className="truncate">
-              Donor: <span className="font-medium text-slate-700">{medication.donorName}</span>
+            <User className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+            <span className="truncate text-slate-800">
+              Donor: <span className="font-bold text-slate-900">{medication.donorName}</span>
             </span>
           </div>
         </div>

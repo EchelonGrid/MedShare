@@ -2,11 +2,11 @@
 
 import React, { createContext, useContext, useState, useSyncExternalStore } from 'react';
 import { Medication, UserProfile } from '@/types/medshare';
-import { DEFAULT_USERS, INITIAL_MEDICATIONS } from '@/lib/seed';
+import { DEFAULT_USERS, INITIAL_MEDICATIONS, getDaysUntilExpiry } from '@/lib/seed';
 
-const MEDS_STORAGE_KEY = 'medshare_medications_v1';
-const USERS_STORAGE_KEY = 'medshare_users_v1';
-const CURRENT_USER_ID_KEY = 'medshare_current_user_id_v1';
+const MEDS_STORAGE_KEY = 'medshare_v2_medications';
+const USERS_STORAGE_KEY = 'medshare_v2_users';
+const CURRENT_USER_ID_KEY = 'medshare_v2_current_user_id';
 
 export interface NewMedicationInput {
   medicineName: string;
@@ -61,8 +61,20 @@ function loadInitialData() {
   try {
     const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
     if (storedUsers) {
-      cachedUsers = JSON.parse(storedUsers);
+      try {
+        const parsedUsers = JSON.parse(storedUsers);
+        if (Array.isArray(parsedUsers) && parsedUsers.length > 0 && parsedUsers[0]?.name) {
+          cachedUsers = parsedUsers;
+        } else {
+          cachedUsers = DEFAULT_USERS;
+          localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(DEFAULT_USERS));
+        }
+      } catch {
+        cachedUsers = DEFAULT_USERS;
+        localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(DEFAULT_USERS));
+      }
     } else {
+      cachedUsers = DEFAULT_USERS;
       localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(DEFAULT_USERS));
     }
 
@@ -76,12 +88,34 @@ function loadInitialData() {
 
     const storedMeds = localStorage.getItem(MEDS_STORAGE_KEY);
     if (storedMeds) {
-      cachedMeds = JSON.parse(storedMeds);
+      try {
+        const parsedMeds = JSON.parse(storedMeds);
+        const isValid =
+          Array.isArray(parsedMeds) &&
+          parsedMeds.length > 0 &&
+          Boolean(parsedMeds[0]?.medicineName) &&
+          Boolean(parsedMeds[0]?.expiryDate) &&
+          !isNaN(getDaysUntilExpiry(parsedMeds[0].expiryDate));
+
+        if (isValid) {
+          cachedMeds = parsedMeds;
+        } else {
+          cachedMeds = INITIAL_MEDICATIONS;
+          localStorage.setItem(MEDS_STORAGE_KEY, JSON.stringify(INITIAL_MEDICATIONS));
+        }
+      } catch {
+        cachedMeds = INITIAL_MEDICATIONS;
+        localStorage.setItem(MEDS_STORAGE_KEY, JSON.stringify(INITIAL_MEDICATIONS));
+      }
     } else {
+      cachedMeds = INITIAL_MEDICATIONS;
       localStorage.setItem(MEDS_STORAGE_KEY, JSON.stringify(INITIAL_MEDICATIONS));
     }
   } catch (err) {
     console.error('Error initializing MedShare store from localStorage:', err);
+    cachedMeds = INITIAL_MEDICATIONS;
+    cachedUsers = DEFAULT_USERS;
+    cachedUserId = DEFAULT_USERS[0].id;
   }
   isLoaded = true;
 }

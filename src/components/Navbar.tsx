@@ -57,7 +57,7 @@ export default function Navbar() {
               <div className="flex items-center gap-2">
                 <span className="font-extrabold text-xl tracking-tight text-white">MedShare</span>
                 <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded bg-teal-800/80 border border-teal-500/40 text-teal-200">
-                  Step 4 Complete
+                  COMMUNITY MED RESCUE
                 </span>
               </div>
               <p className="text-xs text-teal-100/90 font-medium">

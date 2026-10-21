@@ -42,7 +42,10 @@ export default function HomePage() {
   const availableCount = medications.filter((m) => m.status === 'available').length;
   const expiringSoonCount = mounted
     ? medications.filter(
-        (m) => m.status === 'available' && getDaysUntilExpiry(m.expiryDate) <= 60
+        (m) =>
+          m.status === 'available' &&
+          getDaysUntilExpiry(m.expiryDate) > 0 &&
+          getDaysUntilExpiry(m.expiryDate) <= 60
       ).length
     : 0;
   const collectedCount = medications.filter((m) => m.status === 'collected').length;
@@ -90,7 +93,7 @@ export default function HomePage() {
             <div className="max-w-3xl space-y-4">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/20 border border-teal-400/30 text-teal-200 text-xs font-medium">
                 <Sparkles className="w-3.5 h-3.5 text-teal-300" />
-                <span>Step 4: Collector Verification, Claim &amp; Full Handover Lifecycle</span>
+                <span>Verified Community Medication Redistribution Platform</span>
               </div>
               <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-white leading-tight">
                 Bridge the Gap Between Surplus Medicine &amp; Rural Healthcare

@@ -1,12 +1,33 @@
 import { Medication, UserProfile, UrgencyLevel } from '@/types/medshare';
 
-export function getDaysUntilExpiry(expiryDate: string, baseDate?: Date): number {
+export function getDaysUntilExpiry(expiryDate?: string | null, baseDate?: Date): number {
+  if (!expiryDate || typeof expiryDate !== 'string') return 0;
+
   const today = baseDate ? new Date(baseDate) : new Date();
   today.setHours(0, 0, 0, 0);
-  const target = new Date(expiryDate);
+
+  // Normalize date string (strip time component if present)
+  const cleanDate = expiryDate.includes('T') ? expiryDate.split('T')[0] : expiryDate.trim();
+  const parts = cleanDate.split('-');
+
+  let target: Date;
+  if (parts.length === 3) {
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+    target = new Date(year, month, day);
+  } else {
+    target = new Date(cleanDate);
+  }
+
+  if (isNaN(target.getTime())) {
+    return 0;
+  }
+
   target.setHours(0, 0, 0, 0);
   const diffTime = target.getTime() - today.getTime();
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return isNaN(days) ? 0 : days;
 }
 
 export function getUrgencyLevel(days: number): UrgencyLevel {
