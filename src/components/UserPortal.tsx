@@ -33,7 +33,12 @@ import {
   KeyRound,
   RotateCcw,
   AlertTriangle,
+  Award,
+  Download,
+  Printer,
 } from 'lucide-react';
+import { exportCollectedInventoryCSV, exportDonorHistoryCSV } from '@/lib/export-utils';
+import ImpactCertificateModal from '@/components/ImpactCertificateModal';
 
 interface UserPortalProps {
   onBackToFeed: () => void;
@@ -53,10 +58,12 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
     pendingVerifications,
     openDonateModal,
     openAuthModal,
+    showToast,
   } = useMedShare();
   const mounted = useIsMounted();
 
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [isCertificateOpen, setIsCertificateOpen] = useState(false);
 
   // Donor PIN input & verification state
   const [pinInputs, setPinInputs] = useState<Record<string, string>>({});
@@ -281,6 +288,16 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
 
   const myDonations = medications.filter((m) => m.donorId === currentUser.id);
 
+  const handleExportCSV = () => {
+    if (!currentUser) return;
+    if (isDonor) {
+      exportDonorHistoryCSV(currentUser, myDonations);
+    } else {
+      exportCollectedInventoryCSV(currentUser, myCollectionHistory);
+    }
+    showToast('Audit log exported to CSV successfully!', 'success', 'Export Complete');
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in duration-200">
       
@@ -390,6 +407,31 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                 </div>
               </>
             )}
+          </div>
+        </div>
+
+        {/* Quick Actions: Impact Certificate & Audit Log CSV Export */}
+        <div className="mt-5 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+          <div className="text-xs text-slate-500 font-medium">
+            Verified Community Healthcare Record • FEFO Audited
+          </div>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => setIsCertificateOpen(true)}
+              className="px-3.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
+            >
+              <Award className="w-4 h-4 text-amber-700" />
+              <span>🏆 View Impact Certificate</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleExportCSV}
+              className="px-3.5 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-900 border border-teal-300 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
+            >
+              <Download className="w-4 h-4 text-teal-700" />
+              <span>⬇️ Export Audit Log (CSV)</span>
+            </button>
           </div>
         </div>
       </div>
@@ -783,16 +825,40 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
 
           {/* 3. My Collection History */}
           <div className="space-y-4 pt-2">
-            <div>
-              <h3 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                <span>My Collection History</span>
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-                  {myCollectionHistory.length}
-                </span>
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Record of all successfully collected and handed over medications.
-              </p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                  <span>My Collection History</span>
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                    {myCollectionHistory.length}
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Record of all successfully collected and handed over medications.
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2 self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={handleExportCSV}
+                  className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-teal-50 text-slate-700 hover:text-teal-900 border border-slate-200 hover:border-teal-300 text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                  title="Export collection audit log to CSV"
+                >
+                  <Download className="w-3.5 h-3.5 text-teal-700" />
+                  <span>Export CSV</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsCertificateOpen(true)}
+                  className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-amber-50 text-slate-700 hover:text-amber-900 border border-slate-200 hover:border-amber-300 text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                  title="View and print official impact certificate"
+                >
+                  <Award className="w-3.5 h-3.5 text-amber-700" />
+                  <span>Print Certificate</span>
+                </button>
+              </div>
             </div>
 
             {myCollectionHistory.length > 0 ? (
@@ -847,7 +913,7 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
       {/* ============================================================= */}
       {isDonor && (
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h3 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
                 <span>My Listed Medications</span>
@@ -858,6 +924,28 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
               <p className="text-xs text-slate-500 mt-0.5">
                 Track the status of medicines you have listed for community redistribution.
               </p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={handleExportCSV}
+                className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-teal-50 text-slate-700 hover:text-teal-900 border border-slate-200 hover:border-teal-300 text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                title="Export donation log to CSV"
+              >
+                <Download className="w-3.5 h-3.5 text-teal-700" />
+                <span>Export CSV</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsCertificateOpen(true)}
+                className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-amber-50 text-slate-700 hover:text-amber-900 border border-slate-200 hover:border-amber-300 text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                title="View and print official impact certificate"
+              >
+                <Award className="w-3.5 h-3.5 text-amber-700" />
+                <span>Print Certificate</span>
+              </button>
             </div>
           </div>
 
@@ -1267,6 +1355,13 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
           )}
         </div>
       </div>
+
+      {/* Printable Community Healthcare Impact Certificate Modal */}
+      <ImpactCertificateModal
+        isOpen={isCertificateOpen}
+        onClose={() => setIsCertificateOpen(false)}
+        user={currentUser}
+      />
 
     </div>
   );
