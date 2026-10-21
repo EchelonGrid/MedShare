@@ -1,10 +1,16 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { MedicineRequest } from '@/types/medshare';
+import { MedicineRequest, MedicineCategory } from '@/types/medshare';
 import { useMedShare } from '@/context/MedShareContext';
 import { getDaysUntilExpiry, getUrgencyLevel } from '@/lib/seed';
 import { useIsMounted } from '@/lib/useIsMounted';
+import {
+  MEDICINE_CATEGORIES,
+  lookupMedicineByBrandOrName,
+  getAutocompleteSuggestions,
+  AutocompleteSuggestion,
+} from '@/lib/medicine-dictionary';
 import {
   X,
   Pill,
@@ -17,6 +23,7 @@ import {
   CheckCircle2,
   Clock,
   Sparkles,
+  Search,
 } from 'lucide-react';
 
 interface DonateModalProps {
@@ -37,11 +44,18 @@ export default function DonateModal({
 
   const [medicineName, setMedicineName] = useState('');
   const [genericName, setGenericName] = useState('');
+  const [category, setCategory] = useState<MedicineCategory>('Pain & Fever');
   const [strength, setStrength] = useState('');
   const [quantity, setQuantity] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
   const [location, setLocation] = useState(currentUser?.location || '');
   const [phone, setPhone] = useState(currentUser?.phone || '');
+
+  // Smart suggestions & dictionary state
+  const [suggestions, setSuggestions] = useState<AutocompleteSuggestion[]>([]);
+  const [commonStrengths, setCommonStrengths] = useState<string[]>([]);
+  const [equivalentBrands, setEquivalentBrands] = useState<string[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
 
   // 3 Mandatory Safety Checkboxes
   const [safety1, setSafety1] = useState(false);
@@ -69,15 +83,25 @@ export default function DonateModal({
       if (prefillRequest) {
         setMedicineName(prefillRequest.medicineName);
         setGenericName(prefillRequest.genericName || '');
+        setCategory(prefillRequest.category || 'Pain & Fever');
         setStrength(prefillRequest.strength);
         setQuantity(prefillRequest.quantityNeeded);
         setLocation(prefillRequest.location);
+
+        const match = lookupMedicineByBrandOrName(prefillRequest.medicineName);
+        if (match) {
+          setCommonStrengths(match.commonStrengths);
+          setEquivalentBrands(match.allEquivalentBrands.filter((b) => b.toLowerCase() !== prefillRequest.medicineName.toLowerCase()));
+        }
       } else {
         setMedicineName('');
         setGenericName('');
+        setCategory('Pain & Fever');
         setStrength('');
         setQuantity('');
         setLocation(currentUser?.location || '');
+        setCommonStrengths([]);
+        setEquivalentBrands([]);
       }
       setPhone(currentUser?.phone || '');
       setExpiryDate('');
@@ -85,8 +109,34 @@ export default function DonateModal({
       setSafety2(false);
       setSafety3(false);
       setTouched(false);
+      setShowDropdown(false);
     }
   }, [isOpen, prefillRequest, currentUser]);
+
+  const handleMedicineNameChange = (val: string) => {
+    setMedicineName(val);
+    const suggs = getAutocompleteSuggestions(val);
+    setSuggestions(suggs);
+    setShowDropdown(suggs.length > 0);
+
+    // Auto-resolve if exact or close dictionary match
+    const match = lookupMedicineByBrandOrName(val);
+    if (match) {
+      setGenericName(match.genericName);
+      setCategory(match.category);
+      setCommonStrengths(match.commonStrengths);
+      setEquivalentBrands(match.allEquivalentBrands.filter((b) => b.toLowerCase() !== val.trim().toLowerCase()));
+    }
+  };
+
+  const handleSelectSuggestion = (s: AutocompleteSuggestion) => {
+    setMedicineName(s.name);
+    setGenericName(s.genericName);
+    setCategory(s.category);
+    setCommonStrengths(s.commonStrengths);
+    setEquivalentBrands(s.equivalentBrands);
+    setShowDropdown(false);
+  };
 
   if (!isOpen || !currentUser) return null;
 
@@ -120,6 +170,7 @@ export default function DonateModal({
     await addMedication({
       medicineName: medicineName.trim(),
       genericName: genericName.trim() || undefined,
+      category,
       strength: strength.trim(),
       quantity: quantity.trim(),
       expiryDate,
@@ -224,7 +275,7 @@ export default function DonateModal({
           
           {/* Row 1: Medicine Name & Strength */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-            <div className="sm:col-span-2">
+            <div className="sm:col-span-2 relative">
               <label htmlFor="med-name" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                 Medicine Name <span className="text-rose-500">*</span>
               </label>
@@ -233,12 +284,55 @@ export default function DonateModal({
                   id="med-name"
                   type="text"
                   required
+                  autoComplete="off"
                   value={medicineName}
-                  onChange={(e) => setMedicineName(e.target.value)}
+                  onChange={(e) => handleMedicineNameChange(e.target.value)}
+                  onFocus={() => {
+                    if (suggestions.length > 0) setShowDropdown(true);
+                  }}
                   placeholder="e.g. Napa Extend, Sergel, Amdocal"
                   className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition"
                 />
               </div>
+
+              {/* Autocomplete Dropdown */}
+              {showDropdown && suggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 z-30 mt-1 bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden divide-y divide-slate-100 animate-in fade-in">
+                  <div className="p-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50 flex items-center justify-between">
+                    <span>Smart Drug Dictionary Suggestions</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowDropdown(false)}
+                      className="text-slate-400 hover:text-slate-700"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  {suggestions.map((s) => (
+                    <button
+                      key={s.name}
+                      type="button"
+                      onClick={() => handleSelectSuggestion(s)}
+                      className="w-full px-3.5 py-2.5 text-left hover:bg-teal-50/80 transition flex items-center justify-between gap-2 cursor-pointer"
+                    >
+                      <div>
+                        <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                          <span>{s.name}</span>
+                          <span className="text-[10px] font-normal text-slate-500">
+                            ({s.genericName})
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-teal-700 font-medium">
+                          {s.category} • Strengths: {s.commonStrengths.join(', ')}
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-teal-100 text-teal-800 uppercase">
+                        {s.type}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div>
@@ -254,23 +348,77 @@ export default function DonateModal({
                 placeholder="e.g. 665mg, 20mg"
                 className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition"
               />
+              {/* Quick-Click Strength Pills */}
+              {commonStrengths.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                  <span className="text-[10px] text-slate-500 font-semibold">Quick:</span>
+                  {commonStrengths.map((str) => (
+                    <button
+                      key={str}
+                      type="button"
+                      onClick={() => setStrength(str)}
+                      className={`text-[11px] font-mono px-2 py-0.5 rounded-md border transition cursor-pointer ${
+                        strength === str
+                          ? 'bg-teal-700 text-white border-teal-700 font-bold'
+                          : 'bg-teal-50 text-teal-800 border-teal-200 hover:bg-teal-100'
+                      }`}
+                    >
+                      {str}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Generic Name */}
-          <div>
-            <label htmlFor="generic-name" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-              Generic Name <span className="text-slate-400 font-normal lowercase">(optional)</span>
-            </label>
-            <input
-              id="generic-name"
-              type="text"
-              value={genericName}
-              onChange={(e) => setGenericName(e.target.value)}
-              placeholder="e.g. Paracetamol, Esomeprazole, Amlodipine"
-              className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition"
-            />
+          {/* Row 2: Generic Name & Therapeutic Category */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div>
+              <label htmlFor="generic-name" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                Generic Drug Name <span className="text-slate-400 font-normal lowercase">(auto-resolved)</span>
+              </label>
+              <input
+                id="generic-name"
+                type="text"
+                value={genericName}
+                onChange={(e) => setGenericName(e.target.value)}
+                placeholder="e.g. Paracetamol, Esomeprazole, Amlodipine"
+                className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="med-category" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                Therapeutic Category <span className="text-rose-500">*</span>
+              </label>
+              <select
+                id="med-category"
+                value={category}
+                onChange={(e) => setCategory(e.target.value as MedicineCategory)}
+                className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition bg-white"
+              >
+                {MEDICINE_CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
+
+          {/* Equivalent Brands Helper Note */}
+          {equivalentBrands.length > 0 && (
+            <div className="bg-teal-50/80 border border-teal-200 rounded-2xl p-3 text-xs text-teal-900 flex items-start gap-2.5">
+              <Sparkles className="w-4 h-4 text-teal-700 shrink-0 mt-0.5" />
+              <div className="leading-relaxed">
+                <span className="font-bold text-teal-950">Generic Equivalence: </span>
+                <span>
+                  Shares the same active chemical (<em>{genericName}</em>) with:{' '}
+                  <strong>{equivalentBrands.slice(0, 5).join(', ')}</strong>.
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Row 2: Quantity & Packaging */}
           <div>

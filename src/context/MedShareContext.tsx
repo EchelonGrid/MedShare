@@ -16,6 +16,7 @@ import {
   MedicineRequest,
   RequestUrgency,
   RequestStatus,
+  MedicineCategory,
 } from '@/types/medshare';
 import {
   DEFAULT_USERS,
@@ -23,6 +24,7 @@ import {
   INITIAL_REQUESTS,
   getDaysUntilExpiry,
 } from '@/lib/seed';
+import { inferCategory } from '@/lib/medicine-dictionary';
 import {
   supabase,
   isSupabaseConfigured,
@@ -41,6 +43,7 @@ const REQUESTS_STORAGE_KEY = 'medshare_prod_requests_v1';
 export interface NewMedicationInput {
   medicineName: string;
   genericName?: string;
+  category?: MedicineCategory;
   strength: string;
   quantity: string;
   expiryDate: string;
@@ -51,6 +54,7 @@ export interface NewMedicationInput {
 export interface NewMedicineRequestInput {
   medicineName: string;
   genericName?: string;
+  category?: MedicineCategory;
   strength: string;
   quantityNeeded: string;
   urgency: RequestUrgency;
@@ -586,11 +590,13 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
 
       const tempId = `med-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
       const donorUser = currentUser;
+      const resolvedCategory = data.category || inferCategory(data.medicineName, data.genericName);
 
       const newMed: Medication = {
         id: tempId,
         medicineName: data.medicineName.trim(),
         genericName: data.genericName?.trim() || undefined,
+        category: resolvedCategory,
         strength: data.strength.trim(),
         quantity: data.quantity.trim(),
         expiryDate: data.expiryDate,
@@ -750,11 +756,13 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
       setActionLoading('requesting');
       const tempId = `req-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
       const reqUser = currentUser;
+      const resolvedCategory = data.category || inferCategory(data.medicineName, data.genericName);
 
       const newRequest: MedicineRequest = {
         id: tempId,
         medicineName: data.medicineName.trim(),
         genericName: data.genericName?.trim() || undefined,
+        category: resolvedCategory,
         strength: data.strength.trim(),
         quantityNeeded: data.quantityNeeded.trim(),
         urgency: data.urgency,

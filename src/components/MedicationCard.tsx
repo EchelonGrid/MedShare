@@ -5,6 +5,7 @@ import { Medication, UserRole } from '@/types/medshare';
 import { useMedShare } from '@/context/MedShareContext';
 import { getDaysUntilExpiry, getUrgencyLevel } from '@/lib/seed';
 import { useIsMounted } from '@/lib/useIsMounted';
+import { inferCategory } from '@/lib/medicine-dictionary';
 import {
   Clock,
   AlertTriangle,
@@ -17,11 +18,14 @@ import {
   PackageCheck,
   Building2,
   Lock,
+  Sparkles,
 } from 'lucide-react';
 
 interface MedicationCardProps {
   medication: Medication;
   onClaimClick?: (medication: Medication) => void;
+  searchedTerm?: string;
+  isGenericMatch?: boolean;
 }
 
 const ROLE_LABELS: Record<UserRole, string> = {
@@ -30,7 +34,12 @@ const ROLE_LABELS: Record<UserRole, string> = {
   individual: 'Individual',
 };
 
-export default function MedicationCard({ medication, onClaimClick }: MedicationCardProps) {
+export default function MedicationCard({
+  medication,
+  onClaimClick,
+  searchedTerm,
+  isGenericMatch,
+}: MedicationCardProps) {
   const { currentUser, markAsCollected, actionLoading } = useMedShare();
   const mounted = useIsMounted();
 
@@ -41,6 +50,18 @@ export default function MedicationCard({ medication, onClaimClick }: MedicationC
   const isClaimerOfThis = currentUser ? currentUser.id === medication.claimedById : false;
   const canViewPickupContact = isDonorOfThis || isClaimerOfThis;
   const isDonorRole = currentUser ? currentUser.role === 'donor' : false;
+
+  const displayCategory = medication.category || inferCategory(medication.medicineName, medication.genericName);
+
+  // Check if this card was matched due to generic equivalence rather than typed medicine name
+  const showGenericMatchBadge =
+    isGenericMatch ||
+    Boolean(
+      searchedTerm &&
+        searchedTerm.trim().length > 1 &&
+        medication.genericName &&
+        !medication.medicineName.toLowerCase().includes(searchedTerm.toLowerCase().trim())
+    );
 
   // Urgency badge & card border styling
   let urgencyBadge = (
@@ -128,16 +149,30 @@ export default function MedicationCard({ medication, onClaimClick }: MedicationC
           </span>
         </div>
 
-        {/* Sealed & Unexpired indicator tag */}
-        <div className="mt-2 flex items-center gap-2">
-          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-300">
-            <ShieldCheck className="w-3 h-3 text-emerald-700" />
-            ✓ Sealed &amp; Unexpired
+        {/* Category & Sealed Indicator */}
+        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+          <span className="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
+            {displayCategory}
           </span>
-          <span className="text-xs text-slate-700 font-medium truncate">
+          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-300">
+            <ShieldCheck className="w-3 h-3 text-emerald-700" />
+            ✓ Sealed
+          </span>
+          <span className="text-xs text-slate-600 font-medium truncate">
             {medication.quantity}
           </span>
         </div>
+
+        {/* Generic Match Badge (highlighted when matched via generic equivalence) */}
+        {showGenericMatchBadge && searchedTerm && medication.genericName && (
+          <div className="mt-2.5 px-2.5 py-1.5 rounded-xl bg-teal-50 border border-teal-300 text-teal-900 text-xs font-medium flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-teal-700 shrink-0" />
+            <div>
+              <span className="font-bold text-teal-950">✓ Generic Match for &quot;{searchedTerm}&quot;</span>
+              <span className="block text-[11px] text-teal-800">Same Generic: <strong>{medication.genericName}</strong></span>
+            </div>
+          </div>
+        )}
 
         {/* Metadata Details: Expiry, Location, Donor */}
         <div className="mt-4 pt-3 border-t border-slate-100 space-y-2 text-xs text-slate-700">

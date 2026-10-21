@@ -1,8 +1,13 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { MedicineRequest, RequestUrgency } from '@/types/medshare';
+import { MedicineRequest, RequestUrgency, MedicineCategory } from '@/types/medshare';
 import { useMedShare } from '@/context/MedShareContext';
+import {
+  MEDICINE_CATEGORIES,
+  lookupMedicineByBrandOrName,
+  inferCategory,
+} from '@/lib/medicine-dictionary';
 import {
   Search,
   MapPin,
@@ -35,7 +40,14 @@ export default function RequestsBoard({
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLocation, setSelectedLocation] = useState('All Locations');
+  const [selectedCategory, setSelectedCategory] = useState<MedicineCategory | 'All Categories'>('All Categories');
   const [activeTab, setActiveTab] = useState<RequestFilterTab>('all_open');
+
+  // Smart dictionary lookup for equivalent brand searching
+  const dictionaryMatch = useMemo(() => {
+    if (!searchQuery || searchQuery.trim().length < 2) return null;
+    return lookupMedicineByBrandOrName(searchQuery.trim());
+  }, [searchQuery]);
 
   // Dynamic unique locations
   const locations = useMemo(() => {
@@ -58,6 +70,30 @@ export default function RequestsBoard({
     };
   }, [requests]);
 
+  // Category counts based on current active tab
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = { 'All Categories': 0 };
+    MEDICINE_CATEGORIES.forEach((cat) => {
+      counts[cat] = 0;
+    });
+
+    requests.forEach((r) => {
+      if (activeTab === 'all_open' && r.status !== 'open') return;
+      if (activeTab === 'critical' && (r.status !== 'open' || r.urgency !== 'critical')) return;
+      if (activeTab === 'fulfilled' && r.status !== 'fulfilled') return;
+
+      counts['All Categories'] += 1;
+      const cat = r.category || inferCategory(r.medicineName, r.genericName);
+      if (counts[cat] !== undefined) {
+        counts[cat] += 1;
+      } else {
+        counts['Other'] = (counts['Other'] || 0) + 1;
+      }
+    });
+
+    return counts;
+  }, [requests, activeTab]);
+
   // Filtered & sorted requests
   const filteredRequests = useMemo(() => {
     const urgencyWeight: Record<RequestUrgency, number> = {
@@ -68,24 +104,49 @@ export default function RequestsBoard({
 
     return requests
       .filter((req) => {
-        // Tab filter
+        // 1. Tab filter
         if (activeTab === 'all_open' && req.status !== 'open') return false;
         if (activeTab === 'critical' && (req.status !== 'open' || req.urgency !== 'critical')) return false;
         if (activeTab === 'fulfilled' && req.status !== 'fulfilled') return false;
 
-        // Location filter
+        // 2. Location filter
         if (selectedLocation !== 'All Locations' && req.location !== selectedLocation) {
           return false;
         }
 
-        // Search query filter
+        // 3. Category filter
+        if (selectedCategory !== 'All Categories') {
+          const itemCategory = req.category || inferCategory(req.medicineName, req.genericName);
+          if (itemCategory !== selectedCategory) {
+            return false;
+          }
+        }
+
+        // 4. Search query filter (matches name, generic, strength, requester, or equivalent brands)
         if (searchQuery.trim() !== '') {
           const q = searchQuery.toLowerCase().trim();
-          const matchesName = req.medicineName.toLowerCase().includes(q);
-          const matchesStrength = req.strength.toLowerCase().includes(q);
-          const matchesGeneric = req.genericName ? req.genericName.toLowerCase().includes(q) : false;
-          const matchesRequester = req.requesterName.toLowerCase().includes(q);
-          if (!matchesName && !matchesStrength && !matchesGeneric && !matchesRequester) {
+          const reqName = req.medicineName.toLowerCase();
+          const reqGeneric = (req.genericName || '').toLowerCase();
+          const reqStrength = req.strength.toLowerCase();
+          const reqRequester = req.requesterName.toLowerCase();
+
+          const matchesName = reqName.includes(q);
+          const matchesStrength = reqStrength.includes(q);
+          const matchesGeneric = reqGeneric.includes(q);
+          const matchesRequester = reqRequester.includes(q);
+
+          let matchesEquivalent = false;
+          if (dictionaryMatch) {
+            const genericLower = dictionaryMatch.genericName.toLowerCase();
+            if (reqGeneric && (reqGeneric.includes(genericLower) || genericLower.includes(reqGeneric))) {
+              matchesEquivalent = true;
+            }
+            if (dictionaryMatch.allEquivalentBrands.some((brand) => reqName.includes(brand.toLowerCase()))) {
+              matchesEquivalent = true;
+            }
+          }
+
+          if (!matchesName && !matchesStrength && !matchesGeneric && !matchesRequester && !matchesEquivalent) {
             return false;
           }
         }
@@ -100,13 +161,20 @@ export default function RequestsBoard({
         }
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       });
-  }, [requests, activeTab, selectedLocation, searchQuery]);
+  }, [requests, activeTab, selectedLocation, selectedCategory, searchQuery, dictionaryMatch]);
 
   const handleResetFilters = () => {
     setSearchQuery('');
     setSelectedLocation('All Locations');
+    setSelectedCategory('All Categories');
     setActiveTab('all_open');
   };
+
+  const isFiltered =
+    searchQuery.trim() !== '' ||
+    selectedLocation !== 'All Locations' ||
+    selectedCategory !== 'All Categories' ||
+    activeTab !== 'all_open';
 
   const formatTimeAgo = (isoDate: string) => {
     const diffMs = Date.now() - new Date(isoDate).getTime();
@@ -216,8 +284,20 @@ export default function RequestsBoard({
             </button>
           </div>
 
-          <div className="text-xs font-medium text-slate-500">
-            Showing <strong className="text-slate-800">{filteredRequests.length}</strong> request{filteredRequests.length === 1 ? '' : 's'}
+          <div className="flex items-center gap-2">
+            <div className="text-xs font-medium text-slate-500">
+              Showing <strong className="text-slate-800">{filteredRequests.length}</strong> request{filteredRequests.length === 1 ? '' : 's'}
+            </div>
+            {isFiltered && (
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="text-xs font-medium text-slate-500 hover:text-teal-700 inline-flex items-center gap-1 py-1 cursor-pointer transition ml-2"
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>Reset Filters</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -254,7 +334,87 @@ export default function RequestsBoard({
             </select>
           </div>
         </div>
+
+        {/* Row 3: Therapeutic Category Filter Pills */}
+        <div className="pt-2 border-t border-slate-100 space-y-1.5">
+          <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
+            <span>Filter by Therapeutic Category</span>
+            {selectedCategory !== 'All Categories' && (
+              <button
+                type="button"
+                onClick={() => setSelectedCategory('All Categories')}
+                className="text-[10px] text-teal-700 hover:underline cursor-pointer lowercase"
+              >
+                clear category
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-thin">
+            <button
+              type="button"
+              onClick={() => setSelectedCategory('All Categories')}
+              className={`px-3 py-1 rounded-xl text-xs font-semibold shrink-0 transition flex items-center gap-1.5 cursor-pointer ${
+                selectedCategory === 'All Categories'
+                  ? 'bg-teal-700 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              <span>All Categories</span>
+              <span
+                className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                  selectedCategory === 'All Categories' ? 'bg-teal-800 text-teal-100' : 'bg-slate-200 text-slate-700'
+                }`}
+              >
+                {categoryCounts['All Categories'] || 0}
+              </span>
+            </button>
+            {MEDICINE_CATEGORIES.map((cat) => {
+              const count = categoryCounts[cat] || 0;
+              const isSelected = selectedCategory === cat;
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`px-3 py-1 rounded-xl text-xs font-medium shrink-0 transition flex items-center gap-1.5 cursor-pointer ${
+                    isSelected
+                      ? 'bg-teal-700 text-white font-bold shadow-xs'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  <span>{cat}</span>
+                  <span
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                      isSelected ? 'bg-teal-800 text-teal-100' : 'bg-slate-200 text-slate-700'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
+
+      {/* Equivalent Brand Search Notice Banner */}
+      {searchQuery.trim() !== '' && dictionaryMatch && (
+        <div className="bg-gradient-to-r from-teal-50 via-teal-50/80 to-emerald-50 border border-teal-200 rounded-2xl p-4 flex items-start gap-3 text-xs text-teal-950 shadow-xs animate-in fade-in">
+          <div className="w-8 h-8 rounded-xl bg-teal-600/10 border border-teal-600/20 flex items-center justify-center text-teal-700 shrink-0 mt-0.5">
+            <Sparkles className="w-4 h-4 text-teal-700" />
+          </div>
+          <div className="space-y-1">
+            <div className="font-bold text-teal-950 text-sm">
+              Showing exact &amp; generic equivalents for &quot;{searchQuery}&quot;
+            </div>
+            <p className="text-teal-800 leading-relaxed">
+              Generic: <strong className="text-teal-900 underline decoration-teal-400 font-bold">{dictionaryMatch.genericName}</strong>
+              {' — includes equivalent brands: '}
+              <span className="font-semibold text-slate-900">{dictionaryMatch.allEquivalentBrands.slice(0, 6).join(', ')}</span>
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Request Cards Grid */}
       {filteredRequests.length > 0 ? (
@@ -263,6 +423,12 @@ export default function RequestsBoard({
             const isCritical = req.urgency === 'critical';
             const isHigh = req.urgency === 'high';
             const isFulfilled = req.status === 'fulfilled';
+            const displayCategory = req.category || inferCategory(req.medicineName, req.genericName);
+            const isGenericMatch = Boolean(
+              searchQuery.trim().length > 1 &&
+              req.genericName &&
+              !req.medicineName.toLowerCase().includes(searchQuery.toLowerCase().trim())
+            );
 
             return (
               <div
@@ -325,10 +491,26 @@ export default function RequestsBoard({
                       </span>
                     </div>
 
-                    <div className="mt-2 inline-flex items-center gap-2 bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-slate-800 font-semibold">
-                      <span>Needed:</span>
-                      <strong className="text-teal-900 font-extrabold">{req.quantityNeeded}</strong>
+                    <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                      <span className="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
+                        {displayCategory}
+                      </span>
+                      <div className="inline-flex items-center gap-1.5 bg-slate-100 border border-slate-200 rounded-md px-2 py-0.5 text-xs text-slate-800 font-semibold">
+                        <span>Needed:</span>
+                        <strong className="text-teal-900 font-extrabold">{req.quantityNeeded}</strong>
+                      </div>
                     </div>
+
+                    {/* Generic Match Highlight Badge */}
+                    {isGenericMatch && req.genericName && (
+                      <div className="mt-2.5 px-2.5 py-1.5 rounded-xl bg-teal-50 border border-teal-300 text-teal-900 text-xs font-medium flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-teal-700 shrink-0" />
+                        <div>
+                          <span className="font-bold text-teal-950">✓ Generic Match for &quot;{searchQuery}&quot;</span>
+                          <span className="block text-[11px] text-teal-800">Same Generic: <strong>{req.genericName}</strong></span>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Requester Identity & Location */}

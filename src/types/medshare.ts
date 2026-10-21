@@ -10,10 +10,21 @@ export type RequestStatus = 'open' | 'fulfilled';
 
 export type VerificationStatus = 'unverified' | 'pending' | 'verified';
 
+export type MedicineCategory =
+  | 'Gastric & Ulcer'
+  | 'Blood Pressure & Heart'
+  | 'Diabetes'
+  | 'Antibiotics'
+  | 'Pain & Fever'
+  | 'Asthma & Allergy'
+  | 'Vitamins & Supplements'
+  | 'Other';
+
 export interface MedicineRequest {
   id: string;
   medicineName: string;
   genericName?: string;
+  category?: MedicineCategory;
   strength: string;
   quantityNeeded: string; // e.g., "5 strips (50 tablets)"
   urgency: RequestUrgency; // critical = Needed within 48h, high = Needed this week, routine = Clinic stock refill
@@ -47,6 +58,7 @@ export interface Medication {
   id: string;
   medicineName: string;
   genericName?: string; // e.g., "Paracetamol", "Esomeprazole"
+  category?: MedicineCategory;
   strength: string; // e.g., "665mg", "20mg"
   quantity: string; // e.g., "2 sealed strips (20 tablets)"
   expiryDate: string; // ISO date string YYYY-MM-DD
