@@ -24,10 +24,11 @@ interface DonateModalProps {
 }
 
 export default function DonateModal({ isOpen, onClose, onSuccess }: DonateModalProps) {
-  const { currentUser, addMedication } = useMedShare();
+  const { currentUser, addMedication, actionLoading } = useMedShare();
   const mounted = useIsMounted();
 
   const [medicineName, setMedicineName] = useState('');
+  const [genericName, setGenericName] = useState('');
   const [strength, setStrength] = useState('');
   const [quantity, setQuantity] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
@@ -85,6 +86,7 @@ export default function DonateModal({ isOpen, onClose, onSuccess }: DonateModalP
 
     addMedication({
       medicineName: medicineName.trim(),
+      genericName: genericName.trim() || undefined,
       strength: strength.trim(),
       quantity: quantity.trim(),
       expiryDate,
@@ -94,6 +96,7 @@ export default function DonateModal({ isOpen, onClose, onSuccess }: DonateModalP
 
     // Reset fields
     setMedicineName('');
+    setGenericName('');
     setStrength('');
     setQuantity('');
     setExpiryDate('');
@@ -175,7 +178,7 @@ export default function DonateModal({ isOpen, onClose, onSuccess }: DonateModalP
                   required
                   value={medicineName}
                   onChange={(e) => setMedicineName(e.target.value)}
-                  placeholder="e.g. Amoxicillin, Napa Extend, Sergel"
+                  placeholder="e.g. Napa Extend, Sergel, Amdocal"
                   className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition"
                 />
               </div>
@@ -191,10 +194,25 @@ export default function DonateModal({ isOpen, onClose, onSuccess }: DonateModalP
                 required
                 value={strength}
                 onChange={(e) => setStrength(e.target.value)}
-                placeholder="e.g. 500mg, 20mg"
+                placeholder="e.g. 665mg, 20mg"
                 className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition"
               />
             </div>
+          </div>
+
+          {/* Generic Name */}
+          <div>
+            <label htmlFor="generic-name" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              Generic Name <span className="text-slate-400 font-normal lowercase">(optional)</span>
+            </label>
+            <input
+              id="generic-name"
+              type="text"
+              value={genericName}
+              onChange={(e) => setGenericName(e.target.value)}
+              placeholder="e.g. Paracetamol, Esomeprazole, Amlodipine"
+              className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition"
+            />
           </div>
 
           {/* Row 2: Quantity & Packaging */}
@@ -385,15 +403,15 @@ export default function DonateModal({ isOpen, onClose, onSuccess }: DonateModalP
 
             <button
               type="submit"
-              disabled={!isFormValid}
+              disabled={!isFormValid || actionLoading === 'donating'}
               className={`px-5 py-2.5 text-xs sm:text-sm font-bold rounded-xl transition flex items-center gap-2 ${
-                isFormValid
+                isFormValid && actionLoading !== 'donating'
                   ? 'bg-teal-700 hover:bg-teal-800 active:bg-teal-900 text-white shadow-md hover:shadow cursor-pointer'
                   : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'
               }`}
             >
               <CheckCircle2 className="w-4 h-4" />
-              <span>List Medicine for Rescue</span>
+              <span>{actionLoading === 'donating' ? 'Listing Medicine...' : 'List Medicine for Rescue'}</span>
             </button>
           </div>
 

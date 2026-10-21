@@ -4,6 +4,8 @@ export type MedicationStatus = 'available' | 'claimed' | 'collected';
 
 export type UrgencyLevel = 'critical' | 'priority' | 'normal';
 
+export type VerificationStatus = 'unverified' | 'pending' | 'verified';
+
 export interface UserProfile {
   id: string;
   name: string;
@@ -12,19 +14,22 @@ export interface UserProfile {
   role: UserRole;
   phone: string;
   location: string;
-  isVerified: boolean;
+  verificationStatus: VerificationStatus;
+  isVerified: boolean; // boolean compatibility: verificationStatus === 'verified'
   organizationName?: string; // for clinics/charities
   registrationOrNid?: string; // Clinic/NGO reg ID or Individual NID
+  submittedAt?: string;
 }
 
 export interface Medication {
   id: string;
   medicineName: string;
-  strength: string; // e.g., "500mg", "20mg"
+  genericName?: string; // e.g., "Paracetamol", "Esomeprazole"
+  strength: string; // e.g., "665mg", "20mg"
   quantity: string; // e.g., "2 sealed strips (20 tablets)"
   expiryDate: string; // ISO date string YYYY-MM-DD
   location: string;
-  donorId: string;
+  donorId?: string;
   donorName: string;
   donorPhone: string;
   status: MedicationStatus;
@@ -32,5 +37,8 @@ export interface Medication {
   claimedByName?: string;
   claimedByRole?: UserRole;
   prescriptionRef?: string; // for individual collectors
+  pickupNote?: string;
+  claimedAt?: string;
+  collectedAt?: string;
   createdAt: string;
 }

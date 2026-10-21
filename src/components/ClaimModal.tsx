@@ -38,7 +38,7 @@ export default function ClaimModal({
   onSuccess,
   onViewClaimed,
 }: ClaimModalProps) {
-  const { currentUser, claimMedication } = useMedShare();
+  const { currentUser, claimMedication, actionLoading } = useMedShare();
   const mounted = useIsMounted();
 
   const [prescriptionRef, setPrescriptionRef] = useState('');
@@ -176,6 +176,11 @@ export default function ClaimModal({
                   <h3 className="font-extrabold text-slate-900 text-base leading-tight">
                     {medication.medicineName}
                   </h3>
+                  {medication.genericName && (
+                    <p className="text-xs text-slate-500 italic mt-0.5">
+                      ({medication.genericName})
+                    </p>
+                  )}
                   <div className="flex items-center gap-2 mt-1">
                     <span className="text-xs font-bold px-2 py-0.5 rounded bg-teal-100 text-teal-900 font-mono">
                       {medication.strength}
@@ -331,15 +336,15 @@ export default function ClaimModal({
 
               <button
                 type="submit"
-                disabled={!isFormValid}
+                disabled={!isFormValid || actionLoading === medication.id}
                 className={`px-5 py-2.5 text-xs sm:text-sm font-bold rounded-xl transition flex items-center gap-2 ${
-                  isFormValid
+                  isFormValid && actionLoading !== medication.id
                     ? 'bg-teal-700 hover:bg-teal-800 active:bg-teal-900 text-white shadow-md hover:shadow cursor-pointer'
                     : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'
                 }`}
               >
                 <CheckCircle2 className="w-4 h-4" />
-                <span>Confirm &amp; Claim Medicine</span>
+                <span>{actionLoading === medication.id ? 'Claiming...' : 'Confirm & Claim Medicine'}</span>
               </button>
             </div>
 

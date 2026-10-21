@@ -36,7 +36,7 @@ export default function AuthModal({
   onClose,
   onSuccess,
 }: AuthModalProps) {
-  const { login, register, loginAsDemo, allUsers } = useMedShare();
+  const { login, register, loginAsDemo, allUsers, actionLoading } = useMedShare();
 
   const [activeTab, setActiveTab] = useState<'login' | 'register'>(mode);
 
@@ -78,11 +78,11 @@ export default function AuthModal({
 
   if (!isOpen) return null;
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError(null);
 
-    const res = login(loginEmail, loginPassword);
+    const res = await login(loginEmail, loginPassword);
     if (!res.success) {
       setLoginError(res.error || 'Failed to log in.');
       return;
@@ -92,7 +92,7 @@ export default function AuthModal({
     onSuccess?.('Successfully logged in! Welcome back.');
   };
 
-  const handleRegisterSubmit = (e: React.FormEvent) => {
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setRegError(null);
 
@@ -112,7 +112,7 @@ export default function AuthModal({
       registrationOrNid: regOrNid.trim() || undefined,
     };
 
-    const res = register(data);
+    const res = await register(data);
     if (!res.success) {
       setRegError(res.error || 'Failed to create account.');
       return;
@@ -260,9 +260,10 @@ export default function AuthModal({
               {/* Submit Button */}
               <button
                 type="submit"
-                className="w-full py-2.5 px-4 text-xs sm:text-sm font-bold rounded-xl bg-teal-700 hover:bg-teal-800 active:bg-teal-900 text-white transition shadow-sm hover:shadow flex items-center justify-center gap-2 cursor-pointer"
+                disabled={actionLoading === 'auth'}
+                className="w-full py-2.5 px-4 text-xs sm:text-sm font-bold rounded-xl bg-teal-700 hover:bg-teal-800 active:bg-teal-900 text-white transition shadow-sm hover:shadow flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
               >
-                <span>Sign In to Account</span>
+                <span>{actionLoading === 'auth' ? 'Signing In...' : 'Sign In to Account'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </form>
@@ -287,7 +288,7 @@ export default function AuthModal({
                     <HeartHandshake className="w-3.5 h-3.5 text-teal-700" />
                     <span>Donor</span>
                   </div>
-                  <p className="text-[10px] text-teal-800 mt-0.5 truncate font-medium">Dr. Sarah Jenkins</p>
+                  <p className="text-[10px] text-teal-800 mt-0.5 truncate font-medium">Dr. Farhana Rahman</p>
                 </button>
 
                 {/* Demo Rural Clinic */}
@@ -313,7 +314,7 @@ export default function AuthModal({
                     <User className="w-3.5 h-3.5 text-sky-700" />
                     <span>Individual</span>
                   </div>
-                  <p className="text-[10px] text-sky-800 mt-0.5 truncate font-medium">Rahim Chowdhury</p>
+                  <p className="text-[10px] text-sky-800 mt-0.5 truncate font-medium">Rahim Chowdhury (Pending)</p>
                 </button>
               </div>
             </div>
@@ -519,10 +520,11 @@ export default function AuthModal({
             <div className="pt-2">
               <button
                 type="submit"
-                className="w-full py-2.5 px-4 text-xs sm:text-sm font-bold rounded-xl bg-teal-700 hover:bg-teal-800 active:bg-teal-900 text-white transition shadow-sm hover:shadow flex items-center justify-center gap-2 cursor-pointer"
+                disabled={actionLoading === 'auth'}
+                className="w-full py-2.5 px-4 text-xs sm:text-sm font-bold rounded-xl bg-teal-700 hover:bg-teal-800 active:bg-teal-900 text-white transition shadow-sm hover:shadow flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 <CheckCircle2 className="w-4 h-4" />
-                <span>Create Account &amp; Get Started</span>
+                <span>{actionLoading === 'auth' ? 'Creating Account...' : 'Create Account & Get Started'}</span>
               </button>
             </div>
           </form>

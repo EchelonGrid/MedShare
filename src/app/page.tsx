@@ -10,6 +10,7 @@ import VerifyModal from '@/components/VerifyModal';
 import ClaimModal from '@/components/ClaimModal';
 import AuthModal from '@/components/AuthModal';
 import UserPortal from '@/components/UserPortal';
+import ToastContainer from '@/components/Toast';
 import { Medication } from '@/types/medshare';
 import {
   Pill,
@@ -29,6 +30,9 @@ export default function HomePage() {
   const {
     medications,
     currentUser,
+    toasts,
+    dismissToast,
+    showToast,
     isDonateOpen,
     openDonateModal,
     closeDonateModal,
@@ -97,16 +101,21 @@ export default function HomePage() {
 
   const handleClaimSuccess = (msg: string) => {
     setNotification(msg);
+    showToast(msg, 'success', 'Medicine Claimed');
     // Switch to portal so user can immediately view unlocked donor contact details and coordinate pickup
     setActiveMainTab('portal');
   };
 
   const handleVerifySuccess = (msg: string) => {
     setNotification(msg);
+    showToast(msg, 'success', 'Verification');
   };
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-between">
+      {/* Floating Global Toast Notifications */}
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+
       <div className="flex-1">
         {/* Hero Banner */}
         <section className="bg-gradient-to-b from-teal-700 via-teal-800 to-slate-900 text-white pt-10 pb-16 px-4 sm:px-6 lg:px-8">

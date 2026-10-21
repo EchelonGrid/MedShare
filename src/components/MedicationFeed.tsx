@@ -96,12 +96,13 @@ export default function MedicationFeed({
           return false;
         }
 
-        // 3. Search query filter (matches medicineName or strength)
+        // 3. Search query filter (matches medicineName, strength, or genericName)
         if (searchQuery.trim() !== '') {
           const q = searchQuery.toLowerCase().trim();
           const matchesName = med.medicineName.toLowerCase().includes(q);
           const matchesStrength = med.strength.toLowerCase().includes(q);
-          if (!matchesName && !matchesStrength) return false;
+          const matchesGeneric = med.genericName ? med.genericName.toLowerCase().includes(q) : false;
+          if (!matchesName && !matchesStrength && !matchesGeneric) return false;
         }
 
         return true;

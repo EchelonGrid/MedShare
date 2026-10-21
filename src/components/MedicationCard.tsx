@@ -31,7 +31,7 @@ const ROLE_LABELS: Record<UserRole, string> = {
 };
 
 export default function MedicationCard({ medication, onClaimClick }: MedicationCardProps) {
-  const { currentUser, markAsCollected } = useMedShare();
+  const { currentUser, markAsCollected, actionLoading } = useMedShare();
   const mounted = useIsMounted();
 
   const daysRemaining = mounted ? getDaysUntilExpiry(medication.expiryDate) : null;
@@ -113,9 +113,16 @@ export default function MedicationCard({ medication, onClaimClick }: MedicationC
 
         {/* Medicine Name and Strength */}
         <div className="flex items-start justify-between gap-2">
-          <h3 className="font-extrabold text-slate-900 text-base sm:text-lg leading-snug tracking-tight">
-            {medication.medicineName || 'Unnamed Medicine'}
-          </h3>
+          <div>
+            <h3 className="font-extrabold text-slate-900 text-base sm:text-lg leading-snug tracking-tight">
+              {medication.medicineName || 'Unnamed Medicine'}
+            </h3>
+            {medication.genericName && (
+              <p className="text-xs text-slate-500 italic mt-0.5">
+                ({medication.genericName})
+              </p>
+            )}
+          </div>
           <span className="shrink-0 text-xs font-bold px-2.5 py-1 rounded-md bg-teal-100 text-teal-900 border border-teal-300 font-mono shadow-2xs">
             {medication.strength}
           </span>

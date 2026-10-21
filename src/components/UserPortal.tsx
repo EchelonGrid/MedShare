@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useMedShare } from '@/context/MedShareContext';
 import { getDaysUntilExpiry, getUrgencyLevel } from '@/lib/seed';
 import { useIsMounted } from '@/lib/useIsMounted';
+import { validateNidOrBirthReg, validateClinicRegistration } from '@/components/VerifyModal';
 import {
   User,
   Building2,
@@ -24,6 +25,10 @@ import {
   FileText,
   AlertCircle,
   Sparkles,
+  Zap,
+  CheckSquare,
+  XSquare,
+  Loader2,
 } from 'lucide-react';
 
 interface UserPortalProps {
@@ -34,8 +39,13 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
   const {
     currentUser,
     medications,
+    actionLoading,
     markAsCollected,
+    submitVerification,
     verifyCurrentUser,
+    approveVerification,
+    rejectVerification,
+    pendingVerifications,
     openDonateModal,
     openAuthModal,
   } = useMedShare();
@@ -46,7 +56,8 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
   // Inline verification state for unverified collectors
   const [inlineRegId, setInlineRegId] = useState('');
   const [inlineConfirmed, setInlineConfirmed] = useState(false);
-  const [verifySubmitted, setVerifySubmitted] = useState(false);
+  const [inlineFastTrack, setInlineFastTrack] = useState(true);
+  const [inlineTouched, setInlineTouched] = useState(false);
 
   const handleCopyPhone = (text: string, id: string) => {
     if (navigator?.clipboard) {
@@ -56,14 +67,24 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
     }
   };
 
-  const handleInlineVerify = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inlineRegId.trim() || !inlineConfirmed) return;
+  const isClinic = currentUser?.role === 'clinic_charity';
+  const isIndividual = currentUser?.role === 'individual';
 
-    verifyCurrentUser({
+  const isInlineIdValid = isClinic
+    ? validateClinicRegistration(inlineRegId)
+    : isIndividual
+    ? validateNidOrBirthReg(inlineRegId)
+    : inlineRegId.trim().length > 0;
+
+  const handleInlineVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setInlineTouched(true);
+    if (!isInlineIdValid || !inlineConfirmed) return;
+
+    await submitVerification({
       registrationOrNid: inlineRegId.trim(),
+      autoApprove: inlineFastTrack,
     });
-    setVerifySubmitted(true);
   };
 
   // If visitor is logged out
@@ -102,8 +123,6 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
   }
 
   const isDonor = currentUser.role === 'donor';
-  const isClinic = currentUser.role === 'clinic_charity';
-  const isIndividual = currentUser.role === 'individual';
   const isCollector = isClinic || isIndividual;
 
   // Filtered lists
@@ -162,17 +181,22 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                 </h2>
                 {/* Role Badge */}
                 <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-800 border border-teal-300">
-                  {isDonor ? 'Donor' : isClinic ? 'Clinic / Charity' : 'Individual Recipient'}
+                  {isDonor ? 'Donor' : isClinic ? 'Rural Clinic / Charity' : 'Individual Recipient'}
                 </span>
-                {/* Verification Badge */}
-                {currentUser.isVerified ? (
+                {/* 3-Stage Verification Badge */}
+                {currentUser.verificationStatus === 'verified' ? (
                   <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
                     <span>Verified</span>
                   </span>
-                ) : (
+                ) : currentUser.verificationStatus === 'pending' ? (
                   <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
-                    <ShieldAlert className="w-3.5 h-3.5 text-amber-600" />
+                    <Clock className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Pending Review</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-300">
+                    <ShieldAlert className="w-3.5 h-3.5 text-slate-500" />
                     <span>Unverified</span>
                   </span>
                 )}
@@ -229,8 +253,40 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
       {isCollector && (
         <div className="space-y-8">
           
-          {/* 1. Verification Status Card */}
-          {!currentUser.isVerified ? (
+          {/* 1. Verification Status Workflow Card */}
+          {currentUser.verificationStatus === 'pending' ? (
+            <div className="bg-amber-50/90 border border-amber-300 rounded-3xl p-6 sm:p-7 space-y-4 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-200/80 flex items-center justify-center text-amber-900 shrink-0 mt-0.5">
+                    <Clock className="w-5 h-5 text-amber-800 animate-spin" style={{ animationDuration: '4s' }} />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-base font-bold text-amber-950 flex items-center gap-2">
+                      <span>Credentials Under Moderator Review</span>
+                      <span className="text-[10px] font-mono bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full font-bold">
+                        {currentUser.registrationOrNid || 'Submitted'}
+                      </span>
+                    </h3>
+                    <p className="text-xs sm:text-sm text-amber-900/90 leading-relaxed max-w-2xl">
+                      Your identity credentials have been received and are currently queued for verification by the MedShare Compliance Team. Review typically takes under 24 hours.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Instant Evaluator Fast-Track Bypass */}
+                <button
+                  type="button"
+                  onClick={() => verifyCurrentUser({ autoApprove: true })}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 active:bg-teal-900 text-white text-xs font-bold shadow-sm transition cursor-pointer self-start sm:self-auto shrink-0"
+                  title="Instant approval for demo evaluation"
+                >
+                  <Zap className="w-3.5 h-3.5 text-amber-300" />
+                  <span>Instant Auto-Approve (Demo Mode)</span>
+                </button>
+              </div>
+            </div>
+          ) : currentUser.verificationStatus === 'unverified' ? (
             <div className="bg-amber-50/90 border border-amber-300 rounded-3xl p-6 sm:p-7 space-y-4 shadow-xs">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-start gap-3">
@@ -243,8 +299,8 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                     </h3>
                     <p className="text-xs sm:text-sm text-amber-900/90 leading-relaxed max-w-2xl">
                       {isClinic
-                        ? 'To protect community health, please provide your registered Clinic or NGO License number. Once submitted, medicine claiming is unlocked immediately.'
-                        : 'To claim medications, please provide your Government National ID (NID) or Birth Registration Number to confirm recipient authenticity.'}
+                        ? 'To protect community health, please provide your registered Clinic or NGO License number (DGHS / NGO Bureau). Once verified, medicine claiming is unlocked.'
+                        : 'To claim medications, please provide your Government National ID (10, 13, or 17 digits) or Birth Registration Number.'}
                     </p>
                   </div>
                 </div>
@@ -268,10 +324,21 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                       required
                       value={inlineRegId}
                       onChange={(e) => setInlineRegId(e.target.value)}
-                      placeholder={isClinic ? 'e.g. NGO-CLINIC-7729' : 'e.g. 1998260636001'}
-                      className="w-full pl-9 pr-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition font-mono"
+                      placeholder={isClinic ? 'e.g. DGHS-BOG-4491' : 'e.g. 1998260636001 (10, 13, or 17 digits)'}
+                      className={`w-full pl-9 pr-3.5 py-2 text-sm rounded-xl border outline-none transition font-mono ${
+                        inlineTouched && !isInlineIdValid
+                          ? 'border-rose-300 bg-rose-50/50 focus:border-rose-500'
+                          : 'border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100'
+                      }`}
                     />
                   </div>
+                  {inlineTouched && !isInlineIdValid && (
+                    <p className="text-[11px] text-rose-600 mt-1 font-medium">
+                      {isClinic
+                        ? 'License number must be at least 4 characters.'
+                        : 'National ID must be strictly 10, 13, or 17 digits (or 17 digits for birth reg).'}
+                    </p>
+                  )}
                 </div>
 
                 <label className="flex items-start gap-2.5 text-xs text-slate-800 cursor-pointer select-none">
@@ -282,22 +349,49 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                     className="mt-0.5 rounded border-slate-300 text-teal-600 focus:ring-teal-500 cursor-pointer h-4 w-4"
                   />
                   <span>
-                    I confirm that the details provided are accurate and I will physically inspect the sealed packaging and expiry date upon collection.
+                    I confirm that the details provided are accurate and I will physically inspect sealed packaging and expiry dates upon collection.
                   </span>
                 </label>
+
+                {/* Demo Fast-Track Toggle */}
+                <div className="flex items-center justify-between pt-1 text-xs text-slate-600">
+                  <span className="flex items-center gap-1.5 font-medium text-teal-800">
+                    <Zap className="w-3.5 h-3.5 text-amber-500" />
+                    <span>⚡ Instant Auto-Approve (Demo Mode)</span>
+                  </span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={inlineFastTrack}
+                      onChange={(e) => setInlineFastTrack(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-8 h-4 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-teal-600"></div>
+                  </label>
+                </div>
 
                 <div className="pt-1">
                   <button
                     type="submit"
-                    disabled={!inlineRegId.trim() || !inlineConfirmed}
+                    disabled={!inlineRegId.trim() || !inlineConfirmed || actionLoading === 'verifying'}
                     className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 ${
-                      inlineRegId.trim() && inlineConfirmed
+                      inlineRegId.trim() && inlineConfirmed && actionLoading !== 'verifying'
                         ? 'bg-teal-700 hover:bg-teal-800 text-white shadow-sm cursor-pointer'
                         : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'
                     }`}
                   >
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>Verify Account &amp; Unlock Claims</span>
+                    {actionLoading === 'verifying' ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="w-4 h-4" />
+                    )}
+                    <span>
+                      {actionLoading === 'verifying'
+                        ? 'Verifying...'
+                        : inlineFastTrack
+                        ? 'Verify Account & Unlock Claims'
+                        : 'Submit for Review'}
+                    </span>
                   </button>
                 </div>
               </form>
@@ -381,6 +475,11 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                               {med.strength}
                             </span>
                           </div>
+                          {med.genericName && (
+                            <p className="text-xs text-slate-500 italic mt-0.5">
+                              ({med.genericName})
+                            </p>
+                          )}
                           <p className="text-xs text-slate-600 mt-1 font-medium">
                             {med.quantity}
                           </p>
@@ -444,9 +543,14 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                         <button
                           type="button"
                           onClick={() => markAsCollected(med.id)}
-                          className="w-full py-2.5 px-4 text-xs sm:text-sm font-bold rounded-xl bg-teal-700 hover:bg-teal-800 active:bg-teal-900 text-white transition shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                          disabled={actionLoading === med.id}
+                          className="w-full py-2.5 px-4 text-xs sm:text-sm font-bold rounded-xl bg-teal-700 hover:bg-teal-800 active:bg-teal-900 text-white transition shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                         >
-                          <CheckCircle2 className="w-4 h-4" />
+                          {actionLoading === med.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <CheckCircle2 className="w-4 h-4" />
+                          )}
                           <span>Confirm Pickup &amp; Mark Collected</span>
                         </button>
                         <p className="text-[11px] text-center text-slate-500 mt-1 italic">
@@ -506,6 +610,9 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                             {med.strength}
                           </span>
                         </div>
+                        {med.genericName && (
+                          <p className="text-xs text-slate-400 italic">({med.genericName})</p>
+                        )}
                         <p className="text-xs text-slate-500 mt-0.5">
                           {med.quantity} • Collected from <strong className="text-slate-700">{med.donorName}</strong> ({med.location})
                         </p>
@@ -602,6 +709,11 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                             {med.strength}
                           </span>
                         </div>
+                        {med.genericName && (
+                          <p className="text-xs text-slate-500 italic mt-0.5">
+                            ({med.genericName})
+                          </p>
+                        )}
                         <p className="text-xs text-slate-600 mt-1 font-medium">{med.quantity}</p>
                       </div>
 
@@ -637,9 +749,14 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                         <button
                           type="button"
                           onClick={() => markAsCollected(med.id)}
-                          className="w-full py-2.5 px-4 text-xs sm:text-sm font-bold rounded-xl bg-sky-700 hover:bg-sky-800 active:bg-sky-900 text-white transition shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                          disabled={actionLoading === med.id}
+                          className="w-full py-2.5 px-4 text-xs sm:text-sm font-bold rounded-xl bg-sky-700 hover:bg-sky-800 active:bg-sky-900 text-white transition shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                         >
-                          <CheckCircle2 className="w-4 h-4" />
+                          {actionLoading === med.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <CheckCircle2 className="w-4 h-4" />
+                          )}
                           <span>Mark as Handed Over</span>
                         </button>
                       </div>
@@ -668,6 +785,103 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
           )}
         </div>
       )}
+
+      {/* ============================================================= */}
+      {/* 4. COMMUNITY COMPLIANCE & MODERATOR VERIFICATION QUEUE        */}
+      {/* ============================================================= */}
+      <div className="pt-6 border-t border-slate-200">
+        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-teal-950 text-white rounded-3xl p-6 sm:p-7 shadow-lg space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-teal-500/20 border border-teal-400/30 flex items-center justify-center text-teal-300">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base sm:text-lg font-bold tracking-tight text-white flex items-center gap-2">
+                  <span>Community Compliance &amp; Verification Queue</span>
+                  <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                    {pendingVerifications.length} Pending
+                  </span>
+                </h3>
+                <p className="text-xs text-teal-100/80">
+                  Live review desk: verify clinic licenses and recipient national IDs before medicine distribution.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {pendingVerifications.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+              {pendingVerifications.map((pendingUser) => (
+                <div
+                  key={pendingUser.id}
+                  className="bg-white/10 backdrop-blur-sm border border-white/15 rounded-2xl p-4 sm:p-5 space-y-3 flex flex-col justify-between"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-200 border border-teal-400/30">
+                        {pendingUser.role === 'clinic_charity' ? 'Rural Clinic / NGO' : 'Individual Recipient'}
+                      </span>
+                      <span className="text-[11px] font-mono text-amber-300 flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        <span>Awaiting Review</span>
+                      </span>
+                    </div>
+
+                    <div>
+                      <h4 className="font-bold text-white text-base">{pendingUser.name}</h4>
+                      {pendingUser.organizationName && (
+                        <p className="text-xs text-teal-200 font-medium">
+                          Org: {pendingUser.organizationName}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="bg-black/20 rounded-xl p-2.5 space-y-1 text-xs text-slate-300 font-mono">
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Cred ID:</span>
+                        <span className="font-bold text-amber-200">{pendingUser.registrationOrNid || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Phone:</span>
+                        <span>{pendingUser.phone}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Location:</span>
+                        <span>{pendingUser.location}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => approveVerification(pendingUser.id)}
+                      className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Approve Credential</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => rejectVerification(pendingUser.id, 'Format mismatch')}
+                      className="py-2 px-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-500/40 text-xs font-semibold transition cursor-pointer"
+                    >
+                      Reject
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-center text-xs text-teal-100/70 space-y-1">
+              <CheckCircle2 className="w-6 h-6 text-emerald-400 mx-auto mb-1" />
+              <p className="font-semibold text-white">All Verification Requests Processed</p>
+              <p>No collectors are currently waiting in the verification review queue.</p>
+            </div>
+          )}
+        </div>
+      </div>
 
     </div>
   );

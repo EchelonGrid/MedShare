@@ -38,6 +38,8 @@ export default function Navbar() {
   const {
     currentUser,
     medications,
+    isDbConnected,
+    dbMode,
     logout,
     resetDemoData,
     openDonateModal,
@@ -85,6 +87,17 @@ export default function Navbar() {
                 <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded bg-teal-800/80 border border-teal-500/40 text-teal-200">
                   COMMUNITY MED RESCUE
                 </span>
+                {isDbConnected ? (
+                  <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-400/40">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span>Live Cloud DB</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-200 border border-amber-400/40">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                    <span>Local Mode</span>
+                  </span>
+                )}
               </div>
               <p className="text-xs text-teal-100/90 font-medium">
                 Rescuing unexpired medication for rural clinics &amp; families
@@ -131,10 +144,15 @@ export default function Navbar() {
                   </span>
 
                   {/* Verification Badge & Action */}
-                  {currentUser.isVerified ? (
+                  {currentUser.verificationStatus === 'verified' ? (
                     <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-400/50">
                       <ShieldCheck className="w-3.5 h-3.5 text-emerald-300" />
                       <span>Verified</span>
+                    </span>
+                  ) : currentUser.verificationStatus === 'pending' ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-200 border border-amber-400/50">
+                      <ShieldAlert className="w-3.5 h-3.5 text-amber-300" />
+                      <span>Pending Review</span>
                     </span>
                   ) : (
                     <div className="flex items-center gap-2">
