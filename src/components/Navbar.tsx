@@ -57,7 +57,11 @@ export default function Navbar() {
   const portalBadgeCount = currentUser
     ? currentUser.role === 'donor'
       ? medications.filter((m) => m.donorId === currentUser.id && m.status === 'claimed').length
-      : medications.filter((m) => m.claimedById === currentUser.id && m.status === 'claimed').length
+      : medications.filter(
+          (m) =>
+            (m.claimedById === currentUser.id && m.status === 'claimed') ||
+            (m.claims || []).some((c) => c.claimerId === currentUser.id && c.status === 'claimed')
+        ).length
     : 0;
 
   const handleDonateClick = () => {

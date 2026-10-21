@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { Medication } from '@/types/medshare';
 import { useMedShare } from '@/context/MedShareContext';
-import { getDaysUntilExpiry, getUrgencyLevel } from '@/lib/seed';
+import { getDaysUntilExpiry, getUrgencyLevel, parseQuantity } from '@/lib/seed';
 import { useIsMounted } from '@/lib/useIsMounted';
 import { validateNidOrBirthReg, validateClinicRegistration } from '@/components/VerifyModal';
 import {
@@ -125,13 +126,103 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
   const isDonor = currentUser.role === 'donor';
   const isCollector = isClinic || isIndividual;
 
-  // Filtered lists
-  const myClaimedPending = medications.filter(
-    (m) => m.claimedById === currentUser.id && m.status === 'claimed'
-  );
-  const myCollectionHistory = medications.filter(
-    (m) => m.claimedById === currentUser.id && m.status === 'collected'
-  );
+  // Filtered lists with partial split claim support
+  const myClaimedPending = useMemo(() => {
+    const list: {
+      medication: Medication;
+      claimId?: string;
+      claimedQuantity: number;
+      unitName: string;
+      totalBatchQuantity: number;
+      prescriptionRef?: string;
+      isPartial: boolean;
+    }[] = [];
+
+    medications.forEach((med) => {
+      const parsed = parseQuantity(med.quantity);
+      const total = med.totalNumericQuantity ?? parsed.total;
+      const unit = med.unitName || parsed.unit;
+
+      const userClaims = (med.claims || []).filter(
+        (c) => c.claimerId === currentUser.id && c.status === 'claimed'
+      );
+
+      if (userClaims.length > 0) {
+        userClaims.forEach((c) => {
+          list.push({
+            medication: med,
+            claimId: c.id,
+            claimedQuantity: c.claimedQuantity,
+            unitName: c.unitName || unit,
+            totalBatchQuantity: total,
+            prescriptionRef: c.prescriptionRef || med.prescriptionRef,
+            isPartial: c.claimedQuantity < total,
+          });
+        });
+      } else if (med.claimedById === currentUser.id && med.status === 'claimed') {
+        const claimedQty = med.claimedQuantity ?? total;
+        list.push({
+          medication: med,
+          claimedQuantity: claimedQty,
+          unitName: unit,
+          totalBatchQuantity: total,
+          prescriptionRef: med.prescriptionRef,
+          isPartial: claimedQty < total,
+        });
+      }
+    });
+
+    return list;
+  }, [medications, currentUser.id]);
+
+  const myCollectionHistory = useMemo(() => {
+    const list: {
+      medication: Medication;
+      claimId?: string;
+      claimedQuantity: number;
+      unitName: string;
+      totalBatchQuantity: number;
+      collectedAt?: string;
+      isPartial: boolean;
+    }[] = [];
+
+    medications.forEach((med) => {
+      const parsed = parseQuantity(med.quantity);
+      const total = med.totalNumericQuantity ?? parsed.total;
+      const unit = med.unitName || parsed.unit;
+
+      const userCollected = (med.claims || []).filter(
+        (c) => c.claimerId === currentUser.id && c.status === 'collected'
+      );
+
+      if (userCollected.length > 0) {
+        userCollected.forEach((c) => {
+          list.push({
+            medication: med,
+            claimId: c.id,
+            claimedQuantity: c.claimedQuantity,
+            unitName: c.unitName || unit,
+            totalBatchQuantity: total,
+            collectedAt: c.collectedAt || med.collectedAt,
+            isPartial: c.claimedQuantity < total,
+          });
+        });
+      } else if (med.claimedById === currentUser.id && med.status === 'collected') {
+        const claimedQty = med.claimedQuantity ?? total;
+        list.push({
+          medication: med,
+          claimedQuantity: claimedQty,
+          unitName: unit,
+          totalBatchQuantity: total,
+          collectedAt: med.collectedAt,
+          isPartial: claimedQty < total,
+        });
+      }
+    });
+
+    return list;
+  }, [medications, currentUser.id]);
+
   const myDonations = medications.filter((m) => m.donorId === currentUser.id);
 
   return (
@@ -435,13 +526,14 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
 
             {myClaimedPending.length > 0 ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                {myClaimedPending.map((med) => {
+                {myClaimedPending.map((item) => {
+                  const med = item.medication;
                   const days = mounted ? getDaysUntilExpiry(med.expiryDate) : null;
                   const urgency = days !== null ? getUrgencyLevel(days) : 'normal';
 
                   return (
                     <div
-                      key={med.id}
+                      key={item.claimId || med.id}
                       className="bg-white rounded-3xl border-2 border-sky-200 p-5 sm:p-6 shadow-sm space-y-4 flex flex-col justify-between"
                     >
                       <div className="space-y-3">
@@ -461,7 +553,7 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                           </span>
 
                           <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 border border-sky-200">
-                            Claimed • Awaiting Pickup
+                            {item.isPartial ? 'Partial Claim • Awaiting Pickup' : 'Claimed • Awaiting Pickup'}
                           </span>
                         </div>
 
@@ -480,9 +572,16 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                               ({med.genericName})
                             </p>
                           )}
-                          <p className="text-xs text-slate-600 mt-1 font-medium">
-                            {med.quantity}
-                          </p>
+                          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                            <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-teal-100 text-teal-900 font-mono">
+                              Claimed: {item.claimedQuantity} {item.unitName}
+                            </span>
+                            {item.isPartial && (
+                              <span className="text-xs text-slate-500 font-medium">
+                                (from batch of {item.totalBatchQuantity} {item.unitName})
+                              </span>
+                            )}
+                          </div>
                         </div>
 
                         {/* UNLOCKED DONOR CONTACT INFORMATION */}
@@ -511,11 +610,11 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                                 </a>
                                 <button
                                   type="button"
-                                  onClick={() => handleCopyPhone(med.donorPhone, med.id)}
+                                  onClick={() => handleCopyPhone(med.donorPhone, item.claimId || med.id)}
                                   className="p-1 rounded text-slate-400 hover:text-teal-700 hover:bg-teal-50 cursor-pointer"
                                   title="Copy phone number"
                                 >
-                                  {copiedId === med.id ? (
+                                  {copiedId === (item.claimId || med.id) ? (
                                     <Check className="w-3.5 h-3.5 text-emerald-600" />
                                   ) : (
                                     <Copy className="w-3.5 h-3.5" />
@@ -529,9 +628,9 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                               <span className="font-medium text-slate-800 text-right">{med.location}</span>
                             </div>
 
-                            {med.prescriptionRef && (
+                            {item.prescriptionRef && (
                               <div className="pt-1 border-t border-slate-100 text-[11px] text-slate-600">
-                                <span className="font-medium text-slate-700">Prescription / Note:</span> {med.prescriptionRef}
+                                <span className="font-medium text-slate-700">Prescription / Note:</span> {item.prescriptionRef}
                               </div>
                             )}
                           </div>
@@ -542,7 +641,7 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                       <div className="pt-2">
                         <button
                           type="button"
-                          onClick={() => markAsCollected(med.id)}
+                          onClick={() => markAsCollected(med.id, item.claimId)}
                           disabled={actionLoading === med.id}
                           className="w-full py-2.5 px-4 text-xs sm:text-sm font-bold rounded-xl bg-teal-700 hover:bg-teal-800 active:bg-teal-900 text-white transition shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                         >
@@ -551,7 +650,7 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                           ) : (
                             <CheckCircle2 className="w-4 h-4" />
                           )}
-                          <span>Confirm Pickup &amp; Mark Collected</span>
+                          <span>Confirm Pickup &amp; Mark Collected ({item.claimedQuantity} {item.unitName})</span>
                         </button>
                         <p className="text-[11px] text-center text-slate-500 mt-1 italic">
                           Click only after inspecting sealed packaging and expiry date in person.
@@ -597,34 +696,40 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
 
             {myCollectionHistory.length > 0 ? (
               <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs divide-y divide-slate-100">
-                {myCollectionHistory.map((med) => (
-                  <div key={med.id} className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="flex items-start gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 shrink-0 mt-0.5">
-                        <PackageCheck className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-bold text-slate-900 text-sm">{med.medicineName}</h4>
-                          <span className="text-[11px] font-mono font-bold px-2 py-0.2 rounded bg-teal-50 text-teal-800 border border-teal-200">
-                            {med.strength}
-                          </span>
+                {myCollectionHistory.map((item) => {
+                  const med = item.medication;
+                  return (
+                    <div key={item.claimId || med.id} className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 shrink-0 mt-0.5">
+                          <PackageCheck className="w-5 h-5" />
                         </div>
-                        {med.genericName && (
-                          <p className="text-xs text-slate-400 italic">({med.genericName})</p>
-                        )}
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          {med.quantity} • Collected from <strong className="text-slate-700">{med.donorName}</strong> ({med.location})
-                        </p>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-bold text-slate-900 text-sm">{med.medicineName}</h4>
+                            <span className="text-[11px] font-mono font-bold px-2 py-0.2 rounded bg-teal-50 text-teal-800 border border-teal-200">
+                              {med.strength}
+                            </span>
+                            <span className="text-xs font-bold px-2 py-0.2 rounded bg-emerald-100 text-emerald-800 font-mono">
+                              {item.claimedQuantity} {item.unitName}
+                            </span>
+                          </div>
+                          {med.genericName && (
+                            <p className="text-xs text-slate-400 italic">({med.genericName})</p>
+                          )}
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            Collected from <strong className="text-slate-700">{med.donorName}</strong> ({med.location})
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="shrink-0 flex items-center gap-2 self-start sm:self-auto text-xs text-emerald-800 font-semibold bg-emerald-50 px-3 py-1 rounded-xl border border-emerald-200">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Handover Safely Completed</span>
                       </div>
                     </div>
-
-                    <div className="shrink-0 flex items-center gap-2 self-start sm:self-auto text-xs text-emerald-800 font-semibold bg-emerald-50 px-3 py-1 rounded-xl border border-emerald-200">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Handover Safely Completed</span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="bg-white rounded-3xl border border-slate-200 p-6 text-center text-xs text-slate-500">
@@ -661,6 +766,16 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                 const days = mounted ? getDaysUntilExpiry(med.expiryDate) : null;
                 const urgency = days !== null ? getUrgencyLevel(days) : 'normal';
 
+                const parsed = parseQuantity(med.quantity);
+                const total = med.totalNumericQuantity ?? parsed.total;
+                const unit = med.unitName || parsed.unit;
+                const remaining =
+                  med.remainingNumericQuantity !== undefined
+                    ? med.remainingNumericQuantity
+                    : med.status === 'claimed' || med.status === 'collected'
+                    ? 0
+                    : total;
+
                 return (
                   <div
                     key={med.id}
@@ -682,18 +797,23 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                           <span>{days !== null ? `Expires in ${days}d` : med.expiryDate}</span>
                         </span>
 
-                        {med.status === 'available' && (
-                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 border border-teal-300">
-                            Available in Feed
+                        {med.status === 'available' && remaining < total && (
+                          <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
+                            Split: {remaining} of {total} {unit} left
+                          </span>
+                        )}
+                        {med.status === 'available' && remaining === total && (
+                          <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-800 border border-teal-300">
+                            Available in Feed ({total} {unit})
                           </span>
                         )}
                         {med.status === 'claimed' && (
-                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 border border-sky-300">
+                          <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-sky-100 text-sky-800 border border-sky-300">
                             Claimed • Awaiting Pickup
                           </span>
                         )}
                         {med.status === 'collected' && (
-                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                          <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
                             ✓ Handed Over
                           </span>
                         )}
@@ -714,11 +834,43 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                             ({med.genericName})
                           </p>
                         )}
-                        <p className="text-xs text-slate-600 mt-1 font-medium">{med.quantity}</p>
+                        <p className="text-xs text-slate-600 mt-1 font-medium">
+                          Total Batch: <strong>{total} {unit}</strong> (Remaining: {remaining} {unit})
+                        </p>
                       </div>
 
-                      {/* Claim details if claimed */}
-                      {med.status === 'claimed' && (
+                      {/* Partial claims breakdown if split */}
+                      {med.claims && med.claims.length > 0 && (
+                        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-1.5 text-xs">
+                          <span className="font-bold text-slate-800 text-[11px] uppercase tracking-wider">
+                            Claims Log ({med.claims.length}):
+                          </span>
+                          <div className="space-y-1">
+                            {med.claims.map((c) => (
+                              <div
+                                key={c.id}
+                                className="flex items-center justify-between text-[11px] text-slate-700 bg-white p-2 rounded-xl border border-slate-100"
+                              >
+                                <span>
+                                  <strong>{c.claimerName}</strong>: {c.claimedQuantity} {c.unitName}
+                                </span>
+                                <span
+                                  className={`px-2 py-0.5 rounded-full font-bold uppercase text-[10px] ${
+                                    c.status === 'collected'
+                                      ? 'bg-emerald-100 text-emerald-800'
+                                      : 'bg-sky-100 text-sky-800'
+                                  }`}
+                                >
+                                  {c.status === 'collected' ? '✓ Handed Over' : 'Pending Pickup'}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Claim details if full legacy claimed */}
+                      {med.status === 'claimed' && (!med.claims || med.claims.length === 0) && (
                         <div className="bg-sky-50/80 border border-sky-200 rounded-2xl p-3.5 space-y-1.5 text-xs text-sky-950">
                           <div className="font-bold text-sky-900 flex items-center gap-1.5">
                             <Building2 className="w-3.5 h-3.5 text-sky-700" />
@@ -735,7 +887,7 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                         </div>
                       )}
 
-                      {med.status === 'collected' && (
+                      {med.status === 'collected' && (!med.claims || med.claims.length === 0) && (
                         <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3 text-xs text-emerald-900 flex items-center gap-2">
                           <PackageCheck className="w-4 h-4 text-emerald-600 shrink-0" />
                           <span>Handed over to <strong>{med.claimedByName}</strong></span>

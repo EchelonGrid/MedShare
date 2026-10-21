@@ -42,6 +42,66 @@ export function getFutureDateISO(daysAhead: number): string {
   return date.toISOString().split('T')[0];
 }
 
+/**
+ * Extracts numeric quantity and unit from human-readable strings like:
+ * "3 sealed blister strips (30 tablets)" -> { total: 30, unit: 'tablets' }
+ * "2 intact strips (20 capsules)" -> { total: 20, unit: 'capsules' }
+ * "3 sealed vials" -> { total: 3, unit: 'vials' }
+ * Falls back to { total: 10, unit: 'units' } if unparsable.
+ */
+export function parseQuantity(quantityStr?: string | null): { total: number; unit: string } {
+  if (!quantityStr || typeof quantityStr !== 'string') {
+    return { total: 10, unit: 'units' };
+  }
+
+  const str = quantityStr.trim();
+
+  // Pattern 1: Inner parentheses count e.g. "(30 tablets)", "(20 capsules)", "(6 tablets)"
+  const parenMatch = str.match(/\((\d+)\s*([a-zA-Z]+)\)/);
+  if (parenMatch) {
+    const total = parseInt(parenMatch[1], 10);
+    let unit = parenMatch[2].toLowerCase();
+    if (unit === 'tablet' || unit === 'tab' || unit === 'tabs') unit = 'tablets';
+    if (unit === 'capsule' || unit === 'cap' || unit === 'caps') unit = 'capsules';
+    if (unit === 'strip') unit = 'strips';
+    if (unit === 'vial') unit = 'vials';
+    if (unit === 'bottle') unit = 'bottles';
+    if (unit === 'pack') unit = 'packs';
+    if (unit === 'box') unit = 'boxes';
+    if (!isNaN(total) && total > 0) {
+      return { total, unit };
+    }
+  }
+
+  // Pattern 2: Direct count + unit e.g. "30 tablets", "4 strips", "3 vials", "1 bottle"
+  const directMatch = str.match(
+    /(\d+)\s*(tablets?|capsules?|strips?|vials?|bottles?|packs?|boxes?|pieces?|units?|ampoules?)/i
+  );
+  if (directMatch) {
+    const total = parseInt(directMatch[1], 10);
+    let unit = directMatch[2].toLowerCase();
+    if (!unit.endsWith('s') && !['box'].includes(unit)) {
+      unit = unit + 's';
+    } else if (unit === 'box') {
+      unit = 'boxes';
+    }
+    if (!isNaN(total) && total > 0) {
+      return { total, unit };
+    }
+  }
+
+  // Pattern 3: Any initial number
+  const anyNumMatch = str.match(/(\d+)/);
+  if (anyNumMatch) {
+    const total = parseInt(anyNumMatch[1], 10);
+    if (!isNaN(total) && total > 0) {
+      return { total, unit: 'units' };
+    }
+  }
+
+  return { total: 10, unit: 'units' };
+}
+
 export const DEFAULT_USERS: UserProfile[] = [
   {
     id: 'user-donor-1',
@@ -90,6 +150,9 @@ export const INITIAL_MEDICATIONS: Medication[] = [
     category: 'Pain & Fever',
     strength: '665mg',
     quantity: '3 sealed blister strips (30 tablets)',
+    totalNumericQuantity: 30,
+    unitName: 'tablets',
+    remainingNumericQuantity: 30,
     expiryDate: getFutureDateISO(16),
     location: 'Mirpur 10, Dhaka',
     donorId: 'user-donor-1',
@@ -105,6 +168,9 @@ export const INITIAL_MEDICATIONS: Medication[] = [
     category: 'Gastric & Ulcer',
     strength: '20mg',
     quantity: '2 intact strips (20 capsules)',
+    totalNumericQuantity: 20,
+    unitName: 'capsules',
+    remainingNumericQuantity: 20,
     expiryDate: getFutureDateISO(25),
     location: 'Jaleswaritola, Bogura',
     donorId: 'user-donor-1',
@@ -120,6 +186,9 @@ export const INITIAL_MEDICATIONS: Medication[] = [
     category: 'Blood Pressure & Heart',
     strength: '5mg',
     quantity: '4 sealed blister packs (40 tablets)',
+    totalNumericQuantity: 40,
+    unitName: 'tablets',
+    remainingNumericQuantity: 40,
     expiryDate: getFutureDateISO(42),
     location: 'Pabna Sadar, Pabna',
     donorId: 'user-donor-1',
@@ -135,6 +204,9 @@ export const INITIAL_MEDICATIONS: Medication[] = [
     category: 'Antibiotics',
     strength: '500mg',
     quantity: '1 sealed box (6 tablets)',
+    totalNumericQuantity: 6,
+    unitName: 'tablets',
+    remainingNumericQuantity: 6,
     expiryDate: getFutureDateISO(54),
     location: 'Dhanmondi 27, Dhaka',
     donorId: 'user-donor-1',
@@ -150,6 +222,23 @@ export const INITIAL_MEDICATIONS: Medication[] = [
     category: 'Asthma & Allergy',
     strength: '10mg',
     quantity: '2 intact blister strips (20 tablets)',
+    totalNumericQuantity: 20,
+    unitName: 'tablets',
+    remainingNumericQuantity: 14,
+    claims: [
+      {
+        id: 'claim-seed-5',
+        medicationId: 'med-5',
+        claimerId: 'user-clinic-1',
+        claimerName: 'Nurse Michael Chang (Rural Hope)',
+        claimerRole: 'clinic_charity',
+        claimedQuantity: 6,
+        unitName: 'tablets',
+        prescriptionRef: 'Emergency pediatric respiratory clinic refill',
+        claimedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+        status: 'claimed',
+      },
+    ],
     expiryDate: getFutureDateISO(95),
     location: 'Sherpur Road, Bogura',
     donorId: 'user-donor-1',
@@ -165,6 +254,24 @@ export const INITIAL_MEDICATIONS: Medication[] = [
     category: 'Blood Pressure & Heart',
     strength: '5mg/20mg',
     quantity: '2 sealed strips (20 tablets)',
+    totalNumericQuantity: 20,
+    unitName: 'tablets',
+    remainingNumericQuantity: 0,
+    claimedQuantity: 20,
+    claims: [
+      {
+        id: 'claim-seed-6',
+        medicationId: 'med-6',
+        claimerId: 'user-clinic-1',
+        claimerName: 'Nurse Michael Chang (Rural Hope)',
+        claimerRole: 'clinic_charity',
+        claimedQuantity: 20,
+        unitName: 'tablets',
+        claimedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+        collectedAt: new Date(Date.now() - 13 * 24 * 60 * 60 * 1000).toISOString(),
+        status: 'collected',
+      },
+    ],
     expiryDate: getFutureDateISO(14),
     location: 'Pabna Sadar, Pabna',
     donorId: 'user-donor-1',

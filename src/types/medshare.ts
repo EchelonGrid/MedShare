@@ -54,6 +54,20 @@ export interface UserProfile {
   submittedAt?: string;
 }
 
+export interface BatchClaim {
+  id: string;
+  medicationId: string;
+  claimerId: string;
+  claimerName: string;
+  claimerRole: UserRole;
+  claimedQuantity: number;
+  unitName: string;
+  prescriptionRef?: string;
+  claimedAt: string;
+  collectedAt?: string;
+  status: 'claimed' | 'collected';
+}
+
 export interface Medication {
   id: string;
   medicineName: string;
@@ -61,6 +75,9 @@ export interface Medication {
   category?: MedicineCategory;
   strength: string; // e.g., "665mg", "20mg"
   quantity: string; // e.g., "2 sealed strips (20 tablets)"
+  totalNumericQuantity?: number; // total units in donation batch (e.g., 30)
+  unitName?: string; // e.g., "tablets", "capsules", "strips", "bottles", "vials"
+  remainingNumericQuantity?: number; // units still available to claim (e.g., 20)
   expiryDate: string; // ISO date string YYYY-MM-DD
   location: string;
   donorId?: string;
@@ -70,6 +87,8 @@ export interface Medication {
   claimedById?: string;
   claimedByName?: string;
   claimedByRole?: UserRole;
+  claimedQuantity?: number; // amount claimed in primary or final claim
+  claims?: BatchClaim[]; // partial claims log for split batches
   prescriptionRef?: string; // for individual collectors
   pickupNote?: string;
   claimedAt?: string;

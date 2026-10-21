@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { MedicineRequest, MedicineCategory } from '@/types/medshare';
 import { useMedShare } from '@/context/MedShareContext';
-import { getDaysUntilExpiry, getUrgencyLevel } from '@/lib/seed';
+import { getDaysUntilExpiry, getUrgencyLevel, parseQuantity } from '@/lib/seed';
 import { useIsMounted } from '@/lib/useIsMounted';
 import {
   MEDICINE_CATEGORIES,
@@ -167,12 +167,17 @@ export default function DonateModal({
 
     if (!isFormValid) return;
 
+    const { total, unit } = parseQuantity(quantity);
+
     await addMedication({
       medicineName: medicineName.trim(),
       genericName: genericName.trim() || undefined,
       category,
       strength: strength.trim(),
       quantity: quantity.trim(),
+      totalNumericQuantity: total,
+      unitName: unit,
+      remainingNumericQuantity: total,
       expiryDate,
       location: location.trim(),
       donorPhone: phone.trim(),

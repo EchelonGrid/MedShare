@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Medication } from '@/types/medshare';
 import { useMedShare } from '@/context/MedShareContext';
-import { getDaysUntilExpiry, getUrgencyLevel } from '@/lib/seed';
+import { getDaysUntilExpiry, getUrgencyLevel, parseQuantity } from '@/lib/seed';
 import { useIsMounted } from '@/lib/useIsMounted';
 import {
   X,
@@ -43,16 +43,34 @@ export default function ClaimModal({
 
   const [prescriptionRef, setPrescriptionRef] = useState('');
   const [pickupNote, setPickupNote] = useState('');
+  const [claimAmount, setClaimAmount] = useState<number>(1);
   const [inspectionConfirmed, setInspectionConfirmed] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [copiedPhone, setCopiedPhone] = useState(false);
   const [touched, setTouched] = useState(false);
 
+  // Compute numeric availability
+  const parsedQty = parseQuantity(medication?.quantity);
+  const totalQty = medication?.totalNumericQuantity ?? parsedQty.total;
+  const unitName = medication?.unitName || parsedQty.unit;
+  const remainingQty =
+    medication?.remainingNumericQuantity !== undefined
+      ? medication.remainingNumericQuantity
+      : totalQty;
+
   // Reset modal state on open or medication change
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && medication) {
+      const parsed = parseQuantity(medication.quantity);
+      const total = medication.totalNumericQuantity ?? parsed.total;
+      const remaining =
+        medication.remainingNumericQuantity !== undefined
+          ? medication.remainingNumericQuantity
+          : total;
+
       setPrescriptionRef('');
       setPickupNote('');
+      setClaimAmount(Math.max(1, remaining));
       setInspectionConfirmed(false);
       setIsSubmitted(false);
       setCopiedPhone(false);
@@ -83,7 +101,8 @@ export default function ClaimModal({
 
   // Validation
   const isPrescriptionValid = !isIndividual || prescriptionRef.trim().length > 0;
-  const isFormValid = isPrescriptionValid && inspectionConfirmed;
+  const isClaimAmountValid = claimAmount > 0 && claimAmount <= remainingQty;
+  const isFormValid = isPrescriptionValid && isClaimAmountValid && inspectionConfirmed;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,7 +116,7 @@ export default function ClaimModal({
       ? `Pickup Note: ${pickupNote.trim()}`
       : undefined;
 
-    claimMedication(medication.id, refString);
+    claimMedication(medication.id, refString, claimAmount);
     setIsSubmitted(true);
   };
 
@@ -227,6 +246,114 @@ export default function ClaimModal({
                 <span>Verified donor listing: sealed packaging, factory unexpired.</span>
               </div>
             </div>
+
+            {/* Partial Claim Quantity Selector (When remainingQty > 1) */}
+            {remainingQty > 1 ? (
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-4.5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label
+                    htmlFor="claim-quantity"
+                    className="block text-xs font-bold text-slate-700 uppercase tracking-wider"
+                  >
+                    Quantity to Claim <span className="text-rose-500">*</span>
+                  </label>
+                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-800 border border-teal-200 font-mono">
+                    Max: {remainingQty} {unitName}
+                  </span>
+                </div>
+
+                {/* Slider + Numeric Input Row */}
+                <div className="space-y-2.5">
+                  <div className="flex items-center gap-3.5">
+                    <input
+                      type="range"
+                      min={1}
+                      max={remainingQty}
+                      step={1}
+                      value={claimAmount}
+                      onChange={(e) => setClaimAmount(parseInt(e.target.value, 10) || 1)}
+                      className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-teal-700"
+                    />
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <input
+                        id="claim-quantity"
+                        type="number"
+                        min={1}
+                        max={remainingQty}
+                        value={claimAmount}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value, 10);
+                          if (!isNaN(val)) {
+                            setClaimAmount(Math.max(1, Math.min(remainingQty, val)));
+                          }
+                        }}
+                        className="w-16 px-2 py-1 text-center font-bold text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none bg-white font-mono"
+                      />
+                      <span className="text-xs text-slate-600 font-medium">{unitName}</span>
+                    </div>
+                  </div>
+
+                  {/* Quick Preset Buttons */}
+                  <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                    <span className="text-[11px] text-slate-500 font-medium">Quick select:</span>
+                    <button
+                      type="button"
+                      onClick={() => setClaimAmount(1)}
+                      className={`text-xs px-2.5 py-1 rounded-lg border transition cursor-pointer font-medium ${
+                        claimAmount === 1
+                          ? 'bg-teal-700 text-white border-teal-700 font-bold'
+                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      1 unit
+                    </button>
+                    {remainingQty >= 4 && (
+                      <button
+                        type="button"
+                        onClick={() => setClaimAmount(Math.floor(remainingQty / 2))}
+                        className={`text-xs px-2.5 py-1 rounded-lg border transition cursor-pointer font-medium ${
+                          claimAmount === Math.floor(remainingQty / 2)
+                            ? 'bg-teal-700 text-white border-teal-700 font-bold'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        Half ({Math.floor(remainingQty / 2)})
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setClaimAmount(remainingQty)}
+                      className={`text-xs px-2.5 py-1 rounded-lg border transition cursor-pointer font-medium ${
+                        claimAmount === remainingQty
+                          ? 'bg-teal-700 text-white border-teal-700 font-bold'
+                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      All ({remainingQty})
+                    </button>
+                  </div>
+
+                  {/* Live Split Preview Notice */}
+                  <div className="bg-teal-50/90 border border-teal-200 rounded-xl p-3 text-xs text-teal-950 flex items-start gap-2.5">
+                    <Package className="w-4 h-4 text-teal-700 shrink-0 mt-0.5" />
+                    <div className="leading-relaxed">
+                      <span>
+                        You are claiming <strong>{claimAmount} {unitName}</strong>.{' '}
+                      </span>
+                      {remainingQty - claimAmount > 0 ? (
+                        <span className="text-teal-800">
+                          <strong>{remainingQty - claimAmount} {unitName}</strong> will remain available on the community feed for other clinics or patients.
+                        </span>
+                      ) : (
+                        <span className="text-teal-800">
+                          You are claiming the entire remaining batch of this medication.
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
 
             {/* Role-Specific Claim Requirements */}
             {isIndividual ? (
@@ -360,12 +487,25 @@ export default function ClaimModal({
                 <CheckCircle2 className="w-8 h-8" />
               </div>
               <h3 className="text-lg sm:text-xl font-bold text-slate-900">
-                Claim Successfully Recorded!
+                Claim for {claimAmount} {unitName} Recorded!
               </h3>
               <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
-                <strong className="text-teal-900">{medication.medicineName} ({medication.strength})</strong> has been reserved for you. Please coordinate pickup directly with the donor.
+                <strong className="text-teal-900">{medication.medicineName} ({medication.strength})</strong> — <span className="font-bold text-teal-800">{claimAmount} {unitName}</span> has been reserved for you. Please coordinate pickup directly with the donor.
               </p>
             </div>
+
+            {/* Split remaining batch status if partial */}
+            {remainingQty - claimAmount > 0 && (
+              <div className="bg-sky-50 border border-sky-200 rounded-2xl p-3.5 flex items-center justify-between text-xs text-sky-950">
+                <div className="flex items-center gap-2">
+                  <Package className="w-4 h-4 text-sky-700 shrink-0" />
+                  <span>Remaining batch on community feed:</span>
+                </div>
+                <span className="font-mono font-bold bg-sky-200 text-sky-900 px-2 py-0.5 rounded-full">
+                  {remainingQty - claimAmount} {unitName} still available
+                </span>
+              </div>
+            )}
 
             {/* Revealed Donor Contact Card */}
             <div className="bg-gradient-to-br from-teal-50 to-emerald-50 border-2 border-teal-300/80 rounded-2xl p-4.5 space-y-3.5 shadow-xs">

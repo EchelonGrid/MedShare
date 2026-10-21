@@ -3,7 +3,7 @@
 import React from 'react';
 import { Medication, UserRole } from '@/types/medshare';
 import { useMedShare } from '@/context/MedShareContext';
-import { getDaysUntilExpiry, getUrgencyLevel } from '@/lib/seed';
+import { getDaysUntilExpiry, getUrgencyLevel, parseQuantity } from '@/lib/seed';
 import { useIsMounted } from '@/lib/useIsMounted';
 import { inferCategory } from '@/lib/medicine-dictionary';
 import {
@@ -19,6 +19,7 @@ import {
   Building2,
   Lock,
   Sparkles,
+  Package,
 } from 'lucide-react';
 
 interface MedicationCardProps {
@@ -50,6 +51,14 @@ export default function MedicationCard({
   const isClaimerOfThis = currentUser ? currentUser.id === medication.claimedById : false;
   const canViewPickupContact = isDonorOfThis || isClaimerOfThis;
   const isDonorRole = currentUser ? currentUser.role === 'donor' : false;
+
+  const parsedQty = parseQuantity(medication.quantity);
+  const totalQty = medication.totalNumericQuantity ?? parsedQty.total;
+  const unitName = medication.unitName || parsedQty.unit;
+  const remainingQty =
+    medication.remainingNumericQuantity !== undefined
+      ? medication.remainingNumericQuantity
+      : totalQty;
 
   const displayCategory = medication.category || inferCategory(medication.medicineName, medication.genericName);
 
@@ -149,7 +158,7 @@ export default function MedicationCard({
           </span>
         </div>
 
-        {/* Category & Sealed Indicator */}
+        {/* Category & Sealed Indicator & Inventory */}
         <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
           <span className="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
             {displayCategory}
@@ -158,9 +167,18 @@ export default function MedicationCard({
             <ShieldCheck className="w-3 h-3 text-emerald-700" />
             ✓ Sealed
           </span>
-          <span className="text-xs text-slate-600 font-medium truncate">
-            {medication.quantity}
-          </span>
+          {medication.status === 'available' ? (
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-teal-900 bg-teal-50 px-2.5 py-0.5 rounded-md border border-teal-200">
+              <Package className="w-3.5 h-3.5 text-teal-700 shrink-0" />
+              <span>
+                Available: <strong className="font-bold text-teal-950">{remainingQty}</strong> of {totalQty} {unitName} remaining
+              </span>
+            </span>
+          ) : (
+            <span className="text-xs text-slate-600 font-medium truncate">
+              {medication.quantity}
+            </span>
+          )}
         </div>
 
         {/* Generic Match Badge (highlighted when matched via generic equivalence) */}

@@ -17,12 +17,14 @@ import {
   RequestUrgency,
   RequestStatus,
   MedicineCategory,
+  BatchClaim,
 } from '@/types/medshare';
 import {
   DEFAULT_USERS,
   INITIAL_MEDICATIONS,
   INITIAL_REQUESTS,
   getDaysUntilExpiry,
+  parseQuantity,
 } from '@/lib/seed';
 import { inferCategory } from '@/lib/medicine-dictionary';
 import {
@@ -46,6 +48,9 @@ export interface NewMedicationInput {
   category?: MedicineCategory;
   strength: string;
   quantity: string;
+  totalNumericQuantity?: number;
+  unitName?: string;
+  remainingNumericQuantity?: number;
   expiryDate: string;
   location: string;
   donorPhone?: string;
@@ -101,8 +106,8 @@ interface MedShareContextType {
   logout: () => Promise<void>;
   loginAsDemo: (userId: string) => void;
   addMedication: (data: NewMedicationInput) => Promise<Medication>;
-  claimMedication: (medicationId: string, prescriptionRef?: string) => Promise<void>;
-  markAsCollected: (medicationId: string) => Promise<void>;
+  claimMedication: (medicationId: string, prescriptionRef?: string, claimedAmount?: number) => Promise<void>;
+  markAsCollected: (medicationId: string, claimId?: string) => Promise<void>;
   addMedicineRequest: (data: NewMedicineRequestInput) => Promise<MedicineRequest>;
   fulfillMedicineRequest: (requestId: string, donorName?: string) => Promise<void>;
   verifyCurrentUser: (details?: VerificationDetails) => Promise<void>;
@@ -253,7 +258,24 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
           Boolean(parsedMeds[0]?.expiryDate) &&
           !isNaN(getDaysUntilExpiry(parsedMeds[0].expiryDate));
         if (isValid) {
-          initialLocalMeds = parsedMeds;
+          initialLocalMeds = parsedMeds.map((m: Medication) => {
+            const parsed = parseQuantity(m.quantity);
+            const total = m.totalNumericQuantity ?? parsed.total;
+            const unit = m.unitName || parsed.unit;
+            const remaining =
+              m.remainingNumericQuantity !== undefined
+                ? m.remainingNumericQuantity
+                : m.status === 'claimed' || m.status === 'collected'
+                ? 0
+                : total;
+            return {
+              ...m,
+              totalNumericQuantity: total,
+              unitName: unit,
+              remainingNumericQuantity: remaining,
+              claims: m.claims || [],
+            };
+          });
         }
       } catch (e) {
         console.warn('Failed parsing stored meds', e);
@@ -592,6 +614,11 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
       const donorUser = currentUser;
       const resolvedCategory = data.category || inferCategory(data.medicineName, data.genericName);
 
+      const { total, unit } = parseQuantity(data.quantity);
+      const totalNumericQuantity = data.totalNumericQuantity ?? total;
+      const unitName = data.unitName ?? unit;
+      const remainingNumericQuantity = data.remainingNumericQuantity ?? totalNumericQuantity;
+
       const newMed: Medication = {
         id: tempId,
         medicineName: data.medicineName.trim(),
@@ -599,6 +626,10 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
         category: resolvedCategory,
         strength: data.strength.trim(),
         quantity: data.quantity.trim(),
+        totalNumericQuantity,
+        unitName,
+        remainingNumericQuantity,
+        claims: [],
         expiryDate: data.expiryDate,
         location: data.location.trim(),
         donorId: donorUser?.id || 'donor-anon',
@@ -657,23 +688,63 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
   );
 
   const claimMedication = useCallback(
-    async (medicationId: string, prescriptionRef?: string) => {
+    async (medicationId: string, prescriptionRef?: string, claimedAmount?: number) => {
       setActionLoading(medicationId);
 
       const claimer = currentUser;
       const claimedAt = new Date().toISOString();
+      let feedbackToastMsg = 'Medicine claimed! Pickup contact unlocked in your portal.';
+      let feedbackToastTitle = 'Claim Successful';
 
       setMedications((prev) => {
         const updated = prev.map((med) => {
           if (med.id === medicationId) {
-            return {
-              ...med,
-              status: 'claimed' as const,
-              claimedById: claimer?.id,
-              claimedByName: claimer?.name || 'Verified Collector',
-              claimedByRole: claimer?.role || 'individual',
+            const parsed = parseQuantity(med.quantity);
+            const total = med.totalNumericQuantity ?? parsed.total;
+            const unit = med.unitName || parsed.unit;
+            const currentRemaining =
+              med.remainingNumericQuantity !== undefined ? med.remainingNumericQuantity : total;
+
+            const amountToClaim = Math.min(
+              claimedAmount && claimedAmount > 0 ? claimedAmount : currentRemaining,
+              currentRemaining
+            );
+            const newRemaining = Math.max(0, currentRemaining - amountToClaim);
+            const isFullClaim = newRemaining <= 0;
+
+            const newClaim: BatchClaim = {
+              id: `claim-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+              medicationId: med.id,
+              claimerId: claimer?.id || 'collector-anon',
+              claimerName: claimer?.name || 'Verified Collector',
+              claimerRole: claimer?.role || 'individual',
+              claimedQuantity: amountToClaim,
+              unitName: unit,
               prescriptionRef: prescriptionRef || med.prescriptionRef,
               claimedAt,
+              status: 'claimed',
+            };
+
+            const updatedClaims = [...(med.claims || []), newClaim];
+
+            if (newRemaining > 0) {
+              feedbackToastMsg = `Partially claimed ${amountToClaim} ${unit}! ${newRemaining} ${unit} remain available on feed.`;
+              feedbackToastTitle = 'Partial Claim Recorded';
+            }
+
+            return {
+              ...med,
+              totalNumericQuantity: total,
+              unitName: unit,
+              remainingNumericQuantity: newRemaining,
+              status: isFullClaim ? ('claimed' as const) : ('available' as const),
+              claimedById: isFullClaim ? claimer?.id : (med.claimedById || claimer?.id),
+              claimedByName: isFullClaim ? (claimer?.name || 'Verified Collector') : (med.claimedByName || claimer?.name),
+              claimedByRole: isFullClaim ? (claimer?.role || 'individual') : (med.claimedByRole || claimer?.role),
+              claimedQuantity: isFullClaim ? amountToClaim : med.claimedQuantity,
+              claims: updatedClaims,
+              prescriptionRef: prescriptionRef || med.prescriptionRef,
+              claimedAt: isFullClaim ? claimedAt : (med.claimedAt || claimedAt),
             };
           }
           return med;
@@ -701,27 +772,44 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
       }
 
       setActionLoading(null);
-      showToast(
-        'Medicine claimed! Pickup contact unlocked in your portal.',
-        'success',
-        'Claim Successful'
-      );
+      showToast(feedbackToastMsg, 'success', feedbackToastTitle);
     },
     [currentUser, saveMedsToLocal, showToast]
   );
 
   const markAsCollected = useCallback(
-    async (medicationId: string) => {
+    async (medicationId: string, claimId?: string) => {
       setActionLoading(medicationId);
       const collectedAt = new Date().toISOString();
 
       setMedications((prev) => {
         const updated = prev.map((med) => {
           if (med.id === medicationId) {
+            let updatedClaims = med.claims || [];
+            if (claimId) {
+              updatedClaims = updatedClaims.map((c) =>
+                c.id === claimId ? { ...c, status: 'collected' as const, collectedAt } : c
+              );
+            } else {
+              updatedClaims = updatedClaims.map((c) => ({
+                ...c,
+                status: 'collected' as const,
+                collectedAt: c.collectedAt || collectedAt,
+              }));
+            }
+
+            const allClaimsCollected =
+              updatedClaims.length > 0 &&
+              updatedClaims.every((c) => c.status === 'collected') &&
+              (med.remainingNumericQuantity ?? 0) <= 0;
+
+            const isNowFullyCollected = !claimId || allClaimsCollected || med.status === 'claimed';
+
             return {
               ...med,
-              status: 'collected' as const,
-              collectedAt,
+              status: isNowFullyCollected ? ('collected' as const) : med.status,
+              claims: updatedClaims,
+              collectedAt: isNowFullyCollected ? collectedAt : med.collectedAt,
             };
           }
           return med;
