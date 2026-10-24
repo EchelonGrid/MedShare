@@ -119,7 +119,6 @@ export interface VerificationDetails {
   location?: string;
   organizationName?: string;
   registrationOrNid?: string;
-  autoApprove?: boolean;
 }
 
 export interface RegisterData {
@@ -573,7 +572,7 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
         }
 
         const initialStatus: VerificationStatus =
-          data.role === 'donor'
+          data.role === 'admin'
             ? 'verified'
             : data.registrationOrNid && data.registrationOrNid.trim().length > 0
             ? 'pending'
@@ -1158,14 +1157,11 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
     setIsDonateOpen(true);
   }, []);
 
-  // Verification Methods (3-Stage Workflow)
+  // Verification Methods (Admin-Moderated Workflow)
   const submitVerification = useCallback(
     async (details: VerificationDetails) => {
       if (!currentUserId) return;
       setActionLoading('verifying');
-
-      const isAuto = details.autoApprove === true;
-      const newStatus: VerificationStatus = isAuto ? 'verified' : 'pending';
 
       const updatedUsers = allUsers.map((user) => {
         if (user.id === currentUserId) {
@@ -1180,8 +1176,8 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
             ...(details.registrationOrNid !== undefined && {
               registrationOrNid: details.registrationOrNid.trim(),
             }),
-            verificationStatus: newStatus,
-            isVerified: isAuto,
+            verificationStatus: 'pending' as const,
+            isVerified: false,
             submittedAt: new Date().toISOString(),
           };
         }
@@ -1196,7 +1192,7 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
           await supabase.from('profiles').update({
             organization_name: details.organizationName?.trim() || null,
             registration_or_nid: details.registrationOrNid?.trim() || null,
-            verification_status: newStatus,
+            verification_status: 'pending',
           }).eq('id', currentUserId);
         } catch (e) {
           console.warn('Supabase verification update fallback:', e);
@@ -1204,31 +1200,28 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
       }
 
       setActionLoading(null);
-      if (isAuto) {
-        showToast('Account verified! You can now claim available medications.', 'success', 'Verified');
-      } else {
-        showToast(
-          'Verification submitted! Your credentials are now under review by the MedShare Verification Team.',
-          'info',
-          'Submitted for Review'
-        );
-      }
+      showToast(
+        'Verification submitted! Your credentials are now under review by MedShare Admin.',
+        'info',
+        'Submitted for Review'
+      );
     },
     [allUsers, currentUserId, saveUsersToLocal, showToast]
   );
 
   const verifyCurrentUser = useCallback(
     async (details?: VerificationDetails) => {
-      await submitVerification({
-        ...details,
-        autoApprove: true,
-      });
+      await submitVerification(details || {});
     },
     [submitVerification]
   );
 
   const approveVerification = useCallback(
     async (userId: string) => {
+      if (currentUser?.role !== 'admin') {
+        showToast('Access denied: Only MedShare Administrators can approve credentials.', 'error', 'Admin Required');
+        return;
+      }
       const target = allUsers.find((u) => u.id === userId);
       const updatedUsers = allUsers.map((u) => {
         if (u.id === userId) {
@@ -1258,14 +1251,18 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
       showToast(
         `Approved collector credentials for ${target?.name || 'User'}!`,
         'success',
-        'Moderator Approval'
+        'Admin Approval'
       );
     },
-    [allUsers, saveUsersToLocal, showToast]
+    [allUsers, currentUser?.role, saveUsersToLocal, showToast]
   );
 
   const rejectVerification = useCallback(
     async (userId: string, reason?: string) => {
+      if (currentUser?.role !== 'admin') {
+        showToast('Access denied: Only MedShare Administrators can reject credentials.', 'error', 'Admin Required');
+        return;
+      }
       const target = allUsers.find((u) => u.id === userId);
       const updatedUsers = allUsers.map((u) => {
         if (u.id === userId) {
@@ -1295,10 +1292,10 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
       showToast(
         `Verification rejected for ${target?.name || 'User'}.${reason ? ` Reason: ${reason}` : ''}`,
         'warning',
-        'Moderator Decision'
+        'Admin Decision'
       );
     },
-    [allUsers, saveUsersToLocal, showToast]
+    [allUsers, currentUser?.role, saveUsersToLocal, showToast]
   );
 
   const resetDemoData = useCallback(async () => {

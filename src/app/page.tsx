@@ -34,6 +34,7 @@ export default function HomePage() {
     medications,
     openRequestsCount,
     currentUser,
+    pendingVerifications,
     toasts,
     dismissToast,
     showToast,
@@ -84,27 +85,35 @@ export default function HomePage() {
   const handleClaimClick = (medication: Medication) => {
     // 1. If not logged in, prompt AuthModal
     if (!currentUser) {
-      openAuthModal('login', 'Please sign in or create a Collector account to claim medications.');
+      openAuthModal('login', 'Please sign in or create an account to claim medications.');
       return;
     }
 
-    // 2. If currentUser.role === 'donor', prompt them to switch or log into a Collector profile
-    if (currentUser.role === 'donor') {
-      setNotification(
-        'Donors list medicines for donation. To claim medicines for yourself or a clinic, please log in with or register a Collector account.'
-      );
+    // 2. Prevent self-claiming own listed donation
+    if (medication.donorId === currentUser.id) {
+      setNotification('You are the donor of this medicine. You cannot claim your own listed donation.');
+      showToast('You cannot claim your own listed medication.', 'warning', 'Donor Notice');
       return;
     }
 
-    // 3. If !currentUser.isVerified, automatically open <VerifyModal /> with required notice
+    // 3. Admin accounts are designated for platform moderation
+    if (currentUser.role === 'admin') {
+      setNotification('Admin accounts are designated for platform moderation. Please sign in with an Individual or Clinic account to claim medicines.');
+      showToast('Admin accounts are for moderation and verification reviews.', 'info', 'Admin Notice');
+      return;
+    }
+
+    // 4. If !currentUser.isVerified, automatically open <VerifyModal /> with required notice
     if (!currentUser.isVerified) {
       openVerifyModal(
-        'Verification Required: Please verify your collector account first to claim this medicine.'
+        currentUser.role === 'clinic_charity'
+          ? 'Verification Required: Please verify your clinic license to claim medications in bulk.'
+          : 'Verification Required: Please verify your recipient identity with your Bangladeshi NID to claim medications.'
       );
       return;
     }
 
-    // 4. If currentUser.isVerified is true, open <ClaimModal /> for that specific medication
+    // 5. If currentUser.isVerified is true, open <ClaimModal /> for that specific medication
     setSelectedMedicationForClaim(medication);
   };
 
@@ -125,12 +134,12 @@ export default function HomePage() {
       openAuthModal('login', 'Please sign in or create an account to post an urgent medicine request.');
       return;
     }
-    if (currentUser.role === 'donor') {
-      setNotification('Donors list surplus medicines. To post urgent medicine shortages, please switch to or register a Clinic or Recipient account.');
+    if (currentUser.role === 'admin') {
+      setNotification('Admin accounts are designated for platform moderation.');
       return;
     }
     if (!currentUser.isVerified) {
-      openVerifyModal('Please verify your collector credentials (NID or Clinic License) to broadcast urgent medicine requests.');
+      openVerifyModal('Please verify your credentials (NID or Clinic License) to broadcast urgent medicine requests.');
       return;
     }
     openRequestModal();
@@ -333,15 +342,16 @@ export default function HomePage() {
                 }`}
               >
                 <LayoutDashboard className="w-4 h-4" />
-                <span>Collector &amp; Donor Portal</span>
+                <span>{currentUser?.role === 'admin' ? 'Admin Moderator Desk' : 'Collector & Donor Portal'}</span>
                 {currentUser && (
                   <span className="text-[11px] px-2 py-0.5 rounded-full font-extrabold bg-teal-100 text-teal-800">
-                    {currentUser.role === 'donor'
-                      ? medications.filter((m) => m.donorId === currentUser.id).length
+                    {currentUser.role === 'admin'
+                      ? pendingVerifications.length
                       : medications.filter(
                           (m) =>
                             (m.claimedById === currentUser.id && m.status === 'claimed') ||
-                            (m.claims || []).some((c) => c.claimerId === currentUser.id && c.status === 'claimed')
+                            (m.claims || []).some((c) => c.claimerId === currentUser.id && c.status === 'claimed') ||
+                            (m.donorId === currentUser.id && m.status === 'claimed')
                         ).length}
                   </span>
                 )}

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Medication } from '@/types/medshare';
 import { useMedShare } from '@/context/MedShareContext';
 import { getDaysUntilExpiry, getUrgencyLevel, parseQuantity, getPickupTimeRemaining } from '@/lib/seed';
@@ -47,12 +47,12 @@ interface UserPortalProps {
 export default function UserPortal({ onBackToFeed }: UserPortalProps) {
   const {
     currentUser,
+    allUsers,
     medications,
     actionLoading,
     markAsCollected,
     releaseClaim,
     submitVerification,
-    verifyCurrentUser,
     approveVerification,
     rejectVerification,
     pendingVerifications,
@@ -111,11 +111,27 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
     }
   };
 
-  // Inline verification state for unverified collectors
+  // Inline verification state for unverified members (Bug 1 & 2 fix)
+  const [inlineFullName, setInlineFullName] = useState('');
+  const [inlinePhone, setInlinePhone] = useState('');
+  const [inlineLocation, setInlineLocation] = useState('');
+  const [inlineOrgName, setInlineOrgName] = useState('');
   const [inlineRegId, setInlineRegId] = useState('');
   const [inlineConfirmed, setInlineConfirmed] = useState(false);
-  const [inlineFastTrack, setInlineFastTrack] = useState(true);
   const [inlineTouched, setInlineTouched] = useState(false);
+
+  // Sync state whenever currentUser changes so prefilled fields are recognized immediately
+  useEffect(() => {
+    if (currentUser) {
+      setInlineFullName(currentUser.name || '');
+      setInlinePhone(currentUser.phone || '');
+      setInlineLocation(currentUser.location || '');
+      setInlineOrgName(currentUser.organizationName || '');
+      setInlineRegId(currentUser.registrationOrNid || '');
+      setInlineConfirmed(false);
+      setInlineTouched(false);
+    }
+  }, [currentUser]);
 
   const handleCopyPhone = (text: string, id: string) => {
     if (navigator?.clipboard) {
@@ -126,25 +142,41 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
   };
 
   const currentUserId = currentUser?.id;
-  const isDonor = currentUser?.role === 'donor';
+  const isAdmin = currentUser?.role === 'admin';
   const isClinic = currentUser?.role === 'clinic_charity';
   const isIndividual = currentUser?.role === 'individual';
   const isCollector = isClinic || isIndividual;
 
+  // Strict format validation on submission
+  const isInlineOrgValid = !isClinic || inlineOrgName.trim().length >= 2;
+  const isInlineNameValid = isClinic || inlineFullName.trim().length >= 2;
+  const isInlinePhoneValid = inlinePhone.trim().length >= 8;
+  const isInlineLocationValid = inlineLocation.trim().length >= 3;
   const isInlineIdValid = isClinic
     ? validateClinicRegistration(inlineRegId)
     : isIndividual
     ? validateNidOrBirthReg(inlineRegId)
-    : inlineRegId.trim().length > 0;
+    : true;
+
+  const isInlineFormValid =
+    isInlineOrgValid &&
+    isInlineNameValid &&
+    isInlinePhoneValid &&
+    isInlineLocationValid &&
+    isInlineIdValid &&
+    inlineConfirmed;
 
   const handleInlineVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     setInlineTouched(true);
-    if (!isInlineIdValid || !inlineConfirmed) return;
+    if (!isInlineFormValid) return;
 
     await submitVerification({
+      name: isClinic ? (inlineFullName.trim() || currentUser?.name) : inlineFullName.trim(),
+      organizationName: isClinic ? inlineOrgName.trim() : currentUser?.organizationName,
       registrationOrNid: inlineRegId.trim(),
-      autoApprove: inlineFastTrack,
+      phone: inlinePhone.trim(),
+      location: inlineLocation.trim(),
     });
   };
 
@@ -295,7 +327,7 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
 
   const handleExportCSV = () => {
     if (!currentUser) return;
-    if (isDonor) {
+    if (myDonations.length > 0) {
       exportDonorHistoryCSV(currentUser, myDonations);
     } else {
       exportCollectedInventoryCSV(currentUser, myCollectionHistory);
@@ -317,7 +349,7 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
           <span>Back to Live Medicine Feed</span>
         </button>
 
-        {isDonor && (
+        {!isAdmin && (
           <button
             type="button"
             onClick={openDonateModal}
@@ -334,12 +366,12 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
           <div className="flex items-start gap-4">
             <div className="w-14 h-14 rounded-2xl bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-700 shrink-0 shadow-inner">
-              {isClinic ? (
-                <Building2 className="w-7 h-7" />
-              ) : isDonor ? (
-                <HeartHandshake className="w-7 h-7" />
+              {isAdmin ? (
+                <ShieldCheck className="w-7 h-7 text-purple-700" />
+              ) : isClinic ? (
+                <Building2 className="w-7 h-7 text-indigo-700" />
               ) : (
-                <User className="w-7 h-7" />
+                <User className="w-7 h-7 text-teal-700" />
               )}
             </div>
 
@@ -349,8 +381,14 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                   {currentUser.name}
                 </h2>
                 {/* Role Badge */}
-                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-800 border border-teal-300">
-                  {isDonor ? 'Donor' : isClinic ? 'Rural Clinic / Charity' : 'Individual Recipient'}
+                <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
+                  isAdmin
+                    ? 'bg-purple-100 text-purple-800 border-purple-300'
+                    : isClinic
+                    ? 'bg-indigo-100 text-indigo-800 border-indigo-300'
+                    : 'bg-teal-100 text-teal-800 border-teal-300'
+                }`}>
+                  {isAdmin ? 'Platform Moderator' : isClinic ? 'Rural Clinic / NGO' : 'Individual Community Member'}
                 </span>
                 {/* 3-Stage Verification Badge */}
                 {currentUser.verificationStatus === 'verified' ? (
@@ -359,9 +397,9 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                     <span>Verified</span>
                   </span>
                 ) : currentUser.verificationStatus === 'pending' ? (
-                  <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
-                    <Clock className="w-3.5 h-3.5 text-amber-600" />
-                    <span>Pending Review</span>
+                  <span className="inline-flex items-center gap-1 text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
+                    <Clock className="w-3.5 h-3.5 text-amber-700" />
+                    <span>⏳ Verification Pending Admin Review</span>
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-300">
@@ -387,32 +425,28 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
 
           {/* Quick Counter Badges */}
           <div className="flex items-center gap-3 pt-3 md:pt-0 border-t md:border-t-0 border-slate-100">
-            {isCollector ? (
+            {isAdmin ? (
+              <>
+                <div className="bg-purple-50 border border-purple-200 rounded-2xl px-4 py-2.5 text-center">
+                  <div className="text-2xl font-extrabold text-purple-900">{pendingVerifications.length}</div>
+                  <div className="text-[11px] font-semibold text-purple-700">Pending Reviews</div>
+                </div>
+                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-2.5 text-center">
+                  <div className="text-2xl font-extrabold text-emerald-900">
+                    {allUsers.filter((u) => u.verificationStatus === 'verified').length}
+                  </div>
+                  <div className="text-[11px] font-semibold text-emerald-700">Verified Users</div>
+                </div>
+              </>
+            ) : (
               <>
                 <div className="bg-sky-50 border border-sky-200 rounded-2xl px-4 py-2.5 text-center">
                   <div className="text-2xl font-extrabold text-sky-900">{myClaimedPending.length}</div>
                   <div className="text-[11px] font-semibold text-sky-700">Pending Pickup</div>
                 </div>
-                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-2.5 text-center">
-                  <div className="text-2xl font-extrabold text-emerald-900">{myCollectionHistory.length}</div>
-                  <div className="text-[11px] font-semibold text-emerald-700">Collected</div>
-                </div>
-              </>
-            ) : (
-              <>
                 <div className="bg-teal-50 border border-teal-200 rounded-2xl px-4 py-2.5 text-center">
                   <div className="text-2xl font-extrabold text-teal-900">{myDonations.length}</div>
-                  <div className="text-[11px] font-semibold text-teal-700">Total Donated</div>
-                </div>
-                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-2.5 text-center">
-                  <div className="text-2xl font-extrabold text-emerald-900">
-                    {myDonations.reduce((acc, m) => {
-                      if (m.status === 'collected') return acc + 1;
-                      const collectedClaims = (m.claims || []).filter((c) => c.status === 'collected').length;
-                      return acc + collectedClaims;
-                    }, 0)}
-                  </div>
-                  <div className="text-[11px] font-semibold text-emerald-700">Handed Over</div>
+                  <div className="text-[11px] font-semibold text-teal-700">Donations Listed</div>
                 </div>
               </>
             )}
@@ -446,100 +480,254 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
       </div>
 
       {/* ============================================================= */}
-      {/* SECTION FOR COLLECTORS (CLINIC/CHARITY & INDIVIDUAL)          */}
+      {/* 1. ADMIN MODERATOR PORTAL (ONLY FOR ROLE === 'admin')         */}
       {/* ============================================================= */}
-      {isCollector && (
+      {isAdmin && (
+        <div className="space-y-6">
+          <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-teal-950 text-white rounded-3xl p-6 sm:p-7 shadow-lg space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-purple-500/20 border border-purple-400/30 flex items-center justify-center text-purple-300">
+                  <ShieldCheck className="w-5 h-5 text-purple-300" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold tracking-tight text-white flex items-center gap-2">
+                    <span>Admin Moderator &amp; Verification Review Desk</span>
+                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                      {pendingVerifications.length} Pending
+                    </span>
+                  </h3>
+                  <p className="text-xs text-teal-100/80">
+                    Sole authority desk: verify Bangladeshi NID credentials and Rural Clinic licenses before medicine distribution.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {pendingVerifications.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                {pendingVerifications.map((pendingUser) => (
+                  <div
+                    key={pendingUser.id}
+                    className="bg-white/10 backdrop-blur-sm border border-white/15 rounded-2xl p-4 sm:p-5 space-y-3 flex flex-col justify-between"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-200 border border-teal-400/30">
+                          {pendingUser.role === 'clinic_charity' ? 'Rural Clinic / NGO' : 'Individual Community Member'}
+                        </span>
+                        <span className="text-[11px] font-mono text-amber-300 flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          <span>Submitted: {pendingUser.submittedAt ? new Date(pendingUser.submittedAt).toLocaleDateString() : 'Awaiting Review'}</span>
+                        </span>
+                      </div>
+
+                      <div>
+                        <h4 className="font-bold text-white text-base">{pendingUser.name}</h4>
+                        {pendingUser.organizationName && (
+                          <p className="text-xs text-teal-200 font-medium">
+                            Org: {pendingUser.organizationName}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="bg-black/25 rounded-xl p-3 space-y-1.5 text-xs text-slate-300 font-mono">
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-400">
+                            {pendingUser.role === 'clinic_charity' ? 'License Reg ID:' : 'National ID (NID):'}
+                          </span>
+                          <span className="font-bold text-amber-200 bg-amber-950/60 px-2 py-0.5 rounded">
+                            {pendingUser.registrationOrNid || 'N/A'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Contact Phone:</span>
+                          <span className="text-slate-200">{pendingUser.phone}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Address / Location:</span>
+                          <span className="text-slate-200">{pendingUser.location}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">User Email:</span>
+                          <span className="text-slate-200">{pendingUser.email}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => approveVerification(pendingUser.id)}
+                        className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>Approve</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => rejectVerification(pendingUser.id, 'Format or authenticity mismatch')}
+                        className="py-2 px-3.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-500/40 text-xs font-semibold transition cursor-pointer"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-8 text-center text-xs text-teal-100/70 space-y-1.5">
+                <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto mb-1" />
+                <p className="font-bold text-white text-sm">All Verification Requests Processed</p>
+                <p>No user verification requests are currently awaiting review.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================= */}
+      {/* 2. SECTION FOR COMMUNITY MEMBERS & CLINICS                    */}
+      {/* ============================================================= */}
+      {!isAdmin && (
         <div className="space-y-8">
           
           {/* 1. Verification Status Workflow Card */}
           {currentUser.verificationStatus === 'pending' ? (
-            <div className="bg-amber-50/90 border border-amber-300 rounded-3xl p-6 sm:p-7 space-y-4 shadow-xs">
-              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-200/80 flex items-center justify-center text-amber-900 shrink-0 mt-0.5">
-                    <Clock className="w-5 h-5 text-amber-800 animate-spin" style={{ animationDuration: '4s' }} />
-                  </div>
-                  <div className="space-y-1">
-                    <h3 className="text-base font-bold text-amber-950 flex items-center gap-2">
-                      <span>Credentials Under Moderator Review</span>
-                      <span className="text-[10px] font-mono bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full font-bold">
-                        {currentUser.registrationOrNid || 'Submitted'}
-                      </span>
-                    </h3>
-                    <p className="text-xs sm:text-sm text-amber-900/90 leading-relaxed max-w-2xl">
-                      Your identity credentials have been received and are currently queued for verification by the MedShare Compliance Team. Review typically takes under 24 hours.
-                    </p>
-                  </div>
+            <div className="bg-amber-50/90 border border-amber-300 rounded-3xl p-6 sm:p-7 space-y-3 shadow-xs">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-200/80 flex items-center justify-center text-amber-900 shrink-0 mt-0.5">
+                  <Clock className="w-5 h-5 text-amber-800" />
                 </div>
-
-                {/* Instant Evaluator Fast-Track Bypass */}
-                <button
-                  type="button"
-                  onClick={() => verifyCurrentUser({ autoApprove: true })}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 active:bg-teal-900 text-white text-xs font-bold shadow-sm transition cursor-pointer self-start sm:self-auto shrink-0"
-                  title="Instant approval for demo evaluation"
-                >
-                  <Zap className="w-3.5 h-3.5 text-amber-300" />
-                  <span>Instant Auto-Approve (Demo Mode)</span>
-                </button>
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-extrabold px-3 py-1 rounded-full bg-amber-200 text-amber-900 border border-amber-300">
+                      ⏳ Verification Pending Admin Review
+                    </span>
+                    <span className="text-[11px] font-mono font-bold text-amber-800">
+                      ID: {currentUser.registrationOrNid || 'Submitted'}
+                    </span>
+                  </div>
+                  <p className="text-xs sm:text-sm text-amber-900/90 leading-relaxed max-w-2xl pt-1">
+                    Your credentials have been submitted and are currently queued for verification by MedShare Platform Administrators. Review typically takes under 24 hours. Medicine claiming will unlock as soon as an Admin approves your account.
+                  </p>
+                </div>
               </div>
             </div>
           ) : currentUser.verificationStatus === 'unverified' ? (
             <div className="bg-amber-50/90 border border-amber-300 rounded-3xl p-6 sm:p-7 space-y-4 shadow-xs">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-200/80 flex items-center justify-center text-amber-900 shrink-0">
-                    <ShieldAlert className="w-5 h-5 text-amber-800" />
-                  </div>
-                  <div className="space-y-1">
-                    <h3 className="text-base font-bold text-amber-950">
-                      Collector Verification Required
-                    </h3>
-                    <p className="text-xs sm:text-sm text-amber-900/90 leading-relaxed max-w-2xl">
-                      {isClinic
-                        ? 'To protect community health, please provide your registered Clinic or NGO License number (DGHS / NGO Bureau). Once verified, medicine claiming is unlocked.'
-                        : 'To claim medications, please provide your Government National ID (10, 13, or 17 digits) or Birth Registration Number.'}
-                    </p>
-                  </div>
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-200/80 flex items-center justify-center text-amber-900 shrink-0">
+                  <ShieldAlert className="w-5 h-5 text-amber-800" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-base font-bold text-amber-950">
+                    Recipient Verification Required to Claim Medicines
+                  </h3>
+                  <p className="text-xs sm:text-sm text-amber-900/90 leading-relaxed max-w-2xl">
+                    {isClinic
+                      ? 'To claim medicines in bulk, please provide your registered Clinic or NGO License number (DGHS / NGO Bureau). Once verified by an Admin, medicine claiming is unlocked.'
+                      : 'To claim medications for yourself or family, please provide your Government National ID (strictly 10, 13, or 17 digits). Once verified by an Admin, claiming is unlocked.'}
+                  </p>
                 </div>
               </div>
 
               {/* Inline Verification Form */}
               <form onSubmit={handleInlineVerify} className="bg-white rounded-2xl p-4 sm:p-5 border border-amber-200 space-y-3.5">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    {isClinic
-                      ? 'Clinic / NGO License Number (DGHS / NGO Bureau)'
-                      : 'National ID (NID) / Birth Registration Number'}{' '}
-                    <span className="text-rose-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                      <FileText className="w-4 h-4" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  {isClinic ? (
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                        Organization / Clinic Name <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={inlineOrgName}
+                        onChange={(e) => setInlineOrgName(e.target.value)}
+                        placeholder="e.g. Bogura Free Rural Clinic"
+                        className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none"
+                      />
                     </div>
+                  ) : (
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                        Full Name (as on NID) <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={inlineFullName}
+                        onChange={(e) => setInlineFullName(e.target.value)}
+                        placeholder="e.g. Dr. Farhana Rahman"
+                        className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none"
+                      />
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                      {isClinic
+                        ? 'Clinic / NGO License Number (min 6 chars)'
+                        : 'National ID (NID: 10, 13, or 17 digits)'}{' '}
+                      <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                        <FileText className="w-4 h-4" />
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        value={inlineRegId}
+                        onChange={(e) => setInlineRegId(e.target.value)}
+                        placeholder={isClinic ? 'e.g. DGHS-BOG-4491' : 'e.g. 1998260636001'}
+                        className={`w-full pl-9 pr-3.5 py-2 text-sm rounded-xl border outline-none transition font-mono ${
+                          inlineTouched && !isInlineIdValid
+                            ? 'border-rose-300 bg-rose-50/50 focus:border-rose-500'
+                            : 'border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100'
+                        }`}
+                      />
+                    </div>
+                    {inlineTouched && !isInlineIdValid && (
+                      <p className="text-[11px] text-rose-600 mt-1 font-medium">
+                        {isClinic
+                          ? 'License number must be at least 6 characters.'
+                          : 'National ID must be strictly 10, 13, or 17 digits (repeating digits rejected).'}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                      Contact Phone <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="tel"
+                      required
+                      value={inlinePhone}
+                      onChange={(e) => setInlinePhone(e.target.value)}
+                      placeholder="e.g. +880 1711-234567"
+                      className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                      Facility / Area Location <span className="text-rose-500">*</span>
+                    </label>
                     <input
                       type="text"
                       required
-                      value={inlineRegId}
-                      onChange={(e) => setInlineRegId(e.target.value)}
-                      placeholder={isClinic ? 'e.g. DGHS-BOG-4491' : 'e.g. 1998260636001 (10, 13, or 17 digits)'}
-                      className={`w-full pl-9 pr-3.5 py-2 text-sm rounded-xl border outline-none transition font-mono ${
-                        inlineTouched && !isInlineIdValid
-                          ? 'border-rose-300 bg-rose-50/50 focus:border-rose-500'
-                          : 'border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100'
-                      }`}
+                      value={inlineLocation}
+                      onChange={(e) => setInlineLocation(e.target.value)}
+                      placeholder="e.g. Mirpur 10, Dhaka"
+                      className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none"
                     />
                   </div>
-                  {inlineTouched && !isInlineIdValid && (
-                    <p className="text-[11px] text-rose-600 mt-1 font-medium">
-                      {isClinic
-                        ? 'License number must be at least 4 characters.'
-                        : 'National ID must be strictly 10, 13, or 17 digits (or 17 digits for birth reg).'}
-                    </p>
-                  )}
                 </div>
 
-                <label className="flex items-start gap-2.5 text-xs text-slate-800 cursor-pointer select-none">
+                <label className="flex items-start gap-2.5 text-xs text-slate-800 cursor-pointer select-none pt-1">
                   <input
                     type="checkbox"
                     checked={inlineConfirmed}
@@ -551,29 +739,12 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                   </span>
                 </label>
 
-                {/* Demo Fast-Track Toggle */}
-                <div className="flex items-center justify-between pt-1 text-xs text-slate-600">
-                  <span className="flex items-center gap-1.5 font-medium text-teal-800">
-                    <Zap className="w-3.5 h-3.5 text-amber-500" />
-                    <span>⚡ Instant Auto-Approve (Demo Mode)</span>
-                  </span>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={inlineFastTrack}
-                      onChange={(e) => setInlineFastTrack(e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-8 h-4 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-teal-600"></div>
-                  </label>
-                </div>
-
                 <div className="pt-1">
                   <button
                     type="submit"
-                    disabled={!inlineRegId.trim() || !inlineConfirmed || actionLoading === 'verifying'}
+                    disabled={!isInlineFormValid || actionLoading === 'verifying'}
                     className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 ${
-                      inlineRegId.trim() && inlineConfirmed && actionLoading !== 'verifying'
+                      isInlineFormValid && actionLoading !== 'verifying'
                         ? 'bg-teal-700 hover:bg-teal-800 text-white shadow-sm cursor-pointer'
                         : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'
                     }`}
@@ -585,10 +756,8 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                     )}
                     <span>
                       {actionLoading === 'verifying'
-                        ? 'Verifying...'
-                        : inlineFastTrack
-                        ? 'Verify Account & Unlock Claims'
-                        : 'Submit for Review'}
+                        ? 'Submitting...'
+                        : 'Submit for Admin Review'}
                     </span>
                   </button>
                 </div>
@@ -602,13 +771,13 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                 </div>
                 <div>
                   <h4 className="text-sm font-bold text-emerald-950 flex items-center gap-2">
-                    <span>Verified Collector Credential Active</span>
+                    <span>Verified Recipient Credential Active</span>
                     <span className="text-[10px] font-mono font-bold bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-full">
                       {currentUser.registrationOrNid || 'Verified'}
                     </span>
                   </h4>
                   <p className="text-xs text-emerald-800 mt-0.5">
-                    Your account is fully verified. You can claim available medicines and coordinate pickup directly with donors.
+                    Your account is fully verified by MedShare Admin. You can claim available medicines and coordinate pickup directly with donors.
                   </p>
                 </div>
               </div>
@@ -927,9 +1096,9 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
       )}
 
       {/* ============================================================= */}
-      {/* SECTION FOR DONORS                                            */}
+      {/* SECTION FOR LISTED MEDICATIONS                                */}
       {/* ============================================================= */}
-      {isDonor && (
+      {!isAdmin && (
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
@@ -1276,103 +1445,6 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
           )}
         </div>
       )}
-
-      {/* ============================================================= */}
-      {/* 4. COMMUNITY COMPLIANCE & MODERATOR VERIFICATION QUEUE        */}
-      {/* ============================================================= */}
-      <div className="pt-6 border-t border-slate-200">
-        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-teal-950 text-white rounded-3xl p-6 sm:p-7 shadow-lg space-y-5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-teal-500/20 border border-teal-400/30 flex items-center justify-center text-teal-300">
-                <ShieldCheck className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-base sm:text-lg font-bold tracking-tight text-white flex items-center gap-2">
-                  <span>Community Compliance &amp; Verification Queue</span>
-                  <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">
-                    {pendingVerifications.length} Pending
-                  </span>
-                </h3>
-                <p className="text-xs text-teal-100/80">
-                  Live review desk: verify clinic licenses and recipient national IDs before medicine distribution.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {pendingVerifications.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-              {pendingVerifications.map((pendingUser) => (
-                <div
-                  key={pendingUser.id}
-                  className="bg-white/10 backdrop-blur-sm border border-white/15 rounded-2xl p-4 sm:p-5 space-y-3 flex flex-col justify-between"
-                >
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-200 border border-teal-400/30">
-                        {pendingUser.role === 'clinic_charity' ? 'Rural Clinic / NGO' : 'Individual Recipient'}
-                      </span>
-                      <span className="text-[11px] font-mono text-amber-300 flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        <span>Awaiting Review</span>
-                      </span>
-                    </div>
-
-                    <div>
-                      <h4 className="font-bold text-white text-base">{pendingUser.name}</h4>
-                      {pendingUser.organizationName && (
-                        <p className="text-xs text-teal-200 font-medium">
-                          Org: {pendingUser.organizationName}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="bg-black/20 rounded-xl p-2.5 space-y-1 text-xs text-slate-300 font-mono">
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Cred ID:</span>
-                        <span className="font-bold text-amber-200">{pendingUser.registrationOrNid || 'N/A'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Phone:</span>
-                        <span>{pendingUser.phone}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Location:</span>
-                        <span>{pendingUser.location}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="pt-2 flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => approveVerification(pendingUser.id)}
-                      className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>Approve Credential</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => rejectVerification(pendingUser.id, 'Format mismatch')}
-                      className="py-2 px-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-500/40 text-xs font-semibold transition cursor-pointer"
-                    >
-                      Reject
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-center text-xs text-teal-100/70 space-y-1">
-              <CheckCircle2 className="w-6 h-6 text-emerald-400 mx-auto mb-1" />
-              <p className="font-semibold text-white">All Verification Requests Processed</p>
-              <p>No collectors are currently waiting in the verification review queue.</p>
-            </div>
-          )}
-        </div>
-      </div>
 
       {/* Printable Community Healthcare Impact Certificate Modal */}
       <ImpactCertificateModal

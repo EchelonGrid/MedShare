@@ -1,4 +1,4 @@
-export type UserRole = 'donor' | 'clinic_charity' | 'individual';
+export type UserRole = 'individual' | 'clinic_charity' | 'admin';
 
 export type MedicationStatus = 'available' | 'claimed' | 'collected';
 

@@ -102,7 +102,7 @@ export default function ClaimModal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, handleModalClose]);
 
-  if (!isOpen || !medication || !currentUser) return null;
+  if (!isOpen || !medication || !currentUser || medication.donorId === currentUser.id) return null;
 
   const isIndividual = currentUser.role === 'individual';
   const isClinic = currentUser.role === 'clinic_charity';

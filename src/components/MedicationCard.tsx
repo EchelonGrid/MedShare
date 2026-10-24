@@ -14,6 +14,7 @@ import {
   User,
   Phone,
   ShieldCheck,
+  Check,
   CheckCircle2,
   PackageCheck,
   Building2,
@@ -31,9 +32,9 @@ interface MedicationCardProps {
 }
 
 const ROLE_LABELS: Record<UserRole, string> = {
-  donor: 'Donor',
-  clinic_charity: 'Clinic / Charity',
-  individual: 'Individual',
+  individual: 'Individual Member',
+  clinic_charity: 'Rural Clinic / NGO',
+  admin: 'Platform Moderator',
 };
 
 export default function MedicationCard({
@@ -51,7 +52,6 @@ export default function MedicationCard({
   const isDonorOfThis = currentUser ? currentUser.id === medication.donorId : false;
   const isClaimerOfThis = currentUser ? currentUser.id === medication.claimedById : false;
   const canViewPickupContact = isDonorOfThis || isClaimerOfThis;
-  const isDonorRole = currentUser ? currentUser.role === 'donor' : false;
 
   const parsedQty = parseQuantity(medication.quantity);
   const totalQty = medication.totalNumericQuantity ?? parsedQty.total;
@@ -312,19 +312,10 @@ export default function MedicationCard({
                 <AlertTriangle className="w-3.5 h-3.5 text-slate-400" />
                 <span>Expired ({medication.expiryDate}) • Safe Disposal Required</span>
               </div>
-            ) : isDonorRole ? (
-              <div className="space-y-1.5">
-                <button
-                  type="button"
-                  onClick={() => onClaimClick?.(medication)}
-                  className="w-full py-2.5 px-4 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 transition border border-slate-300 flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
-                  title="Click to learn how to claim as a collector"
-                >
-                  <span>Claim Medicine (Collectors Only)</span>
-                </button>
-                <p className="text-[11px] text-center text-slate-500 italic">
-                  Switch to a Collector profile in top navbar to claim
-                </p>
+            ) : isDonorOfThis ? (
+              <div className="text-center py-2 px-3 text-xs font-semibold rounded-xl bg-teal-50 text-teal-800 border border-teal-200 flex items-center justify-center gap-1.5">
+                <Check className="w-3.5 h-3.5 text-teal-600" />
+                <span>Your Listed Medicine Donation</span>
               </div>
             ) : (
               <button

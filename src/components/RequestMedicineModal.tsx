@@ -150,46 +150,6 @@ export default function RequestMedicineModal({
     );
   }
 
-  if (currentUser.role === 'donor') {
-    return (
-      <div
-        role="dialog"
-        aria-modal="true"
-        className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4"
-      >
-        <div className="fixed inset-0" onClick={onClose} />
-        <div className="relative w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 text-center space-y-4 shadow-2xl z-10">
-          <div className="w-14 h-14 mx-auto rounded-2xl bg-sky-50 border border-sky-200 flex items-center justify-center text-sky-700">
-            <Building2 className="w-7 h-7" />
-          </div>
-          <h3 className="text-lg font-bold text-slate-900">Collector Account Required</h3>
-          <p className="text-xs text-slate-600 leading-relaxed">
-            Donor accounts list surplus medications for redistribution. To broadcast medicine stockouts or shortages, please use or switch to a Rural Clinic or Individual Recipient account.
-          </p>
-          <div className="flex items-center justify-center gap-3 pt-2">
-            <button
-              type="button"
-              onClick={() => {
-                onClose();
-                openAuthModal('register', 'Create a Clinic or Individual account to post requests.');
-              }}
-              className="px-4 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold transition cursor-pointer"
-            >
-              Create Collector Account
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 text-xs font-semibold transition cursor-pointer"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   if (!currentUser.isVerified) {
     return (
       <div
@@ -310,7 +270,7 @@ export default function RequestMedicineModal({
             </span>
           </div>
           <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-teal-100 text-teal-800 uppercase">
-            {currentUser.role === 'clinic_charity' ? 'Rural Clinic' : 'Individual Recipient'}
+            {currentUser.role === 'clinic_charity' ? 'Rural Clinic' : currentUser.role === 'admin' ? 'Administrator' : 'Individual Recipient'}
           </span>
         </div>
 

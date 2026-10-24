@@ -12,11 +12,11 @@ import {
   Phone,
   MapPin,
   Building2,
-  HeartHandshake,
   FileText,
   AlertCircle,
   CheckCircle2,
   ArrowRight,
+  ShieldCheck,
   Sparkles,
 } from 'lucide-react';
 
@@ -45,7 +45,7 @@ export default function AuthModal({
   const [loginError, setLoginError] = useState<string | null>(null);
 
   // Register form state
-  const [role, setRole] = useState<UserRole>('donor');
+  const [role, setRole] = useState<UserRole>('individual');
   const [fullName, setFullName] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
@@ -277,15 +277,15 @@ export default function AuthModal({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                {/* Demo Donor */}
+                {/* Demo Individual Member */}
                 <button
                   type="button"
                   onClick={() => handleDemoLogin('user-donor-1')}
                   className="p-2.5 rounded-xl border border-teal-200 bg-teal-50/60 hover:bg-teal-100/70 text-left transition cursor-pointer"
                 >
                   <div className="flex items-center gap-1.5 text-xs font-bold text-teal-900">
-                    <HeartHandshake className="w-3.5 h-3.5 text-teal-700" />
-                    <span>Donor</span>
+                    <User className="w-3.5 h-3.5 text-teal-700" />
+                    <span>Individual Member</span>
                   </div>
                   <p className="text-[10px] text-teal-800 mt-0.5 truncate font-medium">Dr. Farhana Rahman</p>
                 </button>
@@ -300,20 +300,20 @@ export default function AuthModal({
                     <Building2 className="w-3.5 h-3.5 text-indigo-700" />
                     <span>Rural Clinic</span>
                   </div>
-                  <p className="text-[10px] text-indigo-800 mt-0.5 truncate font-medium">Rural Hope (Verified)</p>
+                  <p className="text-[10px] text-indigo-800 mt-0.5 truncate font-medium">Bogura Free Rural Clinic</p>
                 </button>
 
-                {/* Demo Individual */}
+                {/* Demo Platform Admin */}
                 <button
                   type="button"
-                  onClick={() => handleDemoLogin('user-individual-1')}
-                  className="p-2.5 rounded-xl border border-sky-200 bg-sky-50/60 hover:bg-sky-100/70 text-left transition cursor-pointer"
+                  onClick={() => handleDemoLogin('user-admin-1')}
+                  className="p-2.5 rounded-xl border border-purple-200 bg-purple-50/60 hover:bg-purple-100/70 text-left transition cursor-pointer"
                 >
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-sky-900">
-                    <User className="w-3.5 h-3.5 text-sky-700" />
-                    <span>Individual</span>
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-purple-900">
+                    <ShieldCheck className="w-3.5 h-3.5 text-purple-700" />
+                    <span>Platform Admin</span>
                   </div>
-                  <p className="text-[10px] text-sky-800 mt-0.5 truncate font-medium">Rahim Chowdhury (Pending)</p>
+                  <p className="text-[10px] text-purple-800 mt-0.5 truncate font-medium">MedShare Admin</p>
                 </button>
               </div>
             </div>
@@ -336,20 +336,20 @@ export default function AuthModal({
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
                 Select Your Account Type <span className="text-rose-500">*</span>
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                {/* Donor */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {/* Individual Community Member */}
                 <div
-                  onClick={() => setRole('donor')}
+                  onClick={() => setRole('individual')}
                   className={`p-3 rounded-2xl border-2 transition cursor-pointer ${
-                    role === 'donor'
-                      ? 'border-teal-600 bg-teal-50/70 text-teal-950'
+                    role === 'individual'
+                      ? 'border-teal-600 bg-teal-50/70 text-teal-950 shadow-xs'
                       : 'border-slate-200 hover:border-slate-300 text-slate-700'
                   }`}
                 >
-                  <HeartHandshake className={`w-5 h-5 mb-1.5 ${role === 'donor' ? 'text-teal-700' : 'text-slate-400'}`} />
-                  <div className="text-xs font-bold leading-tight">Donor</div>
+                  <User className={`w-5 h-5 mb-1.5 ${role === 'individual' ? 'text-teal-700' : 'text-slate-400'}`} />
+                  <div className="text-xs font-bold leading-tight">Individual Member</div>
                   <p className="text-[10px] text-slate-500 mt-1 leading-snug">
-                    List sealed, unexpired medicines for donation
+                    Donate medicines immediately. Claim with verified national ID.
                   </p>
                 </div>
 
@@ -358,30 +358,14 @@ export default function AuthModal({
                   onClick={() => setRole('clinic_charity')}
                   className={`p-3 rounded-2xl border-2 transition cursor-pointer ${
                     role === 'clinic_charity'
-                      ? 'border-indigo-600 bg-indigo-50/70 text-indigo-950'
+                      ? 'border-indigo-600 bg-indigo-50/70 text-indigo-950 shadow-xs'
                       : 'border-slate-200 hover:border-slate-300 text-slate-700'
                   }`}
                 >
                   <Building2 className={`w-5 h-5 mb-1.5 ${role === 'clinic_charity' ? 'text-indigo-700' : 'text-slate-400'}`} />
-                  <div className="text-xs font-bold leading-tight">Clinic / Charity</div>
+                  <div className="text-xs font-bold leading-tight">Rural Clinic / NGO</div>
                   <p className="text-[10px] text-slate-500 mt-1 leading-snug">
-                    Collect medicines in bulk for rural patients
-                  </p>
-                </div>
-
-                {/* Individual Recipient */}
-                <div
-                  onClick={() => setRole('individual')}
-                  className={`p-3 rounded-2xl border-2 transition cursor-pointer ${
-                    role === 'individual'
-                      ? 'border-sky-600 bg-sky-50/70 text-sky-950'
-                      : 'border-slate-200 hover:border-slate-300 text-slate-700'
-                  }`}
-                >
-                  <User className={`w-5 h-5 mb-1.5 ${role === 'individual' ? 'text-sky-700' : 'text-slate-400'}`} />
-                  <div className="text-xs font-bold leading-tight">Individual</div>
-                  <p className="text-[10px] text-slate-500 mt-1 leading-snug">
-                    Claim with doctor Rx &amp; national ID
+                    Collect medicines in bulk for patients with healthcare license.
                   </p>
                 </div>
               </div>
@@ -490,30 +474,28 @@ export default function AuthModal({
             </div>
 
             {/* Optional Immediate Verification ID */}
-            {role !== 'donor' && (
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-1.5">
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  {role === 'clinic_charity'
-                    ? 'Clinic / NGO License Number (Optional now)'
-                    : 'National ID (NID) / Birth Reg Number (Optional now)'}
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                    <FileText className="w-4 h-4" />
-                  </div>
-                  <input
-                    type="text"
-                    value={regOrNid}
-                    onChange={(e) => setRegOrNid(e.target.value)}
-                    placeholder={role === 'clinic_charity' ? 'e.g. NGO-CLINIC-7729' : 'e.g. 1998260636001'}
-                    className="w-full pl-9 pr-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition font-mono"
-                  />
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-1.5">
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                {role === 'clinic_charity'
+                  ? 'Clinic / NGO License Number (Optional now)'
+                  : 'National ID (NID: 10, 13, or 17 digits - Optional now)'}
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <FileText className="w-4 h-4" />
                 </div>
-                <p className="text-[11px] text-slate-500">
-                  Provide now to verify your collector account immediately, or verify later from your portal.
-                </p>
+                <input
+                  type="text"
+                  value={regOrNid}
+                  onChange={(e) => setRegOrNid(e.target.value)}
+                  placeholder={role === 'clinic_charity' ? 'e.g. DGHS-BOG-4491' : 'e.g. 1998260636001'}
+                  className="w-full pl-9 pr-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition font-mono"
+                />
               </div>
-            )}
+              <p className="text-[11px] text-slate-500">
+                You can provide this now for Admin review, or verify later from your account portal to unlock medicine claims.
+              </p>
+            </div>
 
             {/* Submit Register */}
             <div className="pt-2">

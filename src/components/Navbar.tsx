@@ -17,20 +17,20 @@ import {
 import { UserRole } from '@/types/medshare';
 
 const ROLE_LABELS: Record<UserRole, { label: string; icon: React.ReactNode; badgeClass: string }> = {
-  donor: {
-    label: 'Donor',
-    icon: <HeartHandshake className="w-3.5 h-3.5" />,
+  individual: {
+    label: 'Community Member',
+    icon: <User className="w-3.5 h-3.5" />,
     badgeClass: 'bg-teal-900/60 text-teal-200 border-teal-500/40',
   },
   clinic_charity: {
-    label: 'Rural Clinic / Charity',
+    label: 'Rural Clinic / NGO',
     icon: <Building2 className="w-3.5 h-3.5" />,
     badgeClass: 'bg-indigo-950/70 text-indigo-200 border-indigo-400/40',
   },
-  individual: {
-    label: 'Individual Recipient',
-    icon: <User className="w-3.5 h-3.5" />,
-    badgeClass: 'bg-sky-950/70 text-sky-200 border-sky-400/40',
+  admin: {
+    label: 'Platform Moderator',
+    icon: <ShieldCheck className="w-3.5 h-3.5" />,
+    badgeClass: 'bg-purple-950/70 text-purple-200 border-purple-400/40',
   },
 };
 
@@ -38,6 +38,7 @@ export default function Navbar() {
   const {
     currentUser,
     medications,
+    pendingVerifications,
     isDbConnected,
     dbMode,
     logout,
@@ -50,17 +51,18 @@ export default function Navbar() {
   } = useMedShare();
 
   const currentRoleMeta = currentUser
-    ? ROLE_LABELS[currentUser.role] || ROLE_LABELS.donor
+    ? ROLE_LABELS[currentUser.role] || ROLE_LABELS.individual
     : null;
 
   // Active items badge in portal
   const portalBadgeCount = currentUser
-    ? currentUser.role === 'donor'
-      ? medications.filter((m) => m.donorId === currentUser.id && m.status === 'claimed').length
+    ? currentUser.role === 'admin'
+      ? pendingVerifications.length
       : medications.filter(
           (m) =>
             (m.claimedById === currentUser.id && m.status === 'claimed') ||
-            (m.claims || []).some((c) => c.claimerId === currentUser.id && c.status === 'claimed')
+            (m.claims || []).some((c) => c.claimerId === currentUser.id && c.status === 'claimed') ||
+            (m.donorId === currentUser.id && m.status === 'claimed')
         ).length
     : 0;
 

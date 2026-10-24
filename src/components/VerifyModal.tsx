@@ -12,7 +12,6 @@ import {
   FileText,
   AlertCircle,
   CheckCircle2,
-  Zap,
 } from 'lucide-react';
 
 interface VerifyModalProps {
@@ -23,12 +22,18 @@ interface VerifyModalProps {
 }
 
 export function validateNidOrBirthReg(value: string): boolean {
+  if (!value) return false;
   const clean = value.replace(/[\s-]/g, '');
-  return /^\d{10}$|^\d{13}$|^\d{17}$/.test(clean);
+  // Must be strictly 10, 13, or 17 digits numeric
+  if (!/^\d{10}$|^\d{13}$|^\d{17}$/.test(clean)) return false;
+  // Reject fake repeating digits (e.g. 1111111111, 0000000000)
+  if (/^(\d)\1+$/.test(clean)) return false;
+  return true;
 }
 
 export function validateClinicRegistration(value: string): boolean {
-  return value.trim().length >= 4;
+  if (!value) return false;
+  return value.trim().length >= 6;
 }
 
 export default function VerifyModal({
@@ -39,18 +44,17 @@ export default function VerifyModal({
 }: VerifyModalProps) {
   const { currentUser, submitVerification, verifyNotice, actionLoading } = useMedShare();
 
-  const [orgName, setOrgName] = useState(currentUser?.organizationName || '');
-  const [regOrNid, setRegOrNid] = useState(currentUser?.registrationOrNid || '');
-  const [fullName, setFullName] = useState(currentUser?.name || '');
-  const [phone, setPhone] = useState(currentUser?.phone || '');
-  const [location, setLocation] = useState(currentUser?.location || '');
+  const [orgName, setOrgName] = useState('');
+  const [regOrNid, setRegOrNid] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [location, setLocation] = useState('');
   const [confirmed, setConfirmed] = useState(false);
-  const [fastTrack, setFastTrack] = useState(true); // default true for frictionless demo grading
   const [touched, setTouched] = useState(false);
 
-  // Sync state whenever the modal opens or currentUser switches
+  // Sync state whenever the modal opens or currentUser updates (Bug 1 fix)
   useEffect(() => {
-    if (isOpen && currentUser) {
+    if (currentUser) {
       setOrgName(currentUser.organizationName || '');
       setRegOrNid(currentUser.registrationOrNid || '');
       setFullName(currentUser.name || '');
@@ -81,15 +85,15 @@ export default function VerifyModal({
   const isIndividual = currentUser.role === 'individual';
 
   // Strict field validation
-  const isOrgValid = !isClinic || orgName.trim().length > 0;
-  const isNameValid = isClinic || fullName.trim().length > 0;
+  const isOrgValid = !isClinic || orgName.trim().length >= 2;
+  const isNameValid = isClinic || fullName.trim().length >= 2;
   const isIdValid = isClinic
     ? validateClinicRegistration(regOrNid)
     : isIndividual
     ? validateNidOrBirthReg(regOrNid)
     : true;
   const isPhoneValid = phone.trim().length >= 8;
-  const isLocationValid = location.trim().length > 0;
+  const isLocationValid = location.trim().length >= 3;
 
   const isFormValid =
     isOrgValid && isNameValid && isIdValid && isPhoneValid && isLocationValid && confirmed;
@@ -101,20 +105,15 @@ export default function VerifyModal({
     if (!isFormValid) return;
 
     await submitVerification({
-      name: isClinic ? (fullName || currentUser.name) : fullName.trim(),
+      name: isClinic ? (fullName.trim() || currentUser.name) : fullName.trim(),
       organizationName: isClinic ? orgName.trim() : currentUser.organizationName,
       registrationOrNid: regOrNid.trim(),
       phone: phone.trim(),
       location: location.trim(),
-      autoApprove: fastTrack,
     });
 
     onClose();
-    if (fastTrack) {
-      onSuccess('Account verified! You can now claim available medications.');
-    } else {
-      onSuccess('Credentials submitted! Under review by MedShare Compliance.');
-    }
+    onSuccess('Credentials submitted! Awaiting MedShare Admin review.');
   };
 
   return (
@@ -240,7 +239,7 @@ export default function VerifyModal({
                 </div>
                 {touched && !isIdValid ? (
                   <p className="text-[11px] text-rose-600 mt-1">
-                    Please provide a valid DGHS or NGO Bureau license number (at least 4 characters).
+                    Please provide a valid DGHS or NGO Bureau license number (at least 6 characters).
                   </p>
                 ) : (
                   <p className="text-[11px] text-slate-500 mt-1">
@@ -303,7 +302,7 @@ export default function VerifyModal({
                 </div>
                 {touched && !isIdValid ? (
                   <p className="text-[11px] text-rose-600 mt-1 font-semibold">
-                    * NID must be strictly 10 (Smart Card), 13, or 17 digits (Birth Registration: 17 digits).
+                    * NID must be strictly 10, 13, or 17 numeric digits. Fake repeating digits (e.g. 1111111111) are rejected.
                   </p>
                 ) : (
                   <p className="text-[11px] text-slate-500 mt-1">
@@ -389,23 +388,6 @@ export default function VerifyModal({
             </div>
           </div>
 
-          {/* Demo Fast-Track Toggle */}
-          <div className="bg-teal-50/70 border border-teal-200 rounded-2xl p-3 flex items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-2 text-teal-900">
-              <Zap className="w-4 h-4 text-teal-700 shrink-0" />
-              <span className="font-semibold">⚡ Fast-Track Instant Approval (Evaluator Mode)</span>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={fastTrack}
-                onChange={(e) => setFastTrack(e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-teal-600"></div>
-            </label>
-          </div>
-
           {/* Action Buttons */}
           <div className="pt-3 flex items-center justify-end gap-3 border-t border-slate-100">
             <button
@@ -428,10 +410,8 @@ export default function VerifyModal({
               <CheckCircle2 className="w-4 h-4" />
               <span>
                 {actionLoading === 'verifying'
-                  ? 'Verifying...'
-                  : fastTrack
-                  ? 'Verify & Unlock Claims'
-                  : 'Submit for Review'}
+                  ? 'Submitting...'
+                  : 'Submit for Admin Review'}
               </span>
             </button>
           </div>

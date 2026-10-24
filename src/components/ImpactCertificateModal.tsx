@@ -45,8 +45,8 @@ export default function ImpactCertificateModal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  const isDonor = user?.role === 'donor';
   const isClinic = user?.role === 'clinic_charity';
+  const isAdmin = user?.role === 'admin';
 
   // Calculate Donor Stats
   const donorStats = useMemo(() => {
@@ -141,6 +141,8 @@ export default function ImpactCertificateModal({
       items: collectedItems.slice(0, 5),
     };
   }, [medications, user]);
+
+  const isDonor = donorStats.batches > 0 || collectorStats.batches === 0;
 
   if (!isOpen || !user) return null;
 
@@ -254,7 +256,7 @@ export default function ImpactCertificateModal({
                 <span className="font-semibold text-slate-800">{user.location}</span>
                 <span>•</span>
                 <span className="font-mono text-slate-700 font-medium">
-                  {user.registrationOrNid ? `ID: ${user.registrationOrNid}` : `Role: ${isDonor ? 'Verified Donor' : isClinic ? 'Rural Clinic Relief' : 'Verified Recipient'}`}
+                  {user.registrationOrNid ? `ID: ${user.registrationOrNid}` : `Role: ${isAdmin ? 'MedShare Administrator' : isDonor ? 'Community Donor' : isClinic ? 'Rural Clinic Relief' : 'Individual Recipient'}`}
                 </span>
                 <span>•</span>
                 <span className="inline-flex items-center gap-1 font-bold text-emerald-800">

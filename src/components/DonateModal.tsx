@@ -23,7 +23,6 @@ import {
   CheckCircle2,
   Clock,
   Sparkles,
-  Search,
 } from 'lucide-react';
 
 interface DonateModalProps {
@@ -254,8 +253,8 @@ export default function DonateModal({
             <span className="w-2 h-2 rounded-full bg-teal-500" />
             <span>Listing as: <strong className="font-semibold">{currentUser.name}</strong></span>
           </div>
-          <span className="text-[11px] font-mono font-medium px-2 py-0.5 rounded bg-teal-100 text-teal-800">
-            {currentUser.role.replace('_', ' ')}
+          <span className="text-[11px] font-mono font-medium px-2 py-0.5 rounded bg-teal-100 text-teal-800 uppercase">
+            {currentUser.role === 'clinic_charity' ? 'Rural Clinic / NGO' : currentUser.role === 'admin' ? 'Administrator' : 'Community Member'}
           </span>
         </div>
 

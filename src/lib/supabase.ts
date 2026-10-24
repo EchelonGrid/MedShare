@@ -60,7 +60,7 @@ export interface DbProfile {
   id: string;
   name: string;
   email: string;
-  role: 'donor' | 'clinic_charity' | 'individual';
+  role: UserRole;
   phone?: string | null;
   location?: string | null;
   organization_name?: string | null;
@@ -225,11 +225,15 @@ export function mapAppMedicationToDb(app: Omit<Medication, 'id' | 'createdAt'> &
 
 export function mapDbProfileToApp(db: DbProfile): UserProfile {
   const vStatus = (db.verification_status as VerificationStatus) || 'unverified';
+  const role: UserRole =
+    (db.role as string) === 'clinic_charity' || (db.role as string) === 'admin'
+      ? (db.role as UserRole)
+      : 'individual';
   return {
     id: db.id,
     name: db.name || 'Anonymous User',
     email: db.email || '',
-    role: db.role || 'individual',
+    role,
     phone: db.phone || '',
     location: db.location || '',
     verificationStatus: vStatus,
