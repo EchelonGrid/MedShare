@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMedShare } from '@/context/MedShareContext';
 import { getDaysUntilExpiry } from '@/lib/seed';
 import { useIsMounted } from '@/lib/useIsMounted';
@@ -62,6 +62,15 @@ export default function HomePage() {
   const [notification, setNotification] = useState<string | null>(null);
   const [selectedMedicationForClaim, setSelectedMedicationForClaim] = useState<Medication | null>(null);
   const [activeFeedTab, setActiveFeedTab] = useState<FilterTab>('available');
+
+  // Auto-dismiss top notification banner after 3.5 seconds with clearTimeout cleanup
+  useEffect(() => {
+    if (!notification) return;
+    const timer = setTimeout(() => {
+      setNotification(null);
+    }, 3500);
+    return () => clearTimeout(timer);
+  }, [notification]);
 
   const availableCount = medications.filter((m) => m.status === 'available').length;
   const expiringSoonCount = mounted

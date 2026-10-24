@@ -219,10 +219,10 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
       const newToast: ToastItem = { id, type, title, message };
       setToasts((prev) => [newToast, ...prev.slice(0, 4)]);
 
-      // Auto dismiss after 4.5 seconds
+      // Auto dismiss after 3.5 seconds
       setTimeout(() => {
         dismissToast(id);
-      }, 4500);
+      }, 3500);
     },
     [dismissToast]
   );
