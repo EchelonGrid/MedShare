@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo } from 'react';
-import { UserProfile, Medication } from '@/types/medshare';
+import { UserProfile } from '@/types/medshare';
 import { useMedShare } from '@/context/MedShareContext';
 import { parseQuantity } from '@/lib/seed';
 import {
@@ -9,13 +9,7 @@ import {
   Printer,
   Award,
   ShieldCheck,
-  CheckCircle2,
-  Calendar,
   Building2,
-  HeartHandshake,
-  User,
-  PackageCheck,
-  Sparkles,
 } from 'lucide-react';
 
 function escapeHtml(str: string | number | undefined | null): string {

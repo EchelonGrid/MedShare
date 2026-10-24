@@ -191,7 +191,7 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
   const [medications, setMedications] = useState<Medication[]>(INITIAL_MEDICATIONS);
   const [requests, setRequests] = useState<MedicineRequest[]>(INITIAL_REQUESTS);
   const [allUsers, setAllUsers] = useState<UserProfile[]>(DEFAULT_USERS);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(DEFAULT_USERS[0].id);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isDbConnected, setIsDbConnected] = useState<boolean>(false);
   const [dbMode, setDbMode] = useState<'cloud' | 'local'>('local');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -284,12 +284,10 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
     setAllUsers(initialLocalUsers);
 
     const storedCurrentId = localStorage.getItem(CURRENT_USER_ID_KEY);
-    if (storedCurrentId === 'guest') {
-      setCurrentUserId(null);
-    } else if (storedCurrentId && initialLocalUsers.some((u) => u.id === storedCurrentId)) {
+    if (storedCurrentId && storedCurrentId !== 'guest' && initialLocalUsers.some((u) => u.id === storedCurrentId)) {
       setCurrentUserId(storedCurrentId);
-    } else if (storedCurrentId === null) {
-      setCurrentUserId(DEFAULT_USERS[0].id);
+    } else {
+      setCurrentUserId(null);
     }
 
     let initialLocalMeds = INITIAL_MEDICATIONS;
@@ -1362,17 +1360,17 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
     setMedications(INITIAL_MEDICATIONS);
     setRequests(INITIAL_REQUESTS);
     setAllUsers(DEFAULT_USERS);
-    setCurrentUserId(DEFAULT_USERS[0].id);
+    setCurrentUserId(null);
 
     try {
       localStorage.setItem(MEDS_STORAGE_KEY, JSON.stringify(INITIAL_MEDICATIONS));
       localStorage.setItem(REQUESTS_STORAGE_KEY, JSON.stringify(INITIAL_REQUESTS));
       localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(DEFAULT_USERS));
-      localStorage.setItem(CURRENT_USER_ID_KEY, DEFAULT_USERS[0].id);
+      localStorage.setItem(CURRENT_USER_ID_KEY, 'guest');
     } catch (err) {
       console.error('Error resetting demo data:', err);
     }
-    showToast('Demo data and local state reset to default Bangladeshi seeds.', 'info', 'Demo Reset');
+    showToast('Demo data reset to default seeds. You are in guest mode.', 'info', 'Demo Reset');
   }, [showToast]);
 
   // Modal open/close helpers
