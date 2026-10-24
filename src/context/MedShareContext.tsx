@@ -18,6 +18,7 @@ import {
   RequestStatus,
   MedicineCategory,
   BatchClaim,
+  ClaimRecord,
 } from '@/types/medshare';
 import {
   DEFAULT_USERS,
@@ -760,6 +761,7 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
       const claimedAt = new Date().toISOString();
       const claimExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
       const pin = generateHandoverPin();
+      const claimId = `claim-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
       let feedbackToastMsg = `Medicine claimed! Your 4-Digit Handover PIN is ${pin}. Pick up within 48 hours.`;
       let feedbackToastTitle = 'Claim Successful';
@@ -782,8 +784,23 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
             const isFullClaim = newRemaining <= 0;
             isFullClaimDetermined = isFullClaim;
 
-            const newClaim: BatchClaim = {
-              id: `claim-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            const newClaimRecord: ClaimRecord = {
+              claimId,
+              collectorId: claimer?.id || 'collector-anon',
+              collectorName: claimer?.name || 'Verified Collector',
+              collectorRole: claimer?.role || 'individual',
+              collectorPhone: claimer?.phone,
+              organizationOrRx: prescriptionRef || (claimer?.role === 'clinic_charity' ? (claimer.organizationName || claimer.registrationOrNid) : undefined),
+              quantityClaimed: amountToClaim,
+              unitName: unit,
+              handoverPin: pin,
+              claimedAt,
+              claimExpiresAt,
+              status: 'pending_pickup',
+            };
+
+            const newBatchClaim: BatchClaim = {
+              id: claimId,
               medicationId: med.id,
               claimerId: claimer?.id || 'collector-anon',
               claimerName: claimer?.name || 'Verified Collector',
@@ -797,7 +814,8 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
               status: 'claimed',
             };
 
-            const updatedClaims = [...(med.claims || []), newClaim];
+            const updatedClaims = [...(med.claims || []), newBatchClaim];
+            const updatedActiveClaims = [...(med.activeClaims || []), newClaimRecord];
 
             if (newRemaining > 0) {
               feedbackToastMsg = `Partially claimed ${amountToClaim} ${unit}! PIN: ${pin}. ${newRemaining} ${unit} remain available on feed.`;
@@ -815,6 +833,7 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
               claimedByRole: isFullClaim ? (claimer?.role || 'individual') : (med.claimedByRole || claimer?.role),
               claimedQuantity: isFullClaim ? amountToClaim : med.claimedQuantity,
               claims: updatedClaims,
+              activeClaims: updatedActiveClaims,
               handoverPin: isFullClaim ? pin : (med.handoverPin || pin),
               prescriptionRef: prescriptionRef || med.prescriptionRef,
               claimedAt: isFullClaim ? claimedAt : (med.claimedAt || claimedAt),
@@ -868,21 +887,28 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
               med.remainingNumericQuantity !== undefined ? med.remainingNumericQuantity : 0;
 
             let updatedClaims = med.claims || [];
+            let updatedActive = med.activeClaims || [];
             let restockAmount = 0;
 
             if (claimId) {
               const targetClaim = updatedClaims.find((c) => c.id === claimId);
+              const targetActive = updatedActive.find((c) => c.claimId === claimId);
               if (targetClaim) {
                 restockAmount = targetClaim.claimedQuantity;
-                updatedClaims = updatedClaims.filter((c) => c.id !== claimId);
+              } else if (targetActive) {
+                restockAmount = targetActive.quantityClaimed;
               }
+              updatedClaims = updatedClaims.filter((c) => c.id !== claimId);
+              updatedActive = updatedActive.filter((c) => c.claimId !== claimId);
             } else {
               restockAmount = med.claimedQuantity || (total - currentRemaining);
               updatedClaims = [];
+              updatedActive = [];
             }
 
             const newRemaining = Math.min(total, currentRemaining + restockAmount);
-            const hasPendingClaims = updatedClaims.some((c) => c.status === 'claimed');
+            const hasPendingClaims = updatedClaims.some((c) => c.status === 'claimed') ||
+              updatedActive.some((c) => c.status === 'pending_pickup');
 
             let nextStatus: 'available' | 'claimed' | 'collected' = 'available';
             if (newRemaining <= 0) {
@@ -904,6 +930,7 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
               claimedByRole: latestActiveClaim ? latestActiveClaim.claimerRole : (nextStatus === 'available' ? undefined : med.claimedByRole),
               claimedQuantity: latestActiveClaim ? latestActiveClaim.claimedQuantity : (nextStatus === 'available' ? undefined : med.claimedQuantity),
               claims: updatedClaims,
+              activeClaims: updatedActive,
               handoverPin: latestActiveClaim ? latestActiveClaim.handoverPin : (nextStatus === 'available' ? undefined : med.handoverPin),
               claimExpiresAt: latestActiveClaim ? latestActiveClaim.claimExpiresAt : (nextStatus === 'available' ? undefined : med.claimExpiresAt),
               claimedAt: latestActiveClaim ? latestActiveClaim.claimedAt : (nextStatus === 'available' ? undefined : med.claimedAt),
@@ -959,28 +986,48 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
         targetClaimId = claimId;
       }
 
-      // Check PIN if entered by donor
+      // Check PIN: PIN is strictly required for in-person donor handover
+      const cleanPin = (pinToVerify || '').trim();
+      if (!cleanPin) {
+        showToast(
+          'Please enter the 4-digit Handover PIN provided by the collector.',
+          'error',
+          'PIN Required'
+        );
+        return {
+          success: false,
+          error: 'Please enter the 4-digit Handover PIN provided by the collector.',
+        };
+      }
+
       const targetMed = medications.find((m) => m.id === medicationId);
-      if (targetMed && pinToVerify !== undefined && pinToVerify.trim().length > 0) {
-        let expectedPin = targetMed.handoverPin;
-        if (targetClaimId && targetMed.claims) {
+      if (!targetMed) {
+        return { success: false, error: 'Medication record not found.' };
+      }
+
+      let expectedPin = targetMed.handoverPin;
+      if (targetClaimId) {
+        const matchedActive = (targetMed.activeClaims || []).find((c) => c.claimId === targetClaimId);
+        if (matchedActive?.handoverPin) {
+          expectedPin = matchedActive.handoverPin;
+        } else if (targetMed.claims) {
           const matchedClaim = targetMed.claims.find((c) => c.id === targetClaimId);
           if (matchedClaim?.handoverPin) {
             expectedPin = matchedClaim.handoverPin;
           }
         }
+      }
 
-        if (expectedPin && pinToVerify.trim() !== expectedPin.trim()) {
-          showToast(
-            'Invalid Handover PIN. Please ask the collector for the 4-digit code shown in their portal.',
-            'error',
-            'Incorrect Handover PIN'
-          );
-          return {
-            success: false,
-            error: 'Invalid Handover PIN. Code does not match.',
-          };
-        }
+      if (!expectedPin || cleanPin !== expectedPin.trim()) {
+        showToast(
+          'Incorrect Handover PIN! Ask the collector for the exact 4-digit PIN shown in their portal.',
+          'error',
+          'Incorrect Handover PIN'
+        );
+        return {
+          success: false,
+          error: 'Incorrect Handover PIN! Ask the collector for the exact 4-digit PIN shown in their portal.',
+        };
       }
 
       setActionLoading(medicationId);
@@ -990,9 +1037,14 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
         const updated = prev.map((med) => {
           if (med.id === medicationId) {
             let updatedClaims = med.claims || [];
+            let updatedActive = med.activeClaims || [];
+
             if (targetClaimId) {
               updatedClaims = updatedClaims.map((c) =>
                 c.id === targetClaimId ? { ...c, status: 'collected' as const, collectedAt } : c
+              );
+              updatedActive = updatedActive.map((c) =>
+                c.claimId === targetClaimId ? { ...c, status: 'collected' as const, collectedAt } : c
               );
             } else {
               updatedClaims = updatedClaims.map((c) => ({
@@ -1000,19 +1052,27 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
                 status: 'collected' as const,
                 collectedAt: c.collectedAt || collectedAt,
               }));
+              updatedActive = updatedActive.map((c) => ({
+                ...c,
+                status: 'collected' as const,
+                collectedAt: c.collectedAt || collectedAt,
+              }));
             }
 
             const allClaimsCollected =
-              updatedClaims.length > 0 &&
-              updatedClaims.every((c) => c.status === 'collected') &&
-              (med.remainingNumericQuantity ?? 0) <= 0;
+              (updatedClaims.length > 0 && updatedClaims.every((c) => c.status === 'collected')) ||
+              (updatedActive.length > 0 && updatedActive.every((c) => c.status === 'collected'));
 
-            const isNowFullyCollected = !targetClaimId || allClaimsCollected || med.status === 'claimed';
+            const isNowFullyCollected =
+              (!targetClaimId && (med.remainingNumericQuantity ?? 0) <= 0) ||
+              (allClaimsCollected && (med.remainingNumericQuantity ?? 0) <= 0) ||
+              med.status === 'claimed';
 
             return {
               ...med,
               status: isNowFullyCollected ? ('collected' as const) : med.status,
               claims: updatedClaims,
+              activeClaims: updatedActive,
               collectedAt: isNowFullyCollected ? collectedAt : med.collectedAt,
             };
           }

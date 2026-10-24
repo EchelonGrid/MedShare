@@ -61,8 +61,12 @@ export default function Navbar() {
       : medications.filter(
           (m) =>
             (m.claimedById === currentUser.id && m.status === 'claimed') ||
-            (m.claims || []).some((c) => c.claimerId === currentUser.id && c.status === 'claimed') ||
-            (m.donorId === currentUser.id && m.status === 'claimed')
+            (m.claims || []).some((c) => c.claimerId === currentUser.id && (c.status === 'claimed' || (c.status as string) === 'pending_pickup')) ||
+            (m.activeClaims || []).some((c) => c.collectorId === currentUser.id && c.status === 'pending_pickup') ||
+            ((m.donorId === currentUser.id || (m.donorName && m.donorName.toLowerCase() === currentUser.name.toLowerCase())) &&
+              (m.status === 'claimed' ||
+                (m.claims || []).some((c) => c.status === 'claimed' || (c.status as string) === 'pending_pickup') ||
+                (m.activeClaims || []).some((c) => c.status === 'pending_pickup')))
         ).length
     : 0;
 

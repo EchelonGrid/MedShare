@@ -22,7 +22,34 @@ import {
   ArrowRight,
   KeyRound,
   Clock,
+  Stethoscope,
 } from 'lucide-react';
+
+export function validateBmdcNumber(value: string): boolean {
+  if (!value) return false;
+  return /^[A-Z]-?\d{4,6}$/i.test(value.trim());
+}
+
+export function validatePrescriptionDate(dateStr: string): { isValid: boolean; error?: string } {
+  if (!dateStr) return { isValid: false, error: 'Prescription date is required.' };
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return { isValid: false, error: 'Invalid date format.' };
+
+  const now = new Date();
+  now.setHours(23, 59, 59, 999);
+  if (d > now) {
+    return { isValid: false, error: 'Prescription issue date cannot be in the future.' };
+  }
+
+  const ninetyDaysAgo = new Date();
+  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+  ninetyDaysAgo.setHours(0, 0, 0, 0);
+  if (d < ninetyDaysAgo) {
+    return { isValid: false, error: 'Prescription cannot be older than 90 days.' };
+  }
+
+  return { isValid: true };
+}
 
 interface ClaimModalProps {
   isOpen: boolean;
@@ -42,7 +69,6 @@ export default function ClaimModal({
   const { currentUser, claimMedication, actionLoading } = useMedShare();
   const mounted = useIsMounted();
 
-  const [prescriptionRef, setPrescriptionRef] = useState('');
   const [pickupNote, setPickupNote] = useState('');
   const [claimAmount, setClaimAmount] = useState<number>(1);
   const [inspectionConfirmed, setInspectionConfirmed] = useState(false);
@@ -50,6 +76,13 @@ export default function ClaimModal({
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [copiedPhone, setCopiedPhone] = useState(false);
   const [touched, setTouched] = useState(false);
+
+  // Structured BMDC Doctor's Prescription Form State (For verified individuals)
+  const [doctorName, setDoctorName] = useState('');
+  const [bmdcNumber, setBmdcNumber] = useState('');
+  const [hospitalName, setHospitalName] = useState('');
+  const [issueDate, setIssueDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [dosageSchedule, setDosageSchedule] = useState('1+0+1 (Twice daily)');
 
   // Compute numeric availability
   const parsedQty = parseQuantity(medication?.quantity);
@@ -70,8 +103,12 @@ export default function ClaimModal({
           ? medication.remainingNumericQuantity
           : total;
 
-      setPrescriptionRef('');
       setPickupNote('');
+      setDoctorName('');
+      setBmdcNumber('');
+      setHospitalName('');
+      setIssueDate(new Date().toISOString().split('T')[0]);
+      setDosageSchedule('1+0+1 (Twice daily)');
       setClaimAmount(Math.max(1, remaining));
       setAssignedPin('');
       setInspectionConfirmed(false);
@@ -110,8 +147,18 @@ export default function ClaimModal({
   const daysRemaining = mounted ? getDaysUntilExpiry(medication.expiryDate) : null;
   const urgency = daysRemaining !== null ? getUrgencyLevel(daysRemaining) : 'normal';
 
-  // Validation
-  const isPrescriptionValid = !isIndividual || prescriptionRef.trim().length > 0;
+  // Strict Validation
+  const isDoctorNameValid = doctorName.trim().length >= 5;
+  const isBmdcValid = validateBmdcNumber(bmdcNumber);
+  const isHospitalValid = hospitalName.trim().length >= 4;
+  const dateValidation = validatePrescriptionDate(issueDate);
+  const isDateValid = dateValidation.isValid;
+  const isDosageValid = Boolean(dosageSchedule);
+
+  const isIndividualRxValid =
+    isDoctorNameValid && isBmdcValid && isHospitalValid && isDateValid && isDosageValid;
+
+  const isPrescriptionValid = !isIndividual || isIndividualRxValid;
   const isClaimAmountValid = claimAmount > 0 && claimAmount <= remainingQty;
   const isFormValid = isPrescriptionValid && isClaimAmountValid && inspectionConfirmed;
 
@@ -122,7 +169,7 @@ export default function ClaimModal({
     if (!isFormValid) return;
 
     const refString = isIndividual
-      ? prescriptionRef.trim()
+      ? `Rx: ${doctorName.trim()} (BMDC: ${bmdcNumber.trim().toUpperCase()}, ${hospitalName.trim()}) • Issued: ${issueDate} • Dosage: ${dosageSchedule}`
       : pickupNote.trim()
       ? `Pickup Note: ${pickupNote.trim()}`
       : undefined;
@@ -363,34 +410,200 @@ export default function ClaimModal({
 
             {/* Role-Specific Claim Requirements */}
             {isIndividual ? (
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="prescription-ref"
-                  className="block text-xs font-bold text-slate-700 uppercase tracking-wider"
-                >
-                  Doctor Prescription Reference <span className="text-rose-500">*</span>
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                    <FileText className="w-4 h-4" />
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-4">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-teal-100 text-teal-700 flex items-center justify-center">
+                      <Stethoscope className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs sm:text-sm font-bold text-slate-900">
+                        Doctor&apos;s Prescription (BMDC Verified)
+                      </h4>
+                      <p className="text-[11px] text-slate-500">
+                        Required for individual prescription-only community safety
+                      </p>
+                    </div>
                   </div>
-                  <input
-                    id="prescription-ref"
-                    type="text"
-                    required
-                    value={prescriptionRef}
-                    onChange={(e) => setPrescriptionRef(e.target.value)}
-                    placeholder="e.g. Dr. A. Rahman, SZMC Hospital - Rx dated 15 Oct, advised for 1 month"
-                    className="w-full pl-9 pr-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition"
-                  />
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 border border-teal-200">
+                    Mandatory
+                  </span>
                 </div>
-                <p className="text-[11px] text-slate-500">
-                  Individual recipients must reference their prescribing physician or hospital prescription to guarantee safe medical usage.
-                </p>
-                {!isPrescriptionValid && touched && (
-                  <p className="text-[11px] text-rose-600 font-medium">
-                    * Prescription reference is required for individual collectors.
+
+                {/* Field 1: Doctor's Full Name */}
+                <div className="space-y-1">
+                  <label
+                    htmlFor="rx-doctor-name"
+                    className="block text-xs font-bold text-slate-700 uppercase tracking-wider"
+                  >
+                    Doctor&apos;s Full Name <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                      <User className="w-4 h-4" />
+                    </div>
+                    <input
+                      id="rx-doctor-name"
+                      type="text"
+                      required
+                      value={doctorName}
+                      onChange={(e) => setDoctorName(e.target.value)}
+                      placeholder="e.g. Dr. Mahmudul Hasan"
+                      className={`w-full pl-9 pr-3.5 py-2 text-sm rounded-xl border outline-none transition bg-white ${
+                        touched && !isDoctorNameValid
+                          ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-100'
+                          : 'border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100'
+                      }`}
+                    />
+                  </div>
+                  {touched && !isDoctorNameValid && (
+                    <p className="text-[11px] text-rose-600 font-medium">
+                      * Doctor name must be at least 5 characters.
+                    </p>
+                  )}
+                </div>
+
+                {/* Field 2: BMDC Registration Number */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label
+                      htmlFor="rx-bmdc"
+                      className="block text-xs font-bold text-slate-700 uppercase tracking-wider"
+                    >
+                      BMDC Registration Number <span className="text-rose-500">*</span>
+                    </label>
+                    <span className="text-[11px] text-slate-500 font-mono">Format: A-XXXXX</span>
+                  </div>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                      <FileText className="w-4 h-4" />
+                    </div>
+                    <input
+                      id="rx-bmdc"
+                      type="text"
+                      required
+                      value={bmdcNumber}
+                      onChange={(e) => setBmdcNumber(e.target.value.toUpperCase())}
+                      placeholder="e.g. A-45892"
+                      className={`w-full pl-9 pr-3.5 py-2 text-sm rounded-xl border outline-none transition font-mono uppercase bg-white ${
+                        touched && !isBmdcValid
+                          ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-100'
+                          : 'border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100'
+                      }`}
+                    />
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Format: A-XXXXX (4 to 6 digits as printed on the prescription pad)
                   </p>
+                  {touched && !isBmdcValid && (
+                    <p className="text-[11px] text-rose-600 font-medium">
+                      * Please enter a valid BMDC registration number (e.g., A-45892 or A45892).
+                    </p>
+                  )}
+                </div>
+
+                {/* Field 3: Hospital / Chamber Name */}
+                <div className="space-y-1">
+                  <label
+                    htmlFor="rx-hospital"
+                    className="block text-xs font-bold text-slate-700 uppercase tracking-wider"
+                  >
+                    Hospital / Chamber Name <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                      <Building2 className="w-4 h-4" />
+                    </div>
+                    <input
+                      id="rx-hospital"
+                      type="text"
+                      required
+                      value={hospitalName}
+                      onChange={(e) => setHospitalName(e.target.value)}
+                      placeholder="e.g. SZMC Hospital, Bogura"
+                      className={`w-full pl-9 pr-3.5 py-2 text-sm rounded-xl border outline-none transition bg-white ${
+                        touched && !isHospitalValid
+                          ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-100'
+                          : 'border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100'
+                      }`}
+                    />
+                  </div>
+                  {touched && !isHospitalValid && (
+                    <p className="text-[11px] text-rose-600 font-medium">
+                      * Hospital / Chamber name must be at least 4 characters.
+                    </p>
+                  )}
+                </div>
+
+                {/* Fields 4 & 5: Issue Date + Dosage Schedule */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-0.5">
+                  <div className="space-y-1">
+                    <label
+                      htmlFor="rx-issue-date"
+                      className="block text-xs font-bold text-slate-700 uppercase tracking-wider"
+                    >
+                      Prescription Date <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                        <Calendar className="w-4 h-4" />
+                      </div>
+                      <input
+                        id="rx-issue-date"
+                        type="date"
+                        required
+                        max={new Date().toISOString().split('T')[0]}
+                        value={issueDate}
+                        onChange={(e) => setIssueDate(e.target.value)}
+                        className={`w-full pl-9 pr-3 py-2 text-sm rounded-xl border outline-none transition bg-white ${
+                          touched && !isDateValid
+                            ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-100'
+                            : 'border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100'
+                        }`}
+                      />
+                    </div>
+                    {touched && !isDateValid && (
+                      <p className="text-[11px] text-rose-600 font-medium">
+                        * {dateValidation.error || 'Date must not be in future or older than 90 days.'}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <label
+                      htmlFor="rx-dosage"
+                      className="block text-xs font-bold text-slate-700 uppercase tracking-wider"
+                    >
+                      Dosage Schedule <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                        <Clock className="w-4 h-4" />
+                      </div>
+                      <select
+                        id="rx-dosage"
+                        value={dosageSchedule}
+                        onChange={(e) => setDosageSchedule(e.target.value)}
+                        className="w-full pl-9 pr-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition bg-white font-medium cursor-pointer"
+                      >
+                        <option value="1+0+1 (Twice daily)">1+0+1 (Twice daily)</option>
+                        <option value="1+1+1 (Thrice daily)">1+1+1 (Thrice daily)</option>
+                        <option value="1+0+0 (Morning only)">1+0+0 (Morning only)</option>
+                        <option value="0+0+1 (Night only)">0+0+1 (Night only)</option>
+                        <option value="As directed">As directed</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Formatted Preview */}
+                {doctorName.trim().length > 0 && bmdcNumber.trim().length > 0 && (
+                  <div className="bg-teal-50/70 border border-teal-200/90 rounded-xl p-2.5 text-xs text-teal-950 font-mono">
+                    <span className="font-bold block text-[11px] uppercase tracking-wider text-teal-900 mb-0.5">
+                      Rx Reference Preview for Donor:
+                    </span>
+                    Rx: {doctorName.trim()} (BMDC: {bmdcNumber.trim().toUpperCase()}, {hospitalName.trim() || 'Chamber'}) • Issued: {issueDate} • Dosage: {dosageSchedule}
+                  </div>
                 )}
               </div>
             ) : isClinic ? (
@@ -520,7 +733,7 @@ export default function ClaimModal({
                 <span>Your 4-Digit Handover PIN</span>
               </div>
               <div className="inline-block bg-white px-8 py-2 rounded-2xl border-2 border-amber-400 font-mono text-3xl sm:text-4xl font-black text-amber-950 tracking-[0.3em] shadow-inner">
-                {assignedPin || medication.handoverPin || '4829'}
+                {assignedPin || medication.handoverPin || '----'}
               </div>
               <p className="text-xs text-amber-900 max-w-sm mx-auto leading-relaxed font-medium">
                 Share this 4-digit PIN with the donor when you meet in person. The donor will enter it to verify and complete the handover.

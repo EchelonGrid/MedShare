@@ -67,7 +67,23 @@ export interface BatchClaim {
   claimedAt: string;
   claimExpiresAt?: string; // ISO timestamp (claimedAt + 48 hours)
   collectedAt?: string;
-  status: 'claimed' | 'collected';
+  status: 'claimed' | 'pending_pickup' | 'collected';
+}
+
+export interface ClaimRecord {
+  claimId: string;
+  collectorId: string;
+  collectorName: string;
+  collectorRole: UserRole;
+  collectorPhone?: string;
+  organizationOrRx?: string;
+  quantityClaimed: number;
+  unitName: string;
+  handoverPin: string; // 4-digit code e.g. "7392"
+  claimedAt: string;
+  claimExpiresAt: string; // ISO timestamp (claimedAt + 48 hours)
+  collectedAt?: string;
+  status: 'pending_pickup' | 'collected';
 }
 
 export interface Medication {
@@ -91,6 +107,7 @@ export interface Medication {
   claimedByRole?: UserRole;
   claimedQuantity?: number; // amount claimed in primary or final claim
   claims?: BatchClaim[]; // partial claims log for split batches
+  activeClaims?: ClaimRecord[]; // structured claims list
   handoverPin?: string; // 4-digit code e.g. "4829"
   prescriptionRef?: string; // for individual collectors
   pickupNote?: string;

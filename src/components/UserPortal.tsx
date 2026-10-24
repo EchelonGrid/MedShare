@@ -200,8 +200,31 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
       const total = med.totalNumericQuantity ?? parsed.total;
       const unit = med.unitName || parsed.unit;
 
+      const userActiveClaims = (med.activeClaims || []).filter(
+        (c) => c.collectorId === currentUserId && c.status === 'pending_pickup'
+      );
+
+      if (userActiveClaims.length > 0) {
+        userActiveClaims.forEach((c) => {
+          list.push({
+            medication: med,
+            claimId: c.claimId,
+            claimedQuantity: c.quantityClaimed,
+            unitName: c.unitName || unit,
+            totalBatchQuantity: total,
+            prescriptionRef: c.organizationOrRx || med.prescriptionRef,
+            isPartial: c.quantityClaimed < total,
+            handoverPin: c.handoverPin || med.handoverPin,
+            claimExpiresAt: c.claimExpiresAt || med.claimExpiresAt,
+          });
+        });
+      }
+
       const userClaims = (med.claims || []).filter(
-        (c) => c.claimerId === currentUserId && c.status === 'claimed'
+        (c) =>
+          c.claimerId === currentUserId &&
+          (c.status === 'claimed' || (c.status as string) === 'pending_pickup') &&
+          !userActiveClaims.some((ac) => ac.claimId === c.id)
       );
 
       if (userClaims.length > 0) {
@@ -214,11 +237,15 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
             totalBatchQuantity: total,
             prescriptionRef: c.prescriptionRef || med.prescriptionRef,
             isPartial: c.claimedQuantity < total,
-            handoverPin: c.handoverPin || med.handoverPin || '4829',
+            handoverPin: c.handoverPin || med.handoverPin,
             claimExpiresAt: c.claimExpiresAt || med.claimExpiresAt,
           });
         });
-      } else if (med.claimedById === currentUserId && med.status === 'claimed') {
+      } else if (
+        med.claimedById === currentUserId &&
+        med.status === 'claimed' &&
+        userActiveClaims.length === 0
+      ) {
         const claimedQty = med.claimedQuantity ?? total;
         list.push({
           medication: med,
@@ -227,7 +254,7 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
           totalBatchQuantity: total,
           prescriptionRef: med.prescriptionRef,
           isPartial: claimedQty < total,
-          handoverPin: med.handoverPin || '4829',
+          handoverPin: med.handoverPin,
           claimExpiresAt: med.claimExpiresAt,
         });
       }
@@ -286,9 +313,118 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
   }, [medications, currentUserId]);
 
   const myDonations = useMemo(() => {
-    if (!currentUserId) return [];
-    return medications.filter((m) => m.donorId === currentUserId);
-  }, [medications, currentUserId]);
+    if (!currentUser) return [];
+    return medications.filter(
+      (m) =>
+        m.donorId === currentUser.id ||
+        (m.donorName && m.donorName.toLowerCase() === currentUser.name.toLowerCase())
+    );
+  }, [medications, currentUser]);
+
+  const incomingPickupRequests = useMemo(() => {
+    if (!currentUser) return [];
+    const isDonorOfMed = (m: Medication) =>
+      m.donorId === currentUser.id ||
+      (m.donorName && m.donorName.toLowerCase() === currentUser.name.toLowerCase());
+
+    const donorMeds = medications.filter(isDonorOfMed);
+    const pendingList: {
+      medication: Medication;
+      claimId: string;
+      collectorId?: string;
+      collectorName: string;
+      collectorRole?: string;
+      collectorPhone?: string;
+      organizationOrRx?: string;
+      quantityClaimed: number;
+      unitName: string;
+      handoverPin?: string;
+      claimedAt?: string;
+      claimExpiresAt?: string;
+      isPartial: boolean;
+      totalBatchQuantity: number;
+    }[] = [];
+
+    donorMeds.forEach((med) => {
+      const parsed = parseQuantity(med.quantity);
+      const total = med.totalNumericQuantity ?? parsed.total;
+      const unit = med.unitName || parsed.unit;
+
+      if (med.activeClaims && med.activeClaims.length > 0) {
+        med.activeClaims.forEach((ac) => {
+          if (ac.status === 'pending_pickup') {
+            pendingList.push({
+              medication: med,
+              claimId: ac.claimId,
+              collectorId: ac.collectorId,
+              collectorName: ac.collectorName,
+              collectorRole: ac.collectorRole,
+              collectorPhone: ac.collectorPhone,
+              organizationOrRx: ac.organizationOrRx || med.prescriptionRef,
+              quantityClaimed: ac.quantityClaimed,
+              unitName: ac.unitName || unit,
+              handoverPin: ac.handoverPin,
+              claimedAt: ac.claimedAt,
+              claimExpiresAt: ac.claimExpiresAt,
+              isPartial: ac.quantityClaimed < total,
+              totalBatchQuantity: total,
+            });
+          }
+        });
+      }
+
+      if (med.claims && med.claims.length > 0) {
+        med.claims.forEach((bc) => {
+          if (
+            (bc.status === 'claimed' || (bc.status as string) === 'pending_pickup') &&
+            !pendingList.some((p) => p.claimId === bc.id)
+          ) {
+            pendingList.push({
+              medication: med,
+              claimId: bc.id,
+              collectorId: bc.claimerId,
+              collectorName: bc.claimerName,
+              collectorRole: bc.claimerRole,
+              collectorPhone: undefined,
+              organizationOrRx: bc.prescriptionRef || med.prescriptionRef,
+              quantityClaimed: bc.claimedQuantity,
+              unitName: bc.unitName || unit,
+              handoverPin: bc.handoverPin,
+              claimedAt: bc.claimedAt,
+              claimExpiresAt: bc.claimExpiresAt,
+              isPartial: bc.claimedQuantity < total,
+              totalBatchQuantity: total,
+            });
+          }
+        });
+      }
+
+      if (
+        med.status === 'claimed' &&
+        (!med.claims || med.claims.length === 0) &&
+        (!med.activeClaims || med.activeClaims.length === 0)
+      ) {
+        pendingList.push({
+          medication: med,
+          claimId: med.id,
+          collectorId: med.claimedById,
+          collectorName: med.claimedByName || 'Verified Collector',
+          collectorRole: med.claimedByRole || 'individual',
+          collectorPhone: undefined,
+          organizationOrRx: med.prescriptionRef,
+          quantityClaimed: med.claimedQuantity ?? total,
+          unitName: unit,
+          handoverPin: med.handoverPin,
+          claimedAt: med.claimedAt,
+          claimExpiresAt: med.claimExpiresAt,
+          isPartial: (med.claimedQuantity ?? total) < total,
+          totalBatchQuantity: total,
+        });
+      }
+    });
+
+    return pendingList;
+  }, [medications, currentUser]);
 
   // If visitor is logged out
   if (!currentUser) {
@@ -890,7 +1026,7 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                             </p>
                           </div>
                           <div className="bg-white px-5 py-2 rounded-xl border-2 border-amber-400 font-mono text-2xl sm:text-3xl font-black text-amber-950 tracking-[0.25em] shadow-inner">
-                            {item.handoverPin || '4829'}
+                            {item.handoverPin || '----'}
                           </div>
                         </div>
 
@@ -947,44 +1083,28 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                         </div>
                       </div>
 
-                      {/* Action buttons */}
-                      <div className="pt-2 space-y-2">
-                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-2.5 text-center text-xs text-amber-950">
-                          <p className="font-semibold">
-                            🤝 In-Person Handover Protocol:
+                      {/* Collector Actions & Handover Security Protocol */}
+                      <div className="pt-2 space-y-2.5">
+                        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 text-xs text-amber-950 space-y-1 text-center">
+                          <p className="font-bold flex items-center justify-center gap-1.5 text-amber-900">
+                            <ShieldCheck className="w-4 h-4 text-amber-700" />
+                            <span>In-Person Handover Security Protocol</span>
                           </p>
-                          <p className="text-[11px] text-amber-900 mt-0.5">
-                            Show your 4-digit PIN (<strong className="font-mono text-amber-950 font-black">{item.handoverPin || '4829'}</strong>) to the donor. The donor will enter it in their portal to verify and complete the handover.
+                          <p className="text-[11px] text-amber-900 leading-relaxed font-medium">
+                            Show your sealed medicine inspection and give this 4-digit PIN to the donor in person so they can confirm the handover.
                           </p>
                         </div>
 
                         <button
                           type="button"
-                          onClick={() => markAsCollected(med.id, undefined, item.claimId)}
-                          disabled={actionLoading === med.id}
-                          className="w-full py-2.5 px-4 text-xs sm:text-sm font-bold rounded-xl bg-teal-700 hover:bg-teal-800 active:bg-teal-900 text-white transition shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                        >
-                          {actionLoading === med.id ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <CheckCircle2 className="w-4 h-4" />
-                          )}
-                          <span>Collector Self-Confirmation ({item.claimedQuantity} {item.unitName})</span>
-                        </button>
-
-                        <button
-                          type="button"
                           onClick={() => releaseClaim(med.id, item.claimId)}
                           disabled={actionLoading === med.id}
-                          className="w-full py-2 px-3 text-xs font-bold rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-700 border border-slate-200 hover:border-rose-300 transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                          className="w-full py-2.5 px-4 text-xs font-bold rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 border border-slate-200 hover:border-rose-300 transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                           title="Release this claim and restock medicine back to feed"
                         >
                           <RotateCcw className="w-3.5 h-3.5" />
-                          <span>Release Claim (Restock to Feed)</span>
+                          <span>Release Claim (Restock)</span>
                         </button>
-                        <p className="text-[11px] text-center text-slate-500 mt-1 italic">
-                          Click &quot;Confirm Pickup&quot; only after inspecting sealed packaging and expiry date in person.
-                        </p>
                       </div>
                     </div>
                   );
@@ -1096,22 +1216,226 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
       )}
 
       {/* ============================================================= */}
-      {/* SECTION FOR LISTED MEDICATIONS                                */}
+      {/* SECTION FOR LISTED MEDICATIONS & INCOMING PICKUP DESK          */}
       {/* ============================================================= */}
       {!isAdmin && (
-        <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h3 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                <span>My Listed Medications</span>
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 border border-teal-300">
-                  {myDonations.length}
-                </span>
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Track the status of medicines you have listed for community redistribution.
-              </p>
+        <div className="space-y-8">
+
+          {/* ============================================================= */}
+          {/* INCOMING PICKUP REQUESTS (PENDING HANDOVER)                   */}
+          {/* ============================================================= */}
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                  <span>Incoming Pickup Requests (Pending Handover)</span>
+                  <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
+                    incomingPickupRequests.length > 0
+                      ? 'bg-amber-100 text-amber-900 border-amber-300'
+                      : 'bg-slate-100 text-slate-600 border-slate-200'
+                  }`}>
+                    {incomingPickupRequests.length} Pending
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Verify the collector&apos;s physical credentials and 4-digit PIN to securely complete handovers.
+                </p>
+              </div>
             </div>
+
+            {incomingPickupRequests.length > 0 ? (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                {incomingPickupRequests.map((req) => {
+                  const med = req.medication;
+                  const hold = getPickupTimeRemaining(req.claimExpiresAt);
+                  const isClinicCollector = req.collectorRole === 'clinic_charity';
+
+                  return (
+                    <div
+                      key={req.claimId}
+                      className="bg-white rounded-3xl border-2 border-amber-300 p-5 sm:p-6 shadow-sm space-y-4 flex flex-col justify-between"
+                    >
+                      <div className="space-y-3.5">
+                        {/* Top Bar: Hold Timer & Partial/Full Badge */}
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span
+                            className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+                              hold.isExpired
+                                ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                                : 'bg-amber-100 text-amber-900 border border-amber-300'
+                            }`}
+                          >
+                            <Clock className="w-3 h-3 text-amber-700" />
+                            <span>{hold.label}</span>
+                          </span>
+
+                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 border border-sky-200">
+                            {req.isPartial ? 'Partial Batch Claim' : 'Full Batch Claim'}
+                          </span>
+                        </div>
+
+                        {/* Medicine Overview */}
+                        <div>
+                          <div className="flex items-start justify-between gap-2">
+                            <h4 className="font-extrabold text-slate-900 text-base sm:text-lg">
+                              {med.medicineName}
+                            </h4>
+                            <span className="shrink-0 text-xs font-bold px-2.5 py-1 rounded-md bg-teal-100 text-teal-900 border border-teal-300 font-mono">
+                              {med.strength}
+                            </span>
+                          </div>
+                          {med.genericName && (
+                            <p className="text-xs text-slate-500 italic mt-0.5">
+                              ({med.genericName})
+                            </p>
+                          )}
+                          <p className="text-xs font-bold text-teal-800 mt-1">
+                            Claimed Quantity: {req.quantityClaimed} {req.unitName}
+                            {req.isPartial && (
+                              <span className="text-slate-500 font-normal ml-1">
+                                (batch of {req.totalBatchQuantity} {req.unitName})
+                              </span>
+                            )}
+                          </p>
+                        </div>
+
+                        {/* Collector Credentials Card */}
+                        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-2 text-xs">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                              {isClinicCollector ? (
+                                <Building2 className="w-3.5 h-3.5 text-indigo-700" />
+                              ) : (
+                                <User className="w-3.5 h-3.5 text-teal-700" />
+                              )}
+                              <span>{req.collectorName}</span>
+                            </span>
+                            <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
+                              isClinicCollector
+                                ? 'bg-indigo-100 text-indigo-800 border-indigo-200'
+                                : 'bg-teal-100 text-teal-800 border-teal-200'
+                            }`}>
+                              {isClinicCollector ? 'Rural Clinic / NGO' : 'Verified Individual'}
+                            </span>
+                          </div>
+
+                          {req.collectorPhone && (
+                            <div className="flex items-center justify-between pt-1 border-t border-slate-200">
+                              <span className="text-slate-500">Contact Phone:</span>
+                              <div className="flex items-center gap-1.5">
+                                <a
+                                  href={`tel:${req.collectorPhone}`}
+                                  className="font-mono font-bold text-teal-700 hover:text-teal-900 hover:underline"
+                                >
+                                  {req.collectorPhone}
+                                </a>
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopyPhone(req.collectorPhone!, req.claimId)}
+                                  className="p-1 rounded text-slate-400 hover:text-teal-700 hover:bg-teal-50 cursor-pointer"
+                                  title="Copy phone"
+                                >
+                                  {copiedId === req.claimId ? (
+                                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                  ) : (
+                                    <Copy className="w-3.5 h-3.5" />
+                                  )}
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Verified BMDC Prescription / License Details */}
+                          {req.organizationOrRx && (
+                            <div className="pt-1.5 border-t border-slate-200 text-[11px] leading-relaxed">
+                              <span className="font-bold text-slate-700 block">
+                                {isClinicCollector ? 'Verified Clinic License:' : 'Verified BMDC Prescription:'}
+                              </span>
+                              <span className="text-slate-800 font-medium font-mono">
+                                {req.organizationOrRx}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* PIN Verification Desk */}
+                        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-300 rounded-2xl p-3.5 space-y-2.5">
+                          <label
+                            htmlFor={`pin-input-${req.claimId}`}
+                            className="block text-xs font-bold text-amber-950 uppercase tracking-wider"
+                          >
+                            Enter Collector&apos;s 4-Digit PIN <span className="text-rose-500">*</span>
+                          </label>
+                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                            <input
+                              id={`pin-input-${req.claimId}`}
+                              type="text"
+                              maxLength={4}
+                              value={pinInputs[req.claimId] || ''}
+                              onChange={(e) => handlePinChange(req.claimId, e.target.value)}
+                              placeholder="4-digit PIN"
+                              className="w-full sm:w-32 px-3 py-2 text-center font-mono font-bold text-base tracking-widest rounded-xl border border-amber-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none bg-white text-slate-900"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleDonorVerifyAndCollect(med.id, req.claimId)}
+                              disabled={verifyingId === req.claimId || actionLoading === med.id}
+                              className="flex-1 py-2 px-3.5 rounded-xl bg-teal-700 hover:bg-teal-800 active:bg-teal-900 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-sm"
+                            >
+                              {verifyingId === req.claimId ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                              )}
+                              <span>Verify PIN &amp; Complete Handover</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => releaseClaim(med.id, req.claimId === med.id ? undefined : req.claimId)}
+                              disabled={actionLoading === med.id}
+                              className="py-2 px-3 rounded-xl bg-white hover:bg-rose-50 text-slate-600 hover:text-rose-700 border border-slate-200 hover:border-rose-300 text-xs font-semibold transition flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
+                              title="Release hold and restock items back to available feed"
+                            >
+                              <RotateCcw className="w-3 h-3" />
+                              <span>Release Hold</span>
+                            </button>
+                          </div>
+
+                          {pinErrors[req.claimId] && (
+                            <p className="text-[11px] text-rose-600 font-bold flex items-center gap-1 pt-0.5">
+                              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                              <span>{pinErrors[req.claimId]}</span>
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="bg-slate-50 border border-dashed border-slate-300 rounded-2xl p-4.5 text-center text-xs text-slate-500">
+                No pending incoming pickup requests. When clinics or individuals claim your listed medicines, they will appear here awaiting PIN verification.
+              </div>
+            )}
+          </div>
+
+          {/* ============================================================= */}
+          {/* MY LISTED MEDICATIONS OVERVIEW                                */}
+          {/* ============================================================= */}
+          <div className="space-y-6 pt-4 border-t border-slate-200">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                  <span>My Listed Medications</span>
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 border border-teal-300">
+                    {myDonations.length}
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Track the status of medicines you have listed for community redistribution.
+                </p>
+              </div>
 
             {/* Action Buttons */}
             <div className="flex items-center gap-2 self-start sm:self-auto">
@@ -1245,7 +1569,7 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                               return (
                                 <div
                                   key={c.id}
-                                  className="p-3 bg-white rounded-xl border border-slate-200 space-y-2.5 shadow-2xs"
+                                  className="p-3 bg-white rounded-xl border border-amber-200 space-y-1.5 shadow-2xs"
                                 >
                                   <div className="flex flex-wrap items-center justify-between gap-1 text-xs">
                                     <div>
@@ -1263,62 +1587,18 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                                       <span>{hold.label}</span>
                                     </span>
                                   </div>
-
-                                  {/* PIN Verification Box */}
-                                  <div className="bg-amber-50/70 border border-amber-200/90 rounded-xl p-2.5 space-y-2">
-                                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                                      <div className="relative shrink-0">
-                                        <input
-                                          type="text"
-                                          maxLength={4}
-                                          value={pinInputs[c.id] || ''}
-                                          onChange={(e) => handlePinChange(c.id, e.target.value)}
-                                          placeholder="4-digit PIN"
-                                          className="w-full sm:w-28 px-2.5 py-1.5 text-center font-mono font-bold text-sm tracking-widest rounded-xl border border-amber-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none bg-white text-slate-800"
-                                        />
-                                      </div>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleDonorVerifyAndCollect(med.id, c.id)}
-                                        disabled={verifyingId === c.id || actionLoading === med.id}
-                                        className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-xs"
-                                      >
-                                        {verifyingId === c.id ? (
-                                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                        ) : (
-                                          <CheckCircle2 className="w-3.5 h-3.5" />
-                                        )}
-                                        <span>Verify PIN &amp; Hand Over</span>
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => releaseClaim(med.id, c.id)}
-                                        disabled={actionLoading === med.id}
-                                        className="px-2.5 py-1.5 rounded-xl bg-white hover:bg-rose-50 text-slate-600 hover:text-rose-700 border border-slate-200 hover:border-rose-300 text-xs font-semibold transition flex items-center justify-center gap-1 cursor-pointer"
-                                        title="Release claim and restock items back to available feed"
-                                      >
-                                        <RotateCcw className="w-3 h-3" />
-                                        <span>Restock</span>
-                                      </button>
-                                    </div>
-
-                                    {/* Demo Hint & Error */}
-                                    <div className="flex flex-wrap items-center justify-between gap-1 text-[11px]">
-                                      <button
-                                        type="button"
-                                        onClick={() => handlePinChange(c.id, claimPin)}
-                                        className="text-amber-800 hover:text-amber-950 underline underline-offset-2 font-medium cursor-pointer"
-                                        title="Click to auto-fill for grading demo"
-                                      >
-                                        💡 Demo Hint: Collector PIN is <strong className="font-mono">{claimPin}</strong> (Click to fill)
-                                      </button>
-                                      {pinErrors[c.id] && (
-                                        <span className="text-rose-600 font-bold flex items-center gap-1">
-                                          <AlertTriangle className="w-3 h-3" />
-                                          <span>{pinErrors[c.id]}</span>
-                                        </span>
-                                      )}
-                                    </div>
+                                  <div className="flex items-center justify-between text-[11px] text-amber-900 pt-1 border-t border-slate-100">
+                                    <span>⏳ Awaiting PIN handover at pickup desk</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => releaseClaim(med.id, c.id)}
+                                      disabled={actionLoading === med.id}
+                                      className="text-rose-600 hover:text-rose-800 text-[10px] font-semibold flex items-center gap-1 cursor-pointer"
+                                      title="Release hold and restock items"
+                                    >
+                                      <RotateCcw className="w-3 h-3" />
+                                      <span>Restock</span>
+                                    </button>
                                   </div>
                                 </div>
                               );
@@ -1357,59 +1637,20 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                             </p>
                           )}
 
-                          {/* Interactive PIN Verification Form */}
-                          <div className="bg-white border border-sky-200 rounded-xl p-3 space-y-2">
-                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                              <input
-                                type="text"
-                                maxLength={4}
-                                value={pinInputs[med.id] || ''}
-                                onChange={(e) => handlePinChange(med.id, e.target.value)}
-                                placeholder="4-digit PIN"
-                                className="w-full sm:w-28 px-2.5 py-1.5 text-center font-mono font-bold text-sm tracking-widest rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none bg-white text-slate-800"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => handleDonorVerifyAndCollect(med.id)}
-                                disabled={verifyingId === med.id || actionLoading === med.id}
-                                className="px-3.5 py-1.5 rounded-xl bg-teal-700 hover:bg-teal-800 active:bg-teal-900 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-xs"
-                              >
-                                {verifyingId === med.id ? (
-                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                ) : (
-                                  <CheckCircle2 className="w-3.5 h-3.5" />
-                                )}
-                                <span>Verify PIN &amp; Complete Handover</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => releaseClaim(med.id)}
-                                disabled={actionLoading === med.id}
-                                className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-700 border border-slate-200 hover:border-rose-300 text-xs font-semibold transition flex items-center justify-center gap-1 cursor-pointer"
-                                title="Release claim and restock medicine back to feed"
-                              >
-                                <RotateCcw className="w-3 h-3" />
-                                <span>Restock</span>
-                              </button>
-                            </div>
-
-                            {/* Demo Hint & Error */}
-                            <div className="flex flex-wrap items-center justify-between gap-1 text-[11px]">
-                              <button
-                                type="button"
-                                onClick={() => handlePinChange(med.id, med.handoverPin || '4829')}
-                                className="text-teal-700 hover:text-teal-900 underline underline-offset-2 font-medium cursor-pointer"
-                                title="Click to auto-fill for grading demo"
-                              >
-                                💡 Demo Hint: Collector PIN is <strong className="font-mono">{med.handoverPin || '4829'}</strong> (Click to fill)
-                              </button>
-                              {pinErrors[med.id] && (
-                                <span className="text-rose-600 font-bold flex items-center gap-1">
-                                  <AlertTriangle className="w-3 h-3" />
-                                  <span>{pinErrors[med.id]}</span>
-                                </span>
-                              )}
-                            </div>
+                          <div className="bg-white border border-sky-200 rounded-xl p-3 flex items-center justify-between text-xs text-amber-900">
+                            <span className="font-medium">
+                              ⏳ Awaiting collector in-person PIN handover at pickup desk above.
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => releaseClaim(med.id)}
+                              disabled={actionLoading === med.id}
+                              className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-700 border border-slate-200 hover:border-rose-300 text-xs font-semibold transition flex items-center gap-1 cursor-pointer"
+                              title="Release claim and restock medicine back to feed"
+                            >
+                              <RotateCcw className="w-3 h-3" />
+                              <span>Restock</span>
+                            </button>
                           </div>
                         </div>
                       )}
@@ -1444,7 +1685,8 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
             </div>
           )}
         </div>
-      )}
+      </div>
+    )}
 
       {/* Printable Community Healthcare Impact Certificate Modal */}
       <ImpactCertificateModal
