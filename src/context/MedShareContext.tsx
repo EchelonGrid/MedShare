@@ -186,6 +186,8 @@ interface MedShareContextType {
   openDonateWithRequest: (req: MedicineRequest) => void;
   activeMainTab: 'feed' | 'requests' | 'portal';
   setActiveMainTab: (tab: 'feed' | 'requests' | 'portal') => void;
+  theme: 'light' | 'dark';
+  toggleTheme: () => void;
 }
 
 const MedShareContext = createContext<MedShareContextType | undefined>(undefined);
@@ -212,6 +214,37 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [prefillRequestForDonation, setPrefillRequestForDonation] = useState<MedicineRequest | null>(null);
   const [activeMainTab, setActiveMainTab] = useState<'feed' | 'requests' | 'portal'>('feed');
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('medshare_theme');
+      if (saved === 'dark' || saved === 'light') {
+        setTheme(saved);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      try {
+        localStorage.setItem('medshare_theme', theme);
+      } catch {
+        // ignore
+      }
+    }
+  }, [theme]);
+
+  const toggleTheme = useCallback(() => {
+    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+  }, []);
 
   // Toast Helpers
   const dismissToast = useCallback((id: string) => {
@@ -1660,6 +1693,8 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
         openDonateWithRequest,
         activeMainTab,
         setActiveMainTab,
+        theme,
+        toggleTheme,
       }}
     >
       {children}

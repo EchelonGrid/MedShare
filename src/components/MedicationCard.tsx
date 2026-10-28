@@ -112,13 +112,13 @@ export default function MedicationCard({
   return (
     <TiltSpotlightCard
       glowColor={glowColor}
-      className="p-5 sm:p-6 bg-slate-900/90 border border-teal-500/25 flex flex-col justify-between"
+      className="p-5 sm:p-6 bg-white/95 dark:bg-slate-900/90 border border-slate-200/90 dark:border-teal-500/25 shadow-[0_12px_35px_-8px_rgba(15,23,42,0.08)] hover:shadow-[0_24px_50px_-12px_rgba(13,148,136,0.18)] dark:shadow-[0_20px_45px_-12px_rgba(0,0,0,0.5)] flex flex-col justify-between"
     >
       <div>
         {/* ========================================================= */}
         {/* TOP TELEMETRY HEADER: CIRCULAR SVG FEFO COUNTDOWN DIAL    */}
         {/* ========================================================= */}
-        <div className="flex items-center justify-between gap-3 pb-3.5 border-b border-teal-500/15">
+        <div className="flex items-center justify-between gap-3 pb-3.5 border-b border-slate-200/80 dark:border-teal-500/15">
           {/* Circular SVG Progress Ring + Monospace Countdown Readout */}
           <div className="flex items-center gap-2.5">
             <div className="relative w-9 h-9 flex items-center justify-center shrink-0">
@@ -129,7 +129,7 @@ export default function MedicationCard({
                   cy="18"
                   r={radius}
                   fill="none"
-                  stroke="rgba(255,255,255,0.08)"
+                  className="stroke-slate-200 dark:stroke-white/10"
                   strokeWidth="2.5"
                 />
                 {/* Draining Countdown Arc */}
@@ -167,38 +167,38 @@ export default function MedicationCard({
             {/* Monospace Countdown Label */}
             <div className="font-mono leading-tight">
               {daysRemaining !== null && daysRemaining <= 0 ? (
-                <div className="text-[11px] font-bold text-slate-400">
+                <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
                   EXPIRED • DISPOSAL
                 </div>
               ) : urgency === 'critical' ? (
                 <div>
-                  <div className="text-xs font-extrabold text-rose-400 flex items-center gap-1">
+                  <div className="text-xs font-extrabold text-rose-600 dark:text-rose-400 flex items-center gap-1">
                     <span>{daysRemaining}d LEFT</span>
-                    <span className="text-[9px] uppercase px-1 py-0.2 rounded bg-rose-500/20 text-rose-300 font-bold border border-rose-500/30">
+                    <span className="text-[9px] uppercase px-1 py-0.2 rounded bg-rose-100 text-rose-800 border border-rose-200 dark:bg-rose-500/20 dark:text-rose-300 dark:border-rose-500/30 font-bold">
                       CRITICAL
                     </span>
                   </div>
-                  <div className="text-[10px] text-rose-300/80">FEFO Rush Protocol</div>
+                  <div className="text-[10px] text-rose-700/80 dark:text-rose-300/80 font-medium">Urgent FEFO Priority</div>
                 </div>
               ) : urgency === 'priority' ? (
                 <div>
-                  <div className="text-xs font-bold text-amber-300 flex items-center gap-1">
+                  <div className="text-xs font-bold text-amber-700 dark:text-amber-300 flex items-center gap-1">
                     <span>{daysRemaining}d LEFT</span>
-                    <span className="text-[9px] uppercase px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
+                    <span className="text-[9px] uppercase px-1 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/30 font-bold">
                       PRIORITY
                     </span>
                   </div>
-                  <div className="text-[10px] text-amber-200/70">Urgent Allocation</div>
+                  <div className="text-[10px] text-amber-700/80 dark:text-amber-200/70 font-medium">Urgent Allocation</div>
                 </div>
               ) : (
                 <div>
-                  <div className="text-xs font-bold text-emerald-400 flex items-center gap-1">
+                  <div className="text-xs font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
                     <span>{daysRemaining ?? '--'}d LEFT</span>
-                    <span className="text-[9px] uppercase px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">
+                    <span className="text-[9px] uppercase px-1 py-0.2 rounded bg-emerald-100 text-emerald-800 border border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/30 font-bold">
                       FEFO
                     </span>
                   </div>
-                  <div className="text-[10px] text-teal-200/70">Standard Window</div>
+                  <div className="text-[10px] text-teal-700/80 dark:text-teal-200/70 font-medium">Standard Window</div>
                 </div>
               )}
             </div>
@@ -207,24 +207,24 @@ export default function MedicationCard({
           {/* Right Header: Lifecycle Status & Laser-Etched Strength Badge */}
           <div className="flex items-center gap-2">
             {medication.status === 'available' ? (
-              <span className="inline-flex items-center gap-1.5 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.15)]">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/30 shadow-xs">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
                 AVAILABLE
               </span>
             ) : medication.status === 'claimed' ? (
-              <span className="inline-flex items-center gap-1.5 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-300 border border-sky-500/30">
-                <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-sky-50 text-sky-800 border border-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:border-sky-500/30">
+                <span className="w-1.5 h-1.5 rounded-full bg-sky-500 dark:bg-sky-400" />
                 CLAIMED
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-300 border border-teal-500/30">
-                <CheckCircle2 className="w-3 h-3 text-teal-400" />
+              <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200 dark:bg-teal-500/10 dark:text-teal-300 dark:border-teal-500/30">
+                <CheckCircle2 className="w-3 h-3 text-teal-600 dark:text-teal-400" />
                 COLLECTED
               </span>
             )}
 
             {/* Laser-Etched Metallic Strength Badge */}
-            <span className="shrink-0 text-xs font-mono font-bold px-2.5 py-1 rounded-md bg-slate-950 text-teal-300 border border-teal-500/35 shadow-[inset_0_1px_3px_rgba(0,0,0,0.8)]">
+            <span className="shrink-0 text-xs font-mono font-bold px-2.5 py-1 rounded-md bg-slate-100 text-teal-800 border border-teal-600/25 shadow-xs dark:bg-slate-950 dark:text-teal-300 dark:border-teal-500/35 dark:shadow-[inset_0_1px_3px_rgba(0,0,0,0.8)]">
               {medication.strength}
             </span>
           </div>
@@ -234,36 +234,36 @@ export default function MedicationCard({
         {/* CORE DRUG IDENTITY (translateZ(20px) depth layer)         */}
         {/* ========================================================= */}
         <div className="mt-4 space-y-1.5" style={{ transform: 'translateZ(20px)' }}>
-          <h3 className="font-display font-extrabold text-white text-xl sm:text-2xl tracking-tight leading-snug drop-shadow-sm">
+          <h3 className="font-display font-extrabold text-slate-900 dark:text-white text-xl sm:text-2xl tracking-tight leading-snug">
             {medication.medicineName || 'Unnamed Medicine'}
           </h3>
           {medication.genericName && (
-            <p className="text-xs sm:text-sm font-medium text-teal-300/85 italic">
+            <p className="text-xs sm:text-sm font-semibold text-teal-700 dark:text-teal-300/85 italic">
               ({medication.genericName})
             </p>
           )}
 
           {/* Consolidated Sleek Micro-Bar: Category & Factory Sealed */}
           <div className="pt-2 flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center text-[10px] font-mono font-medium px-2 py-0.5 rounded-md bg-slate-800/90 text-slate-300 border border-slate-700/60">
+            <span className="inline-flex items-center text-[10px] font-mono font-medium px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800/90 dark:text-slate-300 dark:border-slate-700/60">
               {displayCategory}
             </span>
-            <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold text-emerald-300 bg-emerald-950/60 px-2.5 py-0.5 rounded-md border border-emerald-500/35 shadow-[0_0_10px_rgba(16,185,129,0.12)]">
-              <ShieldCheck className="w-3 h-3 text-emerald-400" />
+            <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-300 shadow-xs dark:text-emerald-300 dark:bg-emerald-950/60 dark:border-emerald-500/35">
+              <ShieldCheck className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
               ✓ Factory Sealed
             </span>
-            <span className="text-[10px] font-mono text-teal-400/70">
+            <span className="text-[10px] font-mono text-teal-700 dark:text-teal-400/70 font-semibold">
               FEFO Verified
             </span>
           </div>
 
           {/* Generic Match Badge (when matching query via equivalence) */}
           {showGenericMatchBadge && searchedTerm && medication.genericName && (
-            <div className="mt-2.5 px-3 py-2 rounded-xl bg-teal-950/70 border border-teal-400/40 text-teal-200 text-xs font-mono flex items-center gap-2 shadow-[0_0_15px_rgba(20,184,166,0.15)]">
-              <Sparkles className="w-4 h-4 text-teal-300 shrink-0" />
+            <div className="mt-2.5 px-3 py-2 rounded-xl bg-teal-50 border border-teal-300 text-teal-900 dark:bg-teal-950/70 dark:border-teal-400/40 dark:text-teal-200 text-xs font-mono flex items-center gap-2 shadow-xs dark:shadow-[0_0_15px_rgba(20,184,166,0.15)]">
+              <Sparkles className="w-4 h-4 text-teal-600 dark:text-teal-300 shrink-0" />
               <div>
-                <span className="font-bold text-white">⚡ Generic Equivalent Match</span>
-                <span className="block text-[11px] text-teal-300">
+                <span className="font-bold text-slate-900 dark:text-white">⚡ Generic Equivalent Match</span>
+                <span className="block text-[11px] text-teal-800 dark:text-teal-300">
                   Same Generic: <strong>{medication.genericName}</strong>
                 </span>
               </div>
@@ -274,22 +274,22 @@ export default function MedicationCard({
         {/* ========================================================= */}
         {/* INTERACTIVE STOCK DEPLETION METER (Blister Strip Telemetry)*/}
         {/* ========================================================= */}
-        <div className="mt-5 p-3 rounded-xl bg-slate-950/70 border border-teal-500/20 space-y-2">
+        <div className="mt-5 p-3 rounded-xl bg-slate-50 border border-slate-200/80 dark:bg-slate-950/70 dark:border-teal-500/20 space-y-2">
           <div className="flex items-center justify-between text-[11px] font-mono">
-            <span className="font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-              <Package className="w-3.5 h-3.5 text-teal-400" />
+            <span className="font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1">
+              <Package className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
               <span>BATCH INVENTORY</span>
             </span>
-            <span className="text-teal-300 font-bold">
-              <span className="text-white font-extrabold">{remainingQty}</span> of {totalQty} {unitName} available
+            <span className="text-teal-700 dark:text-teal-300 font-bold">
+              <span className="text-slate-900 dark:text-white font-extrabold">{remainingQty}</span> of {totalQty} {unitName} available
             </span>
           </div>
 
           {/* Smooth Glowing Progress Bar */}
-          <div className="h-2 w-full rounded-full bg-slate-800/90 overflow-hidden border border-slate-700/60 relative">
+          <div className="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-800/90 overflow-hidden border border-slate-300/60 dark:border-slate-700/60 relative">
             <div
               style={{ width: `${stockPercent}%` }}
-              className="h-full rounded-full bg-gradient-to-r from-teal-500 via-emerald-400 to-teal-300 shadow-[0_0_10px_rgba(45,212,191,0.5)] transition-all duration-500"
+              className="h-full rounded-full bg-gradient-to-r from-teal-500 via-emerald-400 to-teal-400 shadow-[0_0_8px_rgba(20,184,166,0.4)] transition-all duration-500"
             />
           </div>
         </div>
@@ -297,25 +297,25 @@ export default function MedicationCard({
         {/* ========================================================= */}
         {/* METADATA RECESSED SUB-PANEL: EXPIRY, LOCATION, DONOR     */}
         {/* ========================================================= */}
-        <div className="mt-4 rounded-xl bg-slate-950/60 backdrop-blur-sm p-3.5 border border-teal-500/15 space-y-2 text-xs font-mono text-slate-300">
+        <div className="mt-4 rounded-xl bg-slate-50/90 dark:bg-slate-950/60 backdrop-blur-xs p-3.5 border border-slate-200/80 dark:border-teal-500/15 space-y-2 text-xs font-mono text-slate-700 dark:text-slate-300">
           <div className="flex items-center gap-2">
-            <Calendar className="w-3.5 h-3.5 text-teal-400 shrink-0" />
+            <Calendar className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
             <span>
-              Expiry: <strong className="text-white font-bold">{medication.expiryDate}</strong>
+              Expiry: <strong className="text-slate-900 dark:text-white font-bold">{medication.expiryDate}</strong>
             </span>
           </div>
 
           <div className="flex items-center gap-2">
-            <MapPin className="w-3.5 h-3.5 text-teal-400 shrink-0" />
-            <span className="truncate text-slate-200" title={medication.location}>
+            <MapPin className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
+            <span className="truncate text-slate-700 dark:text-slate-200" title={medication.location}>
               {medication.location}
             </span>
           </div>
 
           <div className="flex items-center gap-2">
-            <User className="w-3.5 h-3.5 text-teal-400 shrink-0" />
-            <span className="truncate text-slate-200">
-              Donor: <span className="font-bold text-white">{medication.donorName}</span>
+            <User className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
+            <span className="truncate text-slate-700 dark:text-slate-200">
+              Donor: <span className="font-bold text-slate-900 dark:text-white">{medication.donorName}</span>
             </span>
           </div>
         </div>
@@ -399,7 +399,7 @@ export default function MedicationCard({
       {/* ========================================================= */}
       {/* ACTION FOOTER: 3D DEPTH PUSH-BUTTON                       */}
       {/* ========================================================= */}
-      <div className="mt-5 pt-3.5 border-t border-teal-500/15">
+      <div className="mt-5 pt-3.5 border-t border-slate-200/80 dark:border-teal-500/15">
         {medication.status === 'available' && (
           <div>
             {daysRemaining !== null && daysRemaining <= 0 ? (

@@ -276,7 +276,7 @@ export default function RequestMedicineModal({
               required
               value={medicineName}
               onChange={(e) => handleMedicineNameChange(e.target.value)}
-              placeholder="e.g. Insulin Glargine, Napa Extend, Seclo..."
+              placeholder="e.g. Azithromycin 500mg, Napa Extend, Seclo..."
               className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-teal-500/30 text-white placeholder-slate-500 focus:border-teal-400 outline-none"
             />
 

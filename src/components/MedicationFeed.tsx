@@ -220,14 +220,14 @@ export default function MedicationFeed({
       {/* ========================================================= */}
       {/* ELEVATED FROSTED GLASS FILTER COMMAND DECK                */}
       {/* ========================================================= */}
-      <div className="bg-slate-950/85 backdrop-blur-2xl rounded-3xl p-5 sm:p-6 border border-teal-500/25 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] space-y-5">
+      <div className="bg-white/85 dark:bg-slate-950/85 backdrop-blur-2xl rounded-3xl p-5 sm:p-6 border border-slate-200/90 dark:border-teal-500/25 shadow-[0_12px_40px_rgba(15,23,42,0.06)] dark:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] space-y-5">
         
         {/* Search Bar & Location Selector Grid */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-3.5">
           
           {/* Instant Search Input with Glowing Focus Ring & ⌘K badge */}
           <div className="md:col-span-7 relative group">
-            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-teal-400">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-teal-600 dark:text-teal-400">
               <Search className="w-4 h-4" />
             </div>
             <input
@@ -235,19 +235,19 @@ export default function MedicationFeed({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by medicine name, generic drug, or strength (e.g. Napa, Paracetamol, 500mg)..."
-              className="w-full pl-10 pr-24 py-2.5 text-xs sm:text-sm rounded-xl border border-teal-500/25 bg-slate-900/90 text-white placeholder-slate-400 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-500/30 transition shadow-inner font-sans"
+              className="w-full pl-10 pr-24 py-2.5 text-xs sm:text-sm rounded-xl border border-slate-200/90 dark:border-teal-500/25 bg-slate-50 dark:bg-slate-900/90 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-teal-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-teal-500/30 transition shadow-inner font-sans"
             />
             <div className="absolute inset-y-0 right-0 pr-3 flex items-center gap-1.5 pointer-events-none">
               {searchQuery ? (
                 <button
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  className="pointer-events-auto text-xs text-slate-400 hover:text-white px-1.5 py-0.5 rounded bg-slate-800 transition"
+                  className="pointer-events-auto text-xs text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 transition"
                 >
                   Clear
                 </button>
               ) : (
-                <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono font-bold text-teal-300/80 bg-slate-900/90 border border-teal-500/30 rounded-md shadow-xs">
+                <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono font-bold text-teal-800 dark:text-teal-300/80 bg-slate-100 dark:bg-slate-900/90 border border-slate-200 dark:border-teal-500/30 rounded-md shadow-xs">
                   <Command className="w-2.5 h-2.5" />
                   <span>K / SEARCH</span>
                 </kbd>
@@ -257,19 +257,19 @@ export default function MedicationFeed({
 
           {/* Location Dropdown */}
           <div className="md:col-span-5 relative">
-            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-teal-400">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-teal-600 dark:text-teal-400">
               <MapPin className="w-4 h-4" />
             </div>
             <select
               value={selectedLocation}
               onChange={(e) => setSelectedLocation(e.target.value)}
-              className="w-full pl-10 pr-8 py-2.5 text-xs sm:text-sm rounded-xl border border-teal-500/25 bg-slate-900/90 text-white focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-500/30 transition shadow-inner cursor-pointer truncate font-mono"
+              className="w-full pl-10 pr-8 py-2.5 text-xs sm:text-sm rounded-xl border border-slate-200/90 dark:border-teal-500/25 bg-slate-50 dark:bg-slate-900/90 text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/30 transition shadow-inner cursor-pointer truncate font-mono"
             >
-              <option value="All Locations" className="bg-slate-900 text-white">
+              <option value="All Locations" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
                 All Locations ({medications.length} total listings)
               </option>
               {locations.map((loc) => (
-                <option key={loc} value={loc} className="bg-slate-900 text-white">
+                <option key={loc} value={loc} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
                   {loc}
                 </option>
               ))}
@@ -281,7 +281,7 @@ export default function MedicationFeed({
         {/* ========================================================= */}
         {/* SPRING-PHYSICS SLIDING FILTER TABS                        */}
         {/* ========================================================= */}
-        <div className="flex flex-wrap items-center justify-between gap-2.5 pt-3 border-t border-teal-500/15">
+        <div className="flex flex-wrap items-center justify-between gap-2.5 pt-3 border-t border-slate-200/80 dark:border-teal-500/15">
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             
             {/* Available Tab */}
@@ -291,7 +291,7 @@ export default function MedicationFeed({
               className={`relative px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition duration-200 flex items-center gap-2 cursor-pointer ${
                 activeTab === 'available'
                   ? 'text-slate-950 font-black'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-900'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-900'
               }`}
             >
               {activeTab === 'available' && (
@@ -307,7 +307,7 @@ export default function MedicationFeed({
                   className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
                     activeTab === 'available'
                       ? 'bg-slate-950/20 text-slate-950'
-                      : 'bg-slate-800 text-teal-300'
+                      : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-teal-300'
                   }`}
                 >
                   {tabCounts.available}
@@ -322,7 +322,7 @@ export default function MedicationFeed({
               className={`relative px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition duration-200 flex items-center gap-2 cursor-pointer ${
                 activeTab === 'expiring_soon'
                   ? 'text-slate-950 font-black'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-900'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-900'
               }`}
             >
               {activeTab === 'expiring_soon' && (
@@ -339,7 +339,7 @@ export default function MedicationFeed({
                   className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
                     activeTab === 'expiring_soon'
                       ? 'bg-slate-950/20 text-slate-950'
-                      : 'bg-amber-950/70 text-amber-300 border border-amber-500/30'
+                      : 'bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30'
                   }`}
                 >
                   {tabCounts.expiring_soon}
@@ -354,7 +354,7 @@ export default function MedicationFeed({
               className={`relative px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition duration-200 flex items-center gap-2 cursor-pointer ${
                 activeTab === 'urgent'
                   ? 'text-white font-black'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-900'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-900'
               }`}
             >
               {activeTab === 'urgent' && (
@@ -371,7 +371,7 @@ export default function MedicationFeed({
                   className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
                     activeTab === 'urgent'
                       ? 'bg-black/30 text-white'
-                      : 'bg-rose-950/70 text-rose-300 border border-rose-500/30'
+                      : 'bg-rose-100 text-rose-800 dark:bg-rose-950/70 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30'
                   }`}
                 >
                   {tabCounts.urgent}
@@ -386,7 +386,7 @@ export default function MedicationFeed({
               className={`relative px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition duration-200 flex items-center gap-2 cursor-pointer ${
                 activeTab === 'claimed_collected'
                   ? 'text-slate-950 font-black'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-900'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-900'
               }`}
             >
               {activeTab === 'claimed_collected' && (
@@ -402,7 +402,7 @@ export default function MedicationFeed({
                   className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
                     activeTab === 'claimed_collected'
                       ? 'bg-slate-950/20 text-slate-950'
-                      : 'bg-slate-800 text-sky-300'
+                      : 'bg-sky-100 text-sky-800 dark:bg-slate-800 dark:text-sky-300'
                   }`}
                 >
                   {tabCounts.claimed_collected}
@@ -418,7 +418,7 @@ export default function MedicationFeed({
                 className={`relative px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition duration-200 flex items-center gap-2 cursor-pointer ${
                   activeTab === 'expired'
                     ? 'text-white bg-slate-800 font-black'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-900'
                 }`}
               >
                 <span>Expired ({tabCounts.expired})</span>
@@ -432,7 +432,7 @@ export default function MedicationFeed({
             <button
               type="button"
               onClick={handleResetFilters}
-              className="text-xs font-mono font-medium text-teal-400 hover:text-teal-300 inline-flex items-center gap-1 py-1 cursor-pointer transition"
+              className="text-xs font-mono font-medium text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300 inline-flex items-center gap-1 py-1 cursor-pointer transition"
             >
               <RotateCcw className="w-3 h-3" />
               <span>Reset Filters</span>
@@ -443,14 +443,14 @@ export default function MedicationFeed({
         {/* ========================================================= */}
         {/* THERAPEUTIC CATEGORY FILTER PILLS WITH GLIDING INDICATOR   */}
         {/* ========================================================= */}
-        <div className="pt-2 border-t border-teal-500/15 space-y-2">
-          <div className="text-[11px] font-mono font-bold text-teal-300/80 uppercase tracking-wider flex items-center justify-between">
+        <div className="pt-2 border-t border-slate-200/80 dark:border-teal-500/15 space-y-2">
+          <div className="text-[11px] font-mono font-bold text-teal-800 dark:text-teal-300/80 uppercase tracking-wider flex items-center justify-between">
             <span>Filter by Therapeutic Category</span>
             {selectedCategory !== 'All Categories' && (
               <button
                 type="button"
                 onClick={() => setSelectedCategory('All Categories')}
-                className="text-[10px] font-mono text-teal-400 hover:underline cursor-pointer lowercase"
+                className="text-[10px] font-mono text-teal-600 dark:text-teal-400 hover:underline cursor-pointer lowercase"
               >
                 clear category
               </button>
@@ -465,7 +465,7 @@ export default function MedicationFeed({
               className={`relative px-3 py-1 rounded-xl text-xs font-semibold shrink-0 transition flex items-center gap-1.5 cursor-pointer ${
                 selectedCategory === 'All Categories'
                   ? 'text-slate-950 font-bold'
-                  : 'text-slate-300 hover:text-white bg-slate-900/80'
+                  : 'text-slate-600 hover:text-slate-900 bg-slate-100/90 dark:text-slate-300 dark:hover:text-white dark:bg-slate-900/80'
               }`}
             >
               {selectedCategory === 'All Categories' && (
@@ -481,7 +481,7 @@ export default function MedicationFeed({
                   className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
                     selectedCategory === 'All Categories'
                       ? 'bg-slate-950/20 text-slate-950'
-                      : 'bg-slate-800 text-teal-300'
+                      : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-teal-300'
                   }`}
                 >
                   {categoryCounts['All Categories'] || 0}
@@ -501,7 +501,7 @@ export default function MedicationFeed({
                   className={`relative px-3 py-1 rounded-xl text-xs font-medium shrink-0 transition flex items-center gap-1.5 cursor-pointer ${
                     isSelected
                       ? 'text-slate-950 font-bold'
-                      : 'text-slate-300 hover:text-white bg-slate-900/80'
+                      : 'text-slate-600 hover:text-slate-900 bg-slate-100/90 dark:text-slate-300 dark:hover:text-white dark:bg-slate-900/80'
                   }`}
                 >
                   {isSelected && (
@@ -517,7 +517,7 @@ export default function MedicationFeed({
                       className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
                         isSelected
                           ? 'bg-slate-950/20 text-slate-950'
-                          : 'bg-slate-800 text-slate-400'
+                          : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-400'
                       }`}
                     >
                       {count}

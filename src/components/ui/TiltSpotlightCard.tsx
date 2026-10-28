@@ -125,7 +125,7 @@ export default function TiltSpotlightCard({
           willChange: 'transform',
           ...style,
         }}
-        className={`group relative h-full rounded-2xl border border-white/10 bg-slate-900/80 backdrop-blur-xl shadow-[0_20px_45px_-12px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.06)] transition-[border-color,box-shadow] duration-300 ${activeGlow.borderHover} ${activeGlow.shadowHover} ${
+        className={`group relative h-full rounded-2xl border border-slate-200/90 dark:border-white/10 bg-white/95 dark:bg-slate-900/80 backdrop-blur-xl shadow-[0_12px_35px_-8px_rgba(15,23,42,0.08)] dark:shadow-[0_20px_45px_-12px_rgba(0,0,0,0.5)] transition-[border-color,box-shadow] duration-300 ${activeGlow.borderHover} ${activeGlow.shadowHover} ${
           onClick ? 'cursor-pointer' : ''
         } ${className}`}
       >

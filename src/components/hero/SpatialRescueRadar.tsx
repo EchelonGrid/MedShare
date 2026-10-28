@@ -298,7 +298,7 @@ export default function SpatialRescueRadar() {
                 </span>
               </div>
               <p className="text-[10px] text-amber-200/80">
-                Urgent FEFO Match • Insulin Glargine
+                Urgent FEFO Match • Azithromycin 500mg
               </p>
             </div>
           </div>

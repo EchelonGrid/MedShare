@@ -626,7 +626,7 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
         <button
           type="button"
           onClick={onBackToFeed}
-          className="inline-flex items-center gap-2 text-xs sm:text-sm font-mono font-semibold text-teal-300 hover:text-white transition cursor-pointer self-start"
+          className="inline-flex items-center gap-2 text-xs sm:text-sm font-mono font-semibold text-teal-700 dark:text-teal-300 hover:text-teal-900 dark:hover:text-white transition cursor-pointer self-start"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>&larr; Back to Live Medicine Feed</span>
@@ -1168,13 +1168,13 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-display text-lg font-bold text-white tracking-tight flex items-center gap-2">
+                <h3 className="font-display text-lg font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
                   <span>My Claimed Medicines (Pending Pickup)</span>
-                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-sky-950 text-sky-300 border border-sky-400/30">
+                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300 border border-sky-300 dark:border-sky-400/30">
                     {myClaimedPending.length}
                   </span>
                 </h3>
-                <p className="text-xs text-slate-400 mt-0.5 font-sans">
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 font-sans">
                   Contact the donor directly to arrange handover. Inspect packaging seals and expiry dates in person.
                 </p>
               </div>
@@ -1326,7 +1326,7 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                 })}
               </div>
             ) : (
-              <div className="bg-slate-950/70 rounded-3xl border border-dashed border-teal-500/25 p-8 text-center text-xs font-mono text-slate-400">
+              <div className="bg-white/80 dark:bg-slate-950/70 rounded-3xl border border-dashed border-slate-300 dark:border-teal-500/25 p-8 text-center text-xs font-mono text-slate-500 dark:text-slate-400">
                 You have no pending claimed medications. Browse the Live Medicine Feed to claim needed items.
               </div>
             )}
@@ -1338,13 +1338,13 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h3 className="font-display text-lg font-bold text-white tracking-tight flex items-center gap-2">
+                <h3 className="font-display text-lg font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
                   <span>Incoming Pickup Requests (Pending Handover)</span>
-                  <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-400/30">
+                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-400/30">
                     {incomingPickupRequests.length} Pending
                   </span>
                 </h3>
-                <p className="text-xs text-slate-400 mt-0.5 font-sans">
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 font-sans">
                   Verify the collector&apos;s physical credentials and enter their 4-digit PIN to securely complete handovers.
                 </p>
               </div>
@@ -1446,7 +1446,7 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                 })}
               </div>
             ) : (
-              <div className="bg-slate-950/70 rounded-3xl border border-dashed border-teal-500/25 p-8 text-center text-xs font-mono text-slate-400">
+              <div className="bg-white/80 dark:bg-slate-950/70 rounded-3xl border border-dashed border-slate-300 dark:border-teal-500/25 p-8 text-center text-xs font-mono text-slate-500 dark:text-slate-400">
                 No pending incoming pickup requests. When a collector claims your donation, their dispatch request will appear here.
               </div>
             )}

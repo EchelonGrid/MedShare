@@ -228,10 +228,10 @@ export default function RequestsBoard({
       {/* ========================================================= */}
       {/* ELEVATED FROSTED GLASS FILTER CONSOLE                     */}
       {/* ========================================================= */}
-      <div className="bg-slate-950/85 backdrop-blur-2xl rounded-3xl p-5 sm:p-6 border border-teal-500/25 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] space-y-5">
+      <div className="bg-white/85 dark:bg-slate-950/85 backdrop-blur-2xl rounded-3xl p-5 sm:p-6 border border-slate-200/90 dark:border-teal-500/25 shadow-sm dark:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] space-y-5">
         
         {/* Row 1: Filter Tabs with Spring Slider */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-teal-500/15 pb-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 dark:border-teal-500/15 pb-3">
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             
             {/* All Open Tab */}
@@ -241,7 +241,7 @@ export default function RequestsBoard({
               className={`relative px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition duration-200 flex items-center gap-2 cursor-pointer ${
                 activeTab === 'all_open'
                   ? 'text-slate-950 font-black'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-900'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-900'
               }`}
             >
               {activeTab === 'all_open' && (
@@ -257,7 +257,7 @@ export default function RequestsBoard({
                   className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
                     activeTab === 'all_open'
                       ? 'bg-slate-950/20 text-slate-950'
-                      : 'bg-slate-800 text-teal-300'
+                      : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-teal-300'
                   }`}
                 >
                   {tabCounts.all_open}
@@ -272,7 +272,7 @@ export default function RequestsBoard({
               className={`relative px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition duration-200 flex items-center gap-2 cursor-pointer ${
                 activeTab === 'critical'
                   ? 'text-white font-black'
-                  : 'text-rose-300 hover:text-white hover:bg-slate-900'
+                  : 'text-rose-600 hover:text-rose-800 hover:bg-rose-50 dark:text-rose-300 dark:hover:text-white dark:hover:bg-slate-900'
               }`}
             >
               {activeTab === 'critical' && (
@@ -292,7 +292,7 @@ export default function RequestsBoard({
                   className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
                     activeTab === 'critical'
                       ? 'bg-black/30 text-white'
-                      : 'bg-rose-950/80 text-rose-300 border border-rose-500/30'
+                      : 'bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30'
                   }`}
                 >
                   {tabCounts.critical}
@@ -307,7 +307,7 @@ export default function RequestsBoard({
               className={`relative px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition duration-200 flex items-center gap-2 cursor-pointer ${
                 activeTab === 'fulfilled'
                   ? 'text-slate-950 font-black'
-                  : 'text-emerald-300 hover:text-white hover:bg-slate-900'
+                  : 'text-emerald-700 hover:text-emerald-900 hover:bg-emerald-50 dark:text-emerald-300 dark:hover:text-white dark:hover:bg-slate-900'
               }`}
             >
               {activeTab === 'fulfilled' && (
@@ -324,7 +324,7 @@ export default function RequestsBoard({
                   className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
                     activeTab === 'fulfilled'
                       ? 'bg-slate-950/20 text-slate-950'
-                      : 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/30'
+                      : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30'
                   }`}
                 >
                   {tabCounts.fulfilled}
@@ -335,8 +335,8 @@ export default function RequestsBoard({
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-xs font-mono text-teal-300/80">
-              Showing <strong className="text-white font-bold">{filteredRequests.length}</strong> dispatches
+            <span className="text-xs font-mono text-slate-600 dark:text-teal-300/80">
+              Showing <strong className="text-slate-900 dark:text-white font-bold">{filteredRequests.length}</strong> dispatches
             </span>
             {isFiltered && (
               <button
@@ -354,7 +354,7 @@ export default function RequestsBoard({
         {/* Row 2: Search Input & Location Dropdown */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="sm:col-span-2 relative">
-            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-teal-400">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-teal-600 dark:text-teal-400">
               <Search className="w-4 h-4" />
             </div>
             <input
@@ -362,22 +362,22 @@ export default function RequestsBoard({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search medicine name, generic drug, strength, or clinic..."
-              className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm rounded-xl border border-teal-500/25 bg-slate-900/90 text-white placeholder-slate-400 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-500/30 transition shadow-inner font-sans"
+              className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm rounded-xl border border-slate-200/90 dark:border-teal-500/25 bg-slate-50 dark:bg-slate-900/90 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-teal-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-teal-500/30 transition shadow-inner font-sans"
             />
           </div>
 
           <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-teal-400">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-teal-600 dark:text-teal-400">
               <MapPin className="w-4 h-4" />
             </div>
             <select
               value={selectedLocation}
               onChange={(e) => setSelectedLocation(e.target.value)}
-              className="w-full pl-10 pr-8 py-2.5 text-xs sm:text-sm rounded-xl border border-teal-500/25 bg-slate-900/90 text-white focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-500/30 transition shadow-inner cursor-pointer truncate font-mono"
+              className="w-full pl-10 pr-8 py-2.5 text-xs sm:text-sm rounded-xl border border-slate-200/90 dark:border-teal-500/25 bg-slate-50 dark:bg-slate-900/90 text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/30 transition shadow-inner cursor-pointer truncate font-mono"
             >
-              <option value="All Locations" className="bg-slate-900 text-white">All Locations</option>
+              <option value="All Locations" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">All Locations</option>
               {locations.map((loc) => (
-                <option key={loc} value={loc} className="bg-slate-900 text-white">
+                <option key={loc} value={loc} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
                   {loc}
                 </option>
               ))}
@@ -386,14 +386,14 @@ export default function RequestsBoard({
         </div>
 
         {/* Row 3: Therapeutic Category Filter Pills */}
-        <div className="pt-2 border-t border-teal-500/15 space-y-2">
-          <div className="text-[11px] font-mono font-bold text-teal-300/80 uppercase tracking-wider flex items-center justify-between">
+        <div className="pt-2 border-t border-slate-200/80 dark:border-teal-500/15 space-y-2">
+          <div className="text-[11px] font-mono font-bold text-teal-800 dark:text-teal-300/80 uppercase tracking-wider flex items-center justify-between">
             <span>Filter by Therapeutic Category</span>
             {selectedCategory !== 'All Categories' && (
               <button
                 type="button"
                 onClick={() => setSelectedCategory('All Categories')}
-                className="text-[10px] font-mono text-teal-400 hover:underline cursor-pointer lowercase"
+                className="text-[10px] font-mono text-teal-600 dark:text-teal-400 hover:underline cursor-pointer lowercase"
               >
                 clear category
               </button>
@@ -406,7 +406,7 @@ export default function RequestsBoard({
               className={`relative px-3 py-1 rounded-xl text-xs font-semibold shrink-0 transition flex items-center gap-1.5 cursor-pointer ${
                 selectedCategory === 'All Categories'
                   ? 'text-slate-950 font-bold'
-                  : 'text-slate-300 hover:text-white bg-slate-900/80'
+                  : 'text-slate-600 hover:text-slate-900 bg-slate-100/90 dark:text-slate-300 dark:hover:text-white dark:bg-slate-900/80'
               }`}
             >
               {selectedCategory === 'All Categories' && (
@@ -422,7 +422,7 @@ export default function RequestsBoard({
                   className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
                     selectedCategory === 'All Categories'
                       ? 'bg-slate-950/20 text-slate-950'
-                      : 'bg-slate-800 text-teal-300'
+                      : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-teal-300'
                   }`}
                 >
                   {categoryCounts['All Categories'] || 0}
@@ -520,38 +520,38 @@ export default function RequestsBoard({
               >
                 <TiltSpotlightCard
                   glowColor={glowColor}
-                  className="p-5 sm:p-6 bg-slate-900/90 border border-teal-500/25 flex flex-col justify-between"
+                  className="p-5 sm:p-6 bg-white/95 dark:bg-slate-900/90 border border-slate-200/90 dark:border-teal-500/25 shadow-[0_12px_35px_-8px_rgba(15,23,42,0.08)] hover:shadow-[0_24px_50px_-12px_rgba(13,148,136,0.18)] dark:shadow-[0_20px_45px_-12px_rgba(0,0,0,0.5)] flex flex-col justify-between"
                 >
                   <div className="space-y-3.5">
                     {/* Top Header: Urgency Radar Ping & Relative Time */}
-                    <div className="flex items-center justify-between gap-2 pb-3 border-b border-teal-500/15">
+                    <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-200/80 dark:border-teal-500/15">
                       {isFulfilled ? (
-                        <span className="inline-flex items-center gap-1.5 text-xs font-mono font-bold px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-400/35">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        <span className="inline-flex items-center gap-1.5 text-xs font-mono font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-400/35">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                           <span>FULFILLED</span>
                         </span>
                       ) : isCritical ? (
-                        <span className="inline-flex items-center gap-2 text-xs font-mono font-bold px-2.5 py-1 rounded-full bg-rose-500/15 text-rose-300 border border-rose-500/40 shadow-[0_0_12px_rgba(244,63,94,0.25)]">
+                        <span className="inline-flex items-center gap-2 text-xs font-mono font-bold px-2.5 py-1 rounded-full bg-rose-50 text-rose-800 border border-rose-300 shadow-xs dark:bg-rose-500/15 dark:text-rose-300 dark:border-rose-500/40 dark:shadow-[0_0_12px_rgba(244,63,94,0.25)]">
                           {/* Live Animated Radar Ping */}
                           <span className="relative flex h-2.5 w-2.5">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-80"></span>
-                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-80"></span>
+                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-600"></span>
                           </span>
                           <span>CRITICAL • WITHIN 48H</span>
                         </span>
                       ) : isHigh ? (
-                        <span className="inline-flex items-center gap-1.5 text-xs font-mono font-bold px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/40">
-                          <Clock className="w-3.5 h-3.5 text-amber-400" />
+                        <span className="inline-flex items-center gap-1.5 text-xs font-mono font-bold px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-300 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/40">
+                          <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                           <span>HIGH PRIORITY • THIS WEEK</span>
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1.5 text-xs font-mono font-medium px-2.5 py-1 rounded-full bg-sky-500/15 text-sky-300 border border-sky-500/35">
-                          <Clock className="w-3.5 h-3.5 text-sky-400" />
+                        <span className="inline-flex items-center gap-1.5 text-xs font-mono font-medium px-2.5 py-1 rounded-full bg-sky-50 text-sky-800 border border-sky-300 dark:bg-sky-500/15 dark:text-sky-300 dark:border-sky-500/35">
+                          <Clock className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
                           <span>ROUTINE REFILL</span>
                         </span>
                       )}
 
-                      <span className="text-[11px] font-mono text-slate-400">
+                      <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
                         {formatTimeAgo(req.createdAt)}
                       </span>
                     </div>
@@ -560,87 +560,87 @@ export default function RequestsBoard({
                     <div style={{ transform: 'translateZ(20px)' }}>
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <h3 className="font-display font-extrabold text-white text-lg sm:text-xl tracking-tight leading-snug">
+                          <h3 className="font-display font-extrabold text-slate-900 dark:text-white text-lg sm:text-xl tracking-tight leading-snug">
                             {req.medicineName}
                           </h3>
                           {req.genericName && (
-                            <p className="text-xs text-teal-300/80 italic mt-0.5 font-sans">
+                            <p className="text-xs font-semibold text-teal-700 dark:text-teal-300/80 italic mt-0.5 font-sans">
                               ({req.genericName})
                             </p>
                           )}
                         </div>
-                        <span className="shrink-0 text-xs font-mono font-bold px-2.5 py-1 rounded-md bg-slate-950 text-teal-300 border border-teal-500/35 shadow-[inset_0_1px_3px_rgba(0,0,0,0.8)]">
+                        <span className="shrink-0 text-xs font-mono font-bold px-2.5 py-1 rounded-md bg-slate-100 text-teal-800 border border-teal-600/25 shadow-xs dark:bg-slate-950 dark:text-teal-300 dark:border-teal-500/35 dark:shadow-[inset_0_1px_3px_rgba(0,0,0,0.8)]">
                           {req.strength}
                         </span>
                       </div>
 
                       <div className="mt-3 flex flex-wrap items-center gap-2">
-                        <span className="inline-flex items-center text-[10px] font-mono px-2 py-0.5 rounded-md bg-slate-800/90 text-slate-300 border border-slate-700/60">
+                        <span className="inline-flex items-center text-[10px] font-mono px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800/90 dark:text-slate-300 dark:border-slate-700/60">
                           {displayCategory}
                         </span>
-                        <div className="inline-flex items-center gap-1.5 bg-teal-950/70 border border-teal-500/30 rounded-md px-2.5 py-0.5 text-xs font-mono text-teal-200">
-                          <span className="text-slate-400">Needed:</span>
-                          <strong className="text-white font-extrabold">{req.quantityNeeded}</strong>
+                        <div className="inline-flex items-center gap-1.5 bg-slate-100 dark:bg-teal-950/70 border border-slate-200 dark:border-teal-500/30 rounded-md px-2.5 py-0.5 text-xs font-mono text-slate-700 dark:text-teal-200">
+                          <span className="text-slate-500 dark:text-slate-400">Needed:</span>
+                          <strong className="text-slate-900 dark:text-white font-extrabold">{req.quantityNeeded}</strong>
                         </div>
                       </div>
 
                       {/* Generic Match Badge */}
                       {isGenericMatch && req.genericName && (
-                        <div className="mt-2.5 px-3 py-1.5 rounded-xl bg-teal-950/70 border border-teal-400/40 text-teal-200 text-xs font-mono flex items-center gap-2">
-                          <Sparkles className="w-4 h-4 text-teal-300 shrink-0" />
+                        <div className="mt-2.5 px-3 py-1.5 rounded-xl bg-teal-50 border border-teal-300 text-teal-900 dark:bg-teal-950/70 dark:border-teal-400/40 dark:text-teal-200 text-xs font-mono flex items-center gap-2">
+                          <Sparkles className="w-4 h-4 text-teal-600 dark:text-teal-300 shrink-0" />
                           <div>
-                            <span className="font-bold text-white">⚡ Generic Match for &quot;{searchQuery}&quot;</span>
-                            <span className="block text-[11px] text-teal-300">Same Generic: <strong>{req.genericName}</strong></span>
+                            <span className="font-bold text-slate-900 dark:text-white">⚡ Generic Match for &quot;{searchQuery}&quot;</span>
+                            <span className="block text-[11px] text-teal-800 dark:text-teal-300">Same Generic: <strong>{req.genericName}</strong></span>
                           </div>
                         </div>
                       )}
                     </div>
 
                     {/* Requester Identity & Location */}
-                    <div className="bg-slate-950/70 border border-teal-500/20 rounded-2xl p-3.5 space-y-2 text-xs font-mono">
+                    <div className="bg-slate-50 dark:bg-slate-950/70 border border-slate-200/80 dark:border-teal-500/20 rounded-2xl p-3.5 space-y-2 text-xs font-mono">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5 font-bold text-white truncate">
+                        <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white truncate">
                           {req.requesterRole === 'clinic_charity' ? (
-                            <Building2 className="w-3.5 h-3.5 text-teal-400 shrink-0" />
+                            <Building2 className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
                           ) : (
-                            <User className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                            <User className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400 shrink-0" />
                           )}
                           <span className="truncate">{req.requesterName}</span>
                         </div>
-                        <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-950 text-teal-300 border border-teal-500/35 uppercase">
+                        <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200/80 text-teal-800 border border-slate-300 dark:bg-teal-950 dark:text-teal-300 dark:border-teal-500/35 uppercase">
                           {req.requesterRole === 'clinic_charity' ? 'Verified Clinic' : 'Verified Recipient'}
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-slate-300 pt-1.5 border-t border-teal-500/10 text-[11px]">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-slate-600 dark:text-slate-300 pt-1.5 border-t border-slate-200/80 dark:border-teal-500/10 text-[11px]">
                         <div className="flex items-center gap-1.5 truncate">
-                          <MapPin className="w-3.5 h-3.5 text-teal-400 shrink-0" />
+                          <MapPin className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
                           <span className="truncate">{req.location}</span>
                         </div>
                         <div className="flex items-center gap-1.5 truncate">
-                          <Phone className="w-3.5 h-3.5 text-teal-400 shrink-0" />
+                          <Phone className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
                           <span>{req.requesterPhone}</span>
                         </div>
                       </div>
                     </div>
 
                     {/* Official Medical Dispatch Readout: Clinical Need / Rx Reference */}
-                    <div className="border-l-4 border-amber-500 bg-amber-950/40 border-y border-r border-amber-500/20 rounded-r-xl p-3 font-mono text-xs text-amber-200 space-y-1">
-                      <span className="font-bold text-amber-300 flex items-center gap-1.5 text-[11px] uppercase tracking-wider">
-                        <FileText className="w-3 h-3 text-amber-400" />
+                    <div className="border-l-4 border-amber-500 bg-amber-50/80 dark:bg-amber-950/40 border-y border-r border-amber-200 dark:border-amber-500/20 rounded-r-xl p-3 font-mono text-xs text-amber-900 dark:text-amber-200 space-y-1">
+                      <span className="font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5 text-[11px] uppercase tracking-wider">
+                        <FileText className="w-3 h-3 text-amber-600 dark:text-amber-400" />
                         <span>Clinical Need / Rx Reference:</span>
                       </span>
-                      <p className="text-amber-100 leading-relaxed font-sans font-medium text-xs">
+                      <p className="text-slate-800 dark:text-amber-100 leading-relaxed font-sans font-medium text-xs">
                         {req.reasonOrPrescription}
                       </p>
                     </div>
                   </div>
 
                   {/* Card Action Footer: 3D Tactile Elevation */}
-                  <div className="mt-5 pt-3.5 border-t border-teal-500/15">
+                  <div className="mt-5 pt-3.5 border-t border-slate-200/80 dark:border-teal-500/15">
                     {isFulfilled ? (
-                      <div className="bg-emerald-950/70 border border-emerald-500/30 rounded-xl p-2.5 text-center text-xs font-mono font-semibold text-emerald-200 flex items-center justify-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      <div className="bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-500/30 rounded-xl p-2.5 text-center text-xs font-mono font-semibold text-emerald-800 dark:text-emerald-200 flex items-center justify-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                         <span>Fulfilled by {req.fulfilledByName || 'Community Donor'}</span>
                       </div>
                     ) : (
