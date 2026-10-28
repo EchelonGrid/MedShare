@@ -13,6 +13,8 @@ import {
   validateBangladeshNID,
   validateFacilityCredential,
 } from '@/lib/bd-registries';
+import TiltSpotlightCard from '@/components/ui/TiltSpotlightCard';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   User,
   Building2,
@@ -46,6 +48,10 @@ import {
   Award,
   Download,
   Printer,
+  Cpu,
+  Fingerprint,
+  Radio,
+  Lock,
 } from 'lucide-react';
 import { exportCollectedInventoryCSV, exportDonorHistoryCSV } from '@/lib/export-utils';
 import ImpactCertificateModal from '@/components/ImpactCertificateModal';
@@ -306,28 +312,27 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
       birthYear: inlineBirthYear,
     });
     if (otpRes.success) {
-      if (otpRes.demoOtp) {
-        setInlineDemoOtp(otpRes.demoOtp);
-      }
+      if (otpRes.demoOtp) setInlineDemoOtp(otpRes.demoOtp);
       setInlineResendCooldown(60);
     } else {
-      setInlineError(otpRes.error || 'Failed to resend code.');
+      setInlineError(otpRes.error || 'Failed to resend verification OTP.');
     }
   };
 
-  // Filtered lists with partial split claim support (hooks must be unconditional)
+  // Claims made by current user pending pickup
   const myClaimedPending = useMemo(() => {
-    if (!currentUserId) return [];
+    if (!currentUser) return [];
     const list: {
       medication: Medication;
-      claimId?: string;
+      claimId: string;
       claimedQuantity: number;
       unitName: string;
-      totalBatchQuantity: number;
+      handoverPin?: string;
+      claimedAt?: string;
+      claimExpiresAt?: string;
       prescriptionRef?: string;
       isPartial: boolean;
-      handoverPin?: string;
-      claimExpiresAt?: string;
+      totalBatchQuantity: number;
     }[] = [];
 
     medications.forEach((med) => {
@@ -335,79 +340,80 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
       const total = med.totalNumericQuantity ?? parsed.total;
       const unit = med.unitName || parsed.unit;
 
-      const userActiveClaims = (med.activeClaims || []).filter(
-        (c) => c.collectorId === currentUserId && c.status === 'pending_pickup'
-      );
-
-      if (userActiveClaims.length > 0) {
-        userActiveClaims.forEach((c) => {
-          list.push({
-            medication: med,
-            claimId: c.claimId,
-            claimedQuantity: c.quantityClaimed,
-            unitName: c.unitName || unit,
-            totalBatchQuantity: total,
-            prescriptionRef: c.organizationOrRx || med.prescriptionRef,
-            isPartial: c.quantityClaimed < total,
-            handoverPin: c.handoverPin || med.handoverPin,
-            claimExpiresAt: c.claimExpiresAt || med.claimExpiresAt,
-          });
+      if (med.activeClaims && med.activeClaims.length > 0) {
+        med.activeClaims.forEach((ac) => {
+          if (ac.collectorId === currentUser.id && ac.status === 'pending_pickup') {
+            list.push({
+              medication: med,
+              claimId: ac.claimId,
+              claimedQuantity: ac.quantityClaimed,
+              unitName: ac.unitName || unit,
+              handoverPin: ac.handoverPin,
+              claimedAt: ac.claimedAt,
+              claimExpiresAt: ac.claimExpiresAt,
+              prescriptionRef: ac.organizationOrRx || med.prescriptionRef,
+              isPartial: ac.quantityClaimed < total,
+              totalBatchQuantity: total,
+            });
+          }
         });
       }
 
-      const userClaims = (med.claims || []).filter(
-        (c) =>
-          c.claimerId === currentUserId &&
-          (c.status === 'claimed' || (c.status as string) === 'pending_pickup') &&
-          !userActiveClaims.some((ac) => ac.claimId === c.id)
-      );
-
-      if (userClaims.length > 0) {
-        userClaims.forEach((c) => {
-          list.push({
-            medication: med,
-            claimId: c.id,
-            claimedQuantity: c.claimedQuantity,
-            unitName: c.unitName || unit,
-            totalBatchQuantity: total,
-            prescriptionRef: c.prescriptionRef || med.prescriptionRef,
-            isPartial: c.claimedQuantity < total,
-            handoverPin: c.handoverPin || med.handoverPin,
-            claimExpiresAt: c.claimExpiresAt || med.claimExpiresAt,
-          });
+      if (med.claims && med.claims.length > 0) {
+        med.claims.forEach((bc) => {
+          if (
+            bc.claimerId === currentUser.id &&
+            (bc.status === 'claimed' || (bc.status as string) === 'pending_pickup') &&
+            !list.some((l) => l.claimId === bc.id)
+          ) {
+            list.push({
+              medication: med,
+              claimId: bc.id,
+              claimedQuantity: bc.claimedQuantity,
+              unitName: bc.unitName || unit,
+              handoverPin: bc.handoverPin,
+              claimedAt: bc.claimedAt,
+              claimExpiresAt: bc.claimExpiresAt,
+              prescriptionRef: bc.prescriptionRef || med.prescriptionRef,
+              isPartial: bc.claimedQuantity < total,
+              totalBatchQuantity: total,
+            });
+          }
         });
-      } else if (
-        med.claimedById === currentUserId &&
+      }
+
+      if (
+        med.claimedById === currentUser.id &&
         med.status === 'claimed' &&
-        userActiveClaims.length === 0
+        (!med.claims || med.claims.length === 0) &&
+        (!med.activeClaims || med.activeClaims.length === 0)
       ) {
-        const claimedQty = med.claimedQuantity ?? total;
         list.push({
           medication: med,
-          claimedQuantity: claimedQty,
+          claimId: med.id,
+          claimedQuantity: med.claimedQuantity ?? total,
           unitName: unit,
-          totalBatchQuantity: total,
-          prescriptionRef: med.prescriptionRef,
-          isPartial: claimedQty < total,
           handoverPin: med.handoverPin,
+          claimedAt: med.claimedAt,
           claimExpiresAt: med.claimExpiresAt,
+          prescriptionRef: med.prescriptionRef,
+          isPartial: (med.claimedQuantity ?? total) < total,
+          totalBatchQuantity: total,
         });
       }
     });
 
     return list;
-  }, [medications, currentUserId]);
+  }, [medications, currentUser]);
 
   const myCollectionHistory = useMemo(() => {
-    if (!currentUserId) return [];
+    if (!currentUser) return [];
     const list: {
       medication: Medication;
-      claimId?: string;
+      claimId: string;
       claimedQuantity: number;
       unitName: string;
-      totalBatchQuantity: number;
       collectedAt?: string;
-      isPartial: boolean;
     }[] = [];
 
     medications.forEach((med) => {
@@ -415,37 +421,35 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
       const total = med.totalNumericQuantity ?? parsed.total;
       const unit = med.unitName || parsed.unit;
 
-      const userCollected = (med.claims || []).filter(
-        (c) => c.claimerId === currentUserId && c.status === 'collected'
-      );
+      if (med.claims && med.claims.length > 0) {
+        med.claims.forEach((c) => {
+          if (c.claimerId === currentUser.id && c.status === 'collected') {
+            list.push({
+              medication: med,
+              claimId: c.id,
+              claimedQuantity: c.claimedQuantity,
+              unitName: c.unitName || unit,
+              collectedAt: c.collectedAt || med.collectedAt,
+            });
+          }
+        });
+      }
 
-      if (userCollected.length > 0) {
-        userCollected.forEach((c) => {
+      if (med.claimedById === currentUser.id && med.status === 'collected') {
+        if (!list.some((l) => l.medication.id === med.id)) {
           list.push({
             medication: med,
-            claimId: c.id,
-            claimedQuantity: c.claimedQuantity,
-            unitName: c.unitName || unit,
-            totalBatchQuantity: total,
-            collectedAt: c.collectedAt || med.collectedAt,
-            isPartial: c.claimedQuantity < total,
+            claimId: med.id,
+            claimedQuantity: med.claimedQuantity ?? total,
+            unitName: unit,
+            collectedAt: med.collectedAt,
           });
-        });
-      } else if (med.claimedById === currentUserId && med.status === 'collected') {
-        const claimedQty = med.claimedQuantity ?? total;
-        list.push({
-          medication: med,
-          claimedQuantity: claimedQty,
-          unitName: unit,
-          totalBatchQuantity: total,
-          collectedAt: med.collectedAt,
-          isPartial: claimedQty < total,
-        });
+        }
       }
     });
 
     return list;
-  }, [medications, currentUserId]);
+  }, [medications, currentUser]);
 
   const myDonations = useMemo(() => {
     if (!currentUser) return [];
@@ -564,15 +568,15 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
   // If visitor is logged out
   if (!currentUser) {
     return (
-      <div className="bg-white rounded-3xl border border-slate-200 p-8 sm:p-12 text-center space-y-5 max-w-xl mx-auto my-6 shadow-sm">
-        <div className="w-16 h-16 mx-auto rounded-3xl bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-700 shadow-inner">
+      <div className="bg-slate-950/85 backdrop-blur-2xl rounded-3xl border border-teal-500/25 p-8 sm:p-12 text-center space-y-5 max-w-xl mx-auto my-6 shadow-2xl">
+        <div className="w-16 h-16 mx-auto rounded-3xl bg-teal-500/15 border border-teal-400/30 flex items-center justify-center text-teal-300 shadow-inner">
           <User className="w-8 h-8" />
         </div>
         <div className="space-y-2">
-          <h3 className="text-xl font-bold text-slate-900">
+          <h3 className="font-display text-xl font-bold text-white">
             Sign In to Access Your Portal
           </h3>
-          <p className="text-sm text-slate-600 leading-relaxed">
+          <p className="text-sm text-slate-300 leading-relaxed font-sans">
             The Collector &amp; Donor Portal allows you to track your claimed medicines, view donor pickup contacts, and manage your donations.
           </p>
         </div>
@@ -580,14 +584,14 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
           <button
             type="button"
             onClick={() => openAuthModal('login')}
-            className="px-5 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs sm:text-sm font-bold shadow-sm transition cursor-pointer"
+            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-teal-400 to-emerald-500 text-slate-950 text-xs sm:text-sm font-bold shadow-md transition cursor-pointer hover:from-teal-300 hover:to-emerald-400"
           >
             Sign In
           </button>
           <button
             type="button"
             onClick={() => openAuthModal('register')}
-            className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-bold transition cursor-pointer"
+            className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-teal-200 text-xs sm:text-sm font-bold border border-teal-500/30 transition cursor-pointer"
           >
             Create Account
           </button>
@@ -606,9 +610,13 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
     showToast('Audit log exported to CSV successfully!', 'success', 'Export Complete');
   };
 
-  // Role-Specific Reporting Capabilities (Bug 7a)
   const canExportCSV = currentUser?.role === 'clinic_charity' || currentUser?.role === 'admin';
   const hasContributed = myDonations.length > 0 || myCollectionHistory.length > 0 || isAdmin;
+  const isVerified = currentUser?.verificationStatus === 'verified';
+  const isPending = currentUser?.verificationStatus === 'pending';
+
+  const completedRescuesCount =
+    myCollectionHistory.length + myDonations.filter((m) => m.status === 'collected').length;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-200">
@@ -618,154 +626,196 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
         <button
           type="button"
           onClick={onBackToFeed}
-          className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-600 hover:text-teal-800 transition cursor-pointer self-start"
+          className="inline-flex items-center gap-2 text-xs sm:text-sm font-mono font-semibold text-teal-300 hover:text-white transition cursor-pointer self-start"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to Live Medicine Feed</span>
+          <span>&larr; Back to Live Medicine Feed</span>
         </button>
 
         {!isAdmin && (
-          <button
+          <motion.button
             type="button"
+            whileHover={{ scale: 1.03, y: -1 }}
+            whileTap={{ scale: 0.97, y: 1 }}
             onClick={openDonateModal}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs sm:text-sm font-bold shadow-sm transition cursor-pointer self-start sm:self-auto"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-teal-400 to-emerald-500 text-slate-950 text-xs sm:text-sm font-bold shadow-md transition cursor-pointer self-start sm:self-auto border border-teal-300/40"
           >
-            <PlusCircle className="w-4 h-4" />
+            <PlusCircle className="w-4 h-4 text-slate-950" />
             <span>Donate Medicine</span>
-          </button>
+          </motion.button>
         )}
       </div>
 
-      {/* Account Overview Card */}
-      <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-7 shadow-sm">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
-          <div className="flex items-start gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-700 shrink-0 shadow-inner">
-              {isAdmin ? (
-                <ShieldCheck className="w-7 h-7 text-purple-700" />
-              ) : isClinic ? (
-                <Building2 className="w-7 h-7 text-indigo-700" />
-              ) : (
-                <User className="w-7 h-7 text-teal-700" />
-              )}
+      {/* ============================================================= */}
+      {/* 1. UPGRADE: INTERACTIVE 3D HOLOGRAPHIC SMART ID CARD         */}
+      {/* ============================================================= */}
+      <TiltSpotlightCard
+        glowColor={isVerified ? 'teal' : isPending ? 'amber' : 'rose'}
+        className="p-6 sm:p-8 bg-gradient-to-br from-slate-950 via-teal-950 to-slate-900 border border-teal-400/35 shadow-[0_25px_70px_-15px_rgba(13,148,136,0.35)] relative overflow-hidden"
+      >
+        {/* Holographic Background Watermark Grid */}
+        <div className="pointer-events-none absolute inset-0 bg-spatial-grid-dark opacity-40 z-0" />
+        <div className="pointer-events-none absolute -top-24 right-1/4 w-80 h-80 rounded-full bg-teal-500/10 blur-3xl z-0" />
+
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          
+          {/* Left ID Section: Metallic Security Chip, Serial & User Credentials */}
+          <div className="space-y-4 max-w-2xl">
+            
+            {/* Top Serial & Security Chip Row */}
+            <div className="flex items-center justify-between sm:justify-start gap-4">
+              {/* Metallic Security Chip Graphic */}
+              <div className="w-12 h-9 rounded-lg bg-gradient-to-br from-amber-300 via-amber-400 to-amber-600 border border-amber-200/60 shadow-md relative overflow-hidden flex items-center justify-center shrink-0">
+                <div className="absolute inset-x-0 top-1/2 h-px bg-amber-800/40" />
+                <div className="absolute inset-y-0 left-1/2 w-px bg-amber-800/40" />
+                <div className="w-6 h-5 rounded border border-amber-800/50 flex items-center justify-center bg-amber-400/40">
+                  <Cpu className="w-3.5 h-3.5 text-amber-950/80" />
+                </div>
+              </div>
+
+              {/* Monospace Credential Serial Readout */}
+              <div className="font-mono text-[11px] text-teal-300/80 space-y-0.5">
+                <div className="flex items-center gap-1.5 font-bold tracking-wider text-slate-400">
+                  <Fingerprint className="w-3.5 h-3.5 text-teal-400" />
+                  <span>HEALTHCARE CREDENTIAL // BD-MEDSHARE</span>
+                </div>
+                <div className="text-white font-extrabold tracking-widest text-xs">
+                  {currentUser.registrationOrNid
+                    ? `SERIAL: ${currentUser.registrationOrNid}`
+                    : 'SERIAL: PENDING-GOV-REGISTRY-CHECK'}
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-1">
+            {/* User Name & Role Badges */}
+            <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-2.5">
-                <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
+                <h2 className="font-display text-2xl sm:text-3xl font-black text-white tracking-tight drop-shadow-sm">
                   {currentUser.name}
                 </h2>
-                {/* Role Badge */}
-                <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
-                  isAdmin
-                    ? 'bg-purple-100 text-purple-800 border-purple-300'
+
+                {/* Role Pill */}
+                <span
+                  className={`text-xs font-mono font-bold px-3 py-1 rounded-full border ${
+                    isAdmin
+                      ? 'bg-purple-950/80 text-purple-200 border-purple-400/40 shadow-[0_0_12px_rgba(168,85,247,0.2)]'
+                      : isClinic
+                      ? 'bg-indigo-950/80 text-indigo-200 border-indigo-400/40 shadow-[0_0_12px_rgba(99,102,241,0.2)]'
+                      : 'bg-teal-950/80 text-teal-200 border-teal-500/40 shadow-[0_0_12px_rgba(20,184,166,0.2)]'
+                  }`}
+                >
+                  {isAdmin
+                    ? 'Platform Moderator'
                     : isClinic
-                    ? 'bg-indigo-100 text-indigo-800 border-indigo-300'
-                    : 'bg-teal-100 text-teal-800 border-teal-300'
-                }`}>
-                  {isAdmin ? 'Platform Moderator' : isClinic ? 'Rural Clinic / NGO' : 'Individual Community Member'}
+                    ? 'Rural Clinic / NGO'
+                    : 'Community Member'}
                 </span>
-                {/* 3-Stage Verification Badge */}
-                {currentUser.verificationStatus === 'verified' ? (
-                  <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Verified</span>
+
+                {/* Glowing 3D Status Seal */}
+                {isVerified ? (
+                  <span className="inline-flex items-center gap-1.5 text-xs font-mono font-bold px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-400/40 shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+                    </span>
+                    <span>✓ NATIONAL REGISTRY &amp; OTP VERIFIED</span>
                   </span>
-                ) : currentUser.verificationStatus === 'pending' ? (
-                  <span className="inline-flex items-center gap-1 text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
-                    <Clock className="w-3.5 h-3.5 text-amber-700" />
-                    <span>⏳ Verification Pending Admin Review</span>
+                ) : isPending ? (
+                  <span className="inline-flex items-center gap-1.5 text-xs font-mono font-bold px-3 py-1 rounded-full bg-amber-500/15 text-amber-300 border border-amber-400/40 shadow-[0_0_12px_rgba(245,158,11,0.25)]">
+                    <Clock className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                    <span>⏳ PENDING MODERATOR REVIEW</span>
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-300">
-                    <ShieldAlert className="w-3.5 h-3.5 text-slate-500" />
-                    <span>Unverified</span>
+                  <span className="inline-flex items-center gap-1.5 text-xs font-mono font-bold px-3 py-1 rounded-full bg-rose-500/15 text-rose-300 border border-rose-500/40 shadow-[0_0_12px_rgba(244,63,94,0.25)]">
+                    <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
+                    <span>⚡ ACTION REQUIRED: VERIFY CREDENTIAL</span>
                   </span>
                 )}
               </div>
 
-              <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500 pt-0.5">
-                <span className="font-mono">{currentUser.email}</span>
-                <span className="flex items-center gap-1">
-                  <Phone className="w-3.5 h-3.5 text-slate-400" />
+              {/* Contact & Location Strip */}
+              <div className="flex flex-wrap items-center gap-4 text-xs font-mono text-slate-300 pt-1">
+                <span className="text-teal-300">{currentUser.email}</span>
+                <span className="flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5 text-teal-400" />
                   <span>{currentUser.phone}</span>
                 </span>
-                <span className="flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                <span className="flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-teal-400" />
                   <span>{currentUser.location}</span>
                 </span>
               </div>
             </div>
+
           </div>
 
-          {/* Quick Counter Badges */}
-          <div className="flex items-center gap-3 pt-3 md:pt-0 border-t md:border-t-0 border-slate-100">
-            {isAdmin ? (
-              <>
-                <div className="bg-purple-50 border border-purple-200 rounded-2xl px-4 py-2.5 text-center">
-                  <div className="text-2xl font-extrabold text-purple-900">{pendingVerifications.length}</div>
-                  <div className="text-[11px] font-semibold text-purple-700">Pending Reviews</div>
-                </div>
-                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-2.5 text-center">
-                  <div className="text-2xl font-extrabold text-emerald-900">
-                    {allUsers.filter((u) => u.verificationStatus === 'verified').length}
+          {/* Right ID Section: Metric Counters & Floating Translucent Pills */}
+          <div className="flex flex-col sm:flex-row lg:flex-col items-start lg:items-end justify-between gap-4 pt-4 lg:pt-0 border-t lg:border-t-0 border-teal-500/20 shrink-0">
+            
+            {/* Live Frosted Metric Counters */}
+            <div className="flex items-center gap-3">
+              {isAdmin ? (
+                <>
+                  <div className="bg-slate-900/80 backdrop-blur-md border border-purple-500/35 rounded-2xl px-4 py-2.5 text-center min-w-[100px] shadow-lg">
+                    <div className="font-mono text-2xl font-bold text-purple-300">{pendingVerifications.length}</div>
+                    <div className="text-[10px] font-mono text-purple-200/80 uppercase">Pending</div>
                   </div>
-                  <div className="text-[11px] font-semibold text-emerald-700">Verified Users</div>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="bg-sky-50 border border-sky-200 rounded-2xl px-4 py-2.5 text-center">
-                  <div className="text-2xl font-extrabold text-sky-900">{myClaimedPending.length}</div>
-                  <div className="text-[11px] font-semibold text-sky-700">Pending Pickup</div>
-                </div>
-                <div className="bg-teal-50 border border-teal-200 rounded-2xl px-4 py-2.5 text-center">
-                  <div className="text-2xl font-extrabold text-teal-900">{myDonations.length}</div>
-                  <div className="text-[11px] font-semibold text-teal-700">Donations Listed</div>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Quick Actions: Impact Certificate & Audit Log CSV Export (Role-Gated) */}
-        {(hasContributed || canExportCSV) && (
-          <div className="mt-5 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
-            <div className="text-xs text-slate-500 font-medium">
-              Verified Community Healthcare Record • FEFO Audited
+                  <div className="bg-slate-900/80 backdrop-blur-md border border-emerald-500/35 rounded-2xl px-4 py-2.5 text-center min-w-[100px] shadow-lg">
+                    <div className="font-mono text-2xl font-bold text-emerald-300">
+                      {allUsers.filter((u) => u.verificationStatus === 'verified').length}
+                    </div>
+                    <div className="text-[10px] font-mono text-emerald-200/80 uppercase">Verified</div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="bg-slate-900/80 backdrop-blur-md border border-sky-500/35 rounded-2xl px-4 py-2.5 text-center min-w-[110px] shadow-lg">
+                    <div className="font-mono text-2xl font-bold text-sky-300">{myClaimedPending.length}</div>
+                    <div className="text-[10px] font-mono text-sky-200/80 uppercase">Pending Pickups</div>
+                  </div>
+                  <div className="bg-slate-900/80 backdrop-blur-md border border-teal-500/35 rounded-2xl px-4 py-2.5 text-center min-w-[110px] shadow-lg">
+                    <div className="font-mono text-2xl font-bold text-teal-300">{completedRescuesCount}</div>
+                    <div className="text-[10px] font-mono text-teal-200/80 uppercase">Handovers Done</div>
+                  </div>
+                </>
+              )}
             </div>
-            <div className="flex flex-wrap items-center gap-2.5">
+
+            {/* Floating Translucent Action Pills */}
+            <div className="flex flex-wrap items-center gap-2 pt-1">
               {hasContributed && (
                 <button
                   type="button"
                   onClick={() => setIsCertificateOpen(true)}
-                  className="px-3.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-400/40 text-xs font-mono font-bold transition flex items-center gap-1.5 shadow-[0_0_12px_rgba(245,158,11,0.2)] cursor-pointer"
                 >
-                  <Award className="w-4 h-4 text-amber-700" />
-                  <span>🏆 View Impact Certificate</span>
+                  <Award className="w-3.5 h-3.5 text-amber-400" />
+                  <span>🏆 Impact Certificate</span>
                 </button>
               )}
               {canExportCSV && (
                 <button
                   type="button"
                   onClick={handleExportCSV}
-                  className="px-3.5 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-900 border border-teal-300 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-xl bg-teal-500/15 hover:bg-teal-500/25 text-teal-200 border border-teal-400/40 text-xs font-mono font-bold transition flex items-center gap-1.5 shadow-[0_0_12px_rgba(20,184,166,0.2)] cursor-pointer"
                 >
-                  <Download className="w-4 h-4 text-teal-700" />
-                  <span>⬇️ Export Audit Log (CSV)</span>
+                  <Download className="w-3.5 h-3.5 text-teal-400" />
+                  <span>⬇️ Export Audit CSV</span>
                 </button>
               )}
             </div>
+
           </div>
-        )}
-      </div>
+
+        </div>
+      </TiltSpotlightCard>
 
       {/* ============================================================= */}
-      {/* 1. ADMIN MODERATOR PORTAL (ONLY FOR ROLE === 'admin')         */}
+      {/* 2. ADMIN MODERATOR PORTAL (ONLY FOR ROLE === 'admin')         */}
       {/* ============================================================= */}
       {isAdmin && (
         <div className="space-y-6">
-          <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-teal-950 text-white rounded-3xl p-6 sm:p-7 shadow-lg space-y-5">
+          <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-purple-950 text-white rounded-3xl p-6 sm:p-7 border border-purple-500/30 shadow-2xl space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-purple-500/20 border border-purple-400/30 flex items-center justify-center text-purple-300">
@@ -774,81 +824,49 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                 <div>
                   <h3 className="text-base sm:text-lg font-bold tracking-tight text-white flex items-center gap-2">
                     <span>Admin Moderator &amp; Verification Review Desk</span>
-                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30 font-mono">
                       {pendingVerifications.length} Pending
                     </span>
                   </h3>
-                  <p className="text-xs text-teal-100/80">
-                    Sole authority desk: verify Bangladeshi NID credentials and Rural Clinic licenses before medicine distribution.
+                  <p className="text-xs text-purple-200/80 font-mono">
+                    Audit Bangladesh NID credentials and rural clinic registration records.
                   </p>
                 </div>
               </div>
             </div>
 
             {pendingVerifications.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {pendingVerifications.map((pendingUser) => (
                   <div
                     key={pendingUser.id}
-                    className="bg-white/10 backdrop-blur-sm border border-white/15 rounded-2xl p-4 sm:p-5 space-y-3 flex flex-col justify-between"
+                    className="bg-slate-900/90 border border-purple-500/30 rounded-2xl p-4 sm:p-5 space-y-3 font-mono text-xs"
                   >
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-200 border border-teal-400/30">
-                          {pendingUser.role === 'clinic_charity' ? 'Rural Clinic / NGO' : 'Individual Community Member'}
-                        </span>
-                        <span className="text-[11px] font-mono text-amber-300 flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          <span>Submitted: {pendingUser.submittedAt ? new Date(pendingUser.submittedAt).toLocaleDateString() : 'Awaiting Review'}</span>
-                        </span>
-                      </div>
-
-                      <div>
-                        <h4 className="font-bold text-white text-base">{pendingUser.name}</h4>
-                        {pendingUser.organizationName && (
-                          <p className="text-xs text-teal-200 font-medium">
-                            Org: {pendingUser.organizationName}
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="bg-black/25 rounded-xl p-3 space-y-1.5 text-xs text-slate-300 font-mono">
-                        <div className="flex justify-between items-center">
-                          <span className="text-slate-400">
-                            {pendingUser.role === 'clinic_charity' ? 'License Reg ID:' : 'National ID (NID):'}
-                          </span>
-                          <span className="font-bold text-amber-200 bg-amber-950/60 px-2 py-0.5 rounded">
-                            {pendingUser.registrationOrNid || 'N/A'}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">Contact Phone:</span>
-                          <span className="text-slate-200">{pendingUser.phone}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">Address / Location:</span>
-                          <span className="text-slate-200">{pendingUser.location}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">User Email:</span>
-                          <span className="text-slate-200">{pendingUser.email}</span>
-                        </div>
-                      </div>
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-white text-sm">{pendingUser.name}</span>
+                      <span className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 uppercase text-[10px]">
+                        {pendingUser.role}
+                      </span>
                     </div>
 
-                    <div className="pt-2 flex items-center gap-2">
+                    <div className="space-y-1 text-slate-300">
+                      <div>Cred: <strong className="text-white">{pendingUser.registrationOrNid}</strong></div>
+                      <div>Location: <strong className="text-white">{pendingUser.location}</strong></div>
+                      <div>Phone: <strong className="text-white">{pendingUser.phone}</strong></div>
+                    </div>
+
+                    <div className="pt-2 flex items-center gap-2 border-t border-purple-500/20">
                       <button
                         type="button"
                         onClick={() => approveVerification(pendingUser.id)}
-                        className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                        className="py-1.5 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-bold transition cursor-pointer"
                       >
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>Approve</span>
+                        Approve
                       </button>
                       <button
                         type="button"
                         onClick={() => rejectVerification(pendingUser.id, 'Format or authenticity mismatch')}
-                        className="py-2 px-3.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-500/40 text-xs font-semibold transition cursor-pointer"
+                        className="py-1.5 px-3 rounded-xl bg-rose-500/20 text-rose-300 border border-rose-500/40 font-bold transition cursor-pointer"
                       >
                         Reject
                       </button>
@@ -857,7 +875,7 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                 ))}
               </div>
             ) : (
-              <div className="bg-white/5 border border-white/10 rounded-2xl p-8 text-center text-xs text-teal-100/70 space-y-1.5">
+              <div className="bg-slate-900/60 border border-white/10 rounded-2xl p-8 text-center text-xs text-teal-200/70 space-y-1.5 font-mono">
                 <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto mb-1" />
                 <p className="font-bold text-white text-sm">All Verification Requests Processed</p>
                 <p>No user verification requests are currently awaiting review.</p>
@@ -868,61 +886,65 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
       )}
 
       {/* ============================================================= */}
-      {/* 2. SECTION FOR COMMUNITY MEMBERS & CLINICS                    */}
+      {/* 3. SECTION FOR COMMUNITY MEMBERS & CLINICS                    */}
       {/* ============================================================= */}
       {!isAdmin && (
         <div className="space-y-8">
           
-          {/* 1. Automated 2-Step Verification Workflow Card */}
+          {/* ========================================================= */}
+          {/* 2-STEP AUTOMATED VERIFICATION SECURITY TERMINAL           */}
+          {/* ========================================================= */}
           {currentUser.verificationStatus !== 'verified' ? (
-            <div className="bg-amber-50/90 border border-amber-300 rounded-3xl p-6 sm:p-7 space-y-4 shadow-xs">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="bg-slate-950/85 backdrop-blur-2xl border border-amber-500/35 rounded-3xl p-6 sm:p-7 space-y-5 shadow-2xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-amber-500/20">
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-200/80 flex items-center justify-center text-amber-900 shrink-0 mt-0.5">
-                    <ShieldAlert className="w-5 h-5 text-amber-800" />
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-400/30 flex items-center justify-center text-amber-300 shrink-0 mt-0.5">
+                    <ShieldAlert className="w-5 h-5 text-amber-400" />
                   </div>
                   <div className="space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-base font-bold text-amber-950">
-                        Automated 2-Step Identity Verification
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-display text-base sm:text-lg font-bold text-white">
+                        Automated 2-Step Identity Verification Terminal
                       </h3>
-                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 border border-amber-300">
-                        {inlineStep === 1 ? 'Step 1 of 2: Government Registry Check' : 'Step 2 of 2: Live Email OTP'}
+                      <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/40">
+                        {inlineStep === 1
+                          ? 'STEP 01 // BD NID ANATOMY & DGHS REGISTRY CHECK'
+                          : 'STEP 02 // LIVE CRYPTOGRAPHIC EMAIL OTP'}
                       </span>
                     </div>
-                    <p className="text-xs sm:text-sm text-amber-900/90 leading-relaxed max-w-2xl">
+                    <p className="text-xs sm:text-sm text-slate-300/90 leading-relaxed max-w-2xl font-sans">
                       {isClinic
-                        ? 'Verify your rural clinic or charity against official DGHS / NGOAB registries, followed by live Supabase Auth Email OTP.'
-                        : 'Verify your Bangladeshi National ID (BBS District GEO Code & Birth Year anatomy), followed by live Supabase Auth Email OTP.'}
+                        ? 'Validate your clinic against official Bangladesh DGHS & NGOAB databases, followed by live cryptographic email OTP verification.'
+                        : 'Verify your Bangladeshi National ID (BBS District GEO Code & Birth Year anatomy), followed by live cryptographic email OTP verification.'}
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Inline Error Alert */}
+              {/* Error Alert */}
               {inlineError && (
-                <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 flex items-start gap-2.5 text-xs text-rose-800 animate-in fade-in">
-                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <div className="bg-rose-950/80 border border-rose-500/40 rounded-xl p-3 flex items-start gap-2.5 text-xs text-rose-200 font-mono animate-in fade-in">
+                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
                   <p className="font-semibold leading-relaxed">{inlineError}</p>
                 </div>
               )}
 
               {/* Anatomy Match Success Alert */}
               {inlineAnatomyMatch && (
-                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-center gap-2 text-xs text-emerald-800 animate-in fade-in">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <div className="bg-emerald-950/80 border border-emerald-500/40 rounded-xl p-3 flex items-center gap-2 text-xs text-emerald-200 font-mono animate-in fade-in">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                   <span className="font-medium">{inlineAnatomyMatch}</span>
                 </div>
               )}
 
-              {/* STEP 1: REGISTRY FORM */}
+              {/* STEP 1: REGISTRY & ANATOMY FORM */}
               {inlineStep === 1 && (
-                <form onSubmit={handleInlineStep1Submit} className="bg-white rounded-2xl p-4 sm:p-5 border border-amber-200 space-y-4">
+                <form onSubmit={handleInlineStep1Submit} className="bg-slate-900/90 rounded-2xl p-5 border border-teal-500/25 space-y-4 font-mono text-xs">
                   {/* Quick-Fill Chips for evaluators */}
-                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-1.5">
-                    <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-teal-600" />
-                      <span>Quick-Fill Authentic Bangladesh Registries for Testing:</span>
+                  <div className="bg-slate-950 p-3.5 rounded-xl border border-teal-500/20 space-y-2">
+                    <span className="text-[11px] font-bold text-teal-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-teal-400" />
+                      <span>Quick-Fill Authentic Bangladesh Facility Credentials:</span>
                     </span>
 
                     {isClinic ? (
@@ -938,7 +960,7 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                               setInlineLocation(fac.address);
                               setInlineError(null);
                             }}
-                            className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-white hover:bg-teal-50 border border-slate-300 hover:border-teal-400 text-slate-800 transition cursor-pointer"
+                            className="px-2.5 py-1 text-[11px] rounded-lg bg-slate-900 hover:bg-teal-950 border border-teal-500/30 text-teal-200 transition cursor-pointer"
                           >
                             {fac.name.split(' (')[0]} ({fac.type}: {fac.regNumber})
                           </button>
@@ -951,351 +973,209 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                           onClick={() => {
                             setInlineDistrictName('Bogura');
                             setInlineBirthYear('1998');
-                            setInlineRegId('1998101018941253');
+                            setInlineRegId('19981012345678901');
+                            setInlineLocation('Bogura Sadar');
                             setInlineError(null);
                           }}
-                          className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-white hover:bg-teal-50 border border-slate-300 hover:border-teal-400 text-slate-800 transition cursor-pointer"
+                          className="px-2.5 py-1 text-[11px] rounded-lg bg-slate-900 hover:bg-teal-950 border border-teal-500/30 text-teal-200 transition cursor-pointer"
                         >
-                          17-Digit: Bogura (Code 10, Born 1998)
+                          Bogura [GEO-10] • 17-Digit Standard NID
                         </button>
                         <button
                           type="button"
                           onClick={() => {
                             setInlineDistrictName('Pabna');
                             setInlineBirthYear('1995');
-                            setInlineRegId('1995761028941253');
+                            setInlineRegId('7612345678');
+                            setInlineLocation('Pabna Town');
                             setInlineError(null);
                           }}
-                          className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-white hover:bg-teal-50 border border-slate-300 hover:border-teal-400 text-slate-800 transition cursor-pointer"
+                          className="px-2.5 py-1 text-[11px] rounded-lg bg-slate-900 hover:bg-teal-950 border border-teal-500/30 text-teal-200 transition cursor-pointer"
                         >
-                          17-Digit: Pabna (Code 76, Born 1995)
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setInlineDistrictName('Dhaka');
-                            setInlineBirthYear('1992');
-                            setInlineRegId('1992265018941253');
-                            setInlineError(null);
-                          }}
-                          className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-white hover:bg-teal-50 border border-slate-300 hover:border-teal-400 text-slate-800 transition cursor-pointer"
-                        >
-                          17-Digit: Dhaka (Code 26, Born 1992)
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setInlineBirthYear('1994');
-                            setInlineDistrictName('Dhaka');
-                            setInlineRegId('5982143098');
-                            setInlineError(null);
-                          }}
-                          className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-white hover:bg-teal-50 border border-slate-300 hover:border-teal-400 text-slate-800 transition cursor-pointer"
-                        >
-                          10-Digit Smart NID
+                          Pabna [GEO-76] • 10-Digit Smart NID
                         </button>
                       </div>
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                    {isClinic ? (
-                      <>
-                        <div>
-                          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                            Organization / Clinic Name <span className="text-rose-500">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            required
-                            value={inlineOrgName}
-                            onChange={(e) => setInlineOrgName(e.target.value)}
-                            placeholder="e.g. Shaheed Ziaur Rahman Medical College Hospital"
-                            className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                            Facility District <span className="text-rose-500">*</span>
-                          </label>
-                          <select
-                            value={inlineDistrictName}
-                            onChange={(e) => setInlineDistrictName(e.target.value)}
-                            className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none bg-white"
-                          >
-                            {BD_DISTRICT_NAMES.map((d) => (
-                              <option key={d} value={d}>
-                                {d} (BBS Code: {OFFICIAL_BD_DISTRICT_GEOCODES[d]})
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                            DGHS Code or NGOAB Reg <span className="text-rose-500">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            required
-                            value={inlineRegId}
-                            onChange={(e) => setInlineRegId(e.target.value)}
-                            placeholder="e.g. 1105, 10016472, 241"
-                            className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none font-mono"
-                          />
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div>
-                          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                            Full Name (as on NID) <span className="text-rose-500">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            required
-                            value={inlineFullName}
-                            onChange={(e) => setInlineFullName(e.target.value)}
-                            placeholder="e.g. Dr. Farhana Rahman"
-                            className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                            Birth Year <span className="text-rose-500">*</span>
-                          </label>
-                          <input
-                            type="number"
-                            required
-                            min={1930}
-                            max={2008}
-                            value={inlineBirthYear}
-                            onChange={(e) => setInlineBirthYear(e.target.value)}
-                            placeholder="e.g. 1998"
-                            className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                            Birth / Home District <span className="text-rose-500">*</span>
-                          </label>
-                          <select
-                            value={inlineDistrictName}
-                            onChange={(e) => setInlineDistrictName(e.target.value)}
-                            className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none bg-white"
-                          >
-                            {BD_DISTRICT_NAMES.map((d) => (
-                              <option key={d} value={d}>
-                                {d} (BBS Code: {OFFICIAL_BD_DISTRICT_GEOCODES[d]})
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                            National ID (NID: 10, 13, or 17 digits) <span className="text-rose-500">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            required
-                            value={inlineRegId}
-                            onChange={(e) => setInlineRegId(e.target.value)}
-                            placeholder="e.g. 1998101018941253"
-                            className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none font-mono"
-                          />
-                        </div>
-                      </>
-                    )}
-
+                  {/* Form Fields Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                    {/* District Selector with BBS GEO Code Display */}
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                        Contact Phone <span className="text-rose-500">*</span>
+                      <label className="block text-slate-300 font-bold uppercase mb-1">
+                        Bangladesh District (BBS GEO Code) <span className="text-rose-400">*</span>
                       </label>
-                      <input
-                        type="tel"
-                        required
-                        value={inlinePhone}
-                        onChange={(e) => setInlinePhone(e.target.value)}
-                        placeholder="e.g. +880 1711-234567"
-                        className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none"
-                      />
+                      <select
+                        value={inlineDistrictName}
+                        onChange={(e) => setInlineDistrictName(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-950 text-white border border-teal-500/30 focus:border-teal-400 outline-none cursor-pointer"
+                      >
+                        {BD_DISTRICT_NAMES.map((dist) => {
+                          const geo = OFFICIAL_BD_DISTRICT_GEOCODES[dist] || '--';
+                          return (
+                            <option key={dist} value={dist}>
+                              {dist.toUpperCase()} [GEO-{geo}]
+                            </option>
+                          );
+                        })}
+                      </select>
                     </div>
 
+                    {/* Registration / NID Number */}
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                        Area / Location <span className="text-rose-500">*</span>
+                      <label className="block text-slate-300 font-bold uppercase mb-1">
+                        {isClinic ? 'DGHS / NGOAB License Reg No.' : 'Bangladeshi National ID (NID)'} <span className="text-rose-400">*</span>
                       </label>
                       <input
                         type="text"
-                        required
+                        value={inlineRegId}
+                        onChange={(e) => setInlineRegId(e.target.value)}
+                        placeholder={isClinic ? 'e.g. DGHS-1105 or NGO-241' : '10, 13, or 17 digit NID'}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-950 text-white border border-teal-500/30 focus:border-teal-400 outline-none"
+                      />
+                    </div>
+
+                    {/* Phone */}
+                    <div>
+                      <label className="block text-slate-300 font-bold uppercase mb-1">
+                        Official Contact Phone <span className="text-rose-400">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={inlinePhone}
+                        onChange={(e) => setInlinePhone(e.target.value)}
+                        placeholder="e.g. +880 1711-234567"
+                        className="w-full px-3 py-2 rounded-xl bg-slate-950 text-white border border-teal-500/30 focus:border-teal-400 outline-none"
+                      />
+                    </div>
+
+                    {/* Location */}
+                    <div>
+                      <label className="block text-slate-300 font-bold uppercase mb-1">
+                        Area / Facility Location <span className="text-rose-400">*</span>
+                      </label>
+                      <input
+                        type="text"
                         value={inlineLocation}
                         onChange={(e) => setInlineLocation(e.target.value)}
-                        placeholder="e.g. Mirpur 10, Dhaka"
-                        className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none"
+                        placeholder="e.g. Bogura SZMCH Campus"
+                        className="w-full px-3 py-2 rounded-xl bg-slate-950 text-white border border-teal-500/30 focus:border-teal-400 outline-none"
                       />
                     </div>
                   </div>
 
-                  <label className="flex items-start gap-2.5 text-xs text-slate-800 cursor-pointer select-none pt-1">
+                  {/* Declaration Checkbox */}
+                  <label className="flex items-center gap-2 pt-2 text-slate-300 cursor-pointer select-none">
                     <input
                       type="checkbox"
                       checked={inlineConfirmed}
                       onChange={(e) => setInlineConfirmed(e.target.checked)}
-                      className="mt-0.5 rounded border-slate-300 text-teal-600 focus:ring-teal-500 cursor-pointer h-4 w-4"
+                      className="rounded border-teal-500/40 text-teal-500 focus:ring-0 cursor-pointer"
                     />
-                    <span>
-                      I confirm that the details provided are authentic and match official Bangladesh government registries.
-                    </span>
+                    <span>I confirm these government credentials represent an authentic clinical facility or citizen identity.</span>
                   </label>
 
-                  <div className="pt-1">
+                  <div className="pt-2 flex justify-end">
                     <button
                       type="submit"
                       disabled={actionLoading === 'verifying'}
-                      className="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-teal-700 hover:bg-teal-800 text-white shadow-sm transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                      className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-teal-400 to-emerald-500 text-slate-950 font-bold transition cursor-pointer hover:from-teal-300 hover:to-emerald-400 flex items-center gap-2"
                     >
-                      {actionLoading === 'verifying' ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <ArrowRight className="w-4 h-4" />
-                      )}
-                      <span>
-                        {actionLoading === 'verifying'
-                          ? 'Checking Registry...'
-                          : 'Validate Credentials & Send 6-Digit OTP'}
-                      </span>
+                      {actionLoading === 'verifying' ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
+                      <span>Validate &amp; Send Cryptographic OTP &rarr;</span>
                     </button>
                   </div>
                 </form>
               )}
 
-              {/* STEP 2: EMAIL OTP VERIFICATION */}
+              {/* STEP 2: CRYPTOGRAPHIC EMAIL OTP BOX */}
               {inlineStep === 2 && (
-                <form onSubmit={handleInlineStep2Submit} className="bg-white rounded-2xl p-5 border border-amber-200 space-y-4">
-                  <div className="text-center space-y-1.5">
-                    <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200 text-teal-700 flex items-center justify-center mx-auto">
-                      <Mail className="w-5 h-5 text-teal-600" />
-                    </div>
-                    <h4 className="text-sm font-bold text-slate-900">
-                      Step 2 of 2: Enter Email Verification Code
-                    </h4>
-                    <p className="text-xs text-slate-600 max-w-md mx-auto">
-                      A 6-digit confirmation code has been dispatched via Supabase Auth to{' '}
-                      <strong className="text-slate-900">{currentUser.email}</strong>.
-                    </p>
-                  </div>
+                <form onSubmit={handleInlineStep2Submit} className="bg-slate-900/90 rounded-2xl p-6 border border-emerald-500/35 space-y-5 font-mono text-xs">
+                  <div className="bg-slate-950 border-2 border-emerald-500/50 rounded-2xl p-6 shadow-[0_0_25px_rgba(16,185,129,0.25)] space-y-3 text-center">
+                    <span className="text-xs font-bold uppercase tracking-wider text-emerald-300 flex items-center justify-center gap-2">
+                      <Lock className="w-4 h-4 text-emerald-400" />
+                      <span>STEP 02 // ENTER LIVE 6-DIGIT CRYPTOGRAPHIC EMAIL OTP</span>
+                    </span>
 
-                  <div className="max-w-xs mx-auto space-y-1.5">
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                        <KeyRound className="w-4 h-4 text-teal-600" />
-                      </div>
-                      <input
-                        type="text"
-                        maxLength={6}
-                        required
-                        autoFocus
-                        value={inlineOtpCode}
-                        onChange={(e) => setInlineOtpCode(e.target.value.replace(/\D/g, ''))}
-                        placeholder="••••••"
-                        className="w-full pl-9 pr-3 py-2.5 text-xl font-mono font-bold text-center tracking-[0.3em] rounded-xl border-2 border-teal-600/60 focus:border-teal-700 focus:ring-2 focus:ring-teal-100 outline-none"
-                      />
-                    </div>
-                    <p className="text-[11px] text-center text-slate-500">
-                      Enter the 6-digit numeric OTP code sent to your email.
+                    <input
+                      type="text"
+                      maxLength={6}
+                      autoFocus
+                      required
+                      value={inlineOtpCode}
+                      onChange={(e) => setInlineOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder="••••••"
+                      className="w-full max-w-xs mx-auto py-3 text-3xl font-mono font-bold text-center tracking-[0.6em] rounded-xl border-2 border-emerald-500/60 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/30 outline-none bg-slate-900 text-emerald-300 shadow-inner"
+                    />
+
+                    <p className="text-[11px] text-slate-400 font-sans">
+                      A 6-digit confirmation code was dispatched to <strong className="text-teal-300 font-mono">{currentUser.email}</strong>.
                     </p>
                   </div>
 
                   {inlineDemoOtp && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-2.5 text-center text-xs text-amber-900 space-y-0.5">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800">
-                        ⚡ Supabase OTP Simulation Note:
-                      </span>
-                      <p>
-                        Generated test OTP code:{' '}
-                        <strong className="font-mono font-bold bg-amber-200/80 px-2 py-0.5 rounded text-amber-950">
-                          {inlineDemoOtp}
-                        </strong>
-                      </p>
+                    <div className="bg-amber-950/80 border border-amber-500/40 rounded-xl p-2.5 text-center text-amber-200">
+                      ⚡ Supabase Simulated Test OTP: <strong className="text-white font-bold">{inlineDemoOtp}</strong>
                     </div>
                   )}
 
-                  <div className="flex items-center justify-center gap-2 text-xs">
-                    <span className="text-slate-500">Didn&apos;t receive code?</span>
-                    <button
-                      type="button"
-                      onClick={handleInlineResendOtp}
-                      disabled={inlineResendCooldown > 0 || actionLoading === 'verifying'}
-                      className="font-bold text-teal-700 hover:text-teal-800 disabled:text-slate-400 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
-                    >
-                      <RotateCcw className="w-3 h-3" />
-                      <span>{inlineResendCooldown > 0 ? `Resend in ${inlineResendCooldown}s` : 'Resend Code'}</span>
-                    </button>
-                  </div>
-
-                  <div className="pt-2 flex items-center justify-between border-t border-slate-100">
+                  <div className="flex items-center justify-between pt-2">
                     <button
                       type="button"
                       onClick={() => setInlineStep(1)}
-                      className="px-4 py-2 text-xs font-semibold rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition flex items-center gap-1 cursor-pointer"
+                      className="text-slate-400 hover:text-white transition flex items-center gap-1 cursor-pointer"
                     >
                       <ArrowLeft className="w-3.5 h-3.5" />
-                      <span>Back to Edit Details</span>
+                      <span>Back to Step 1</span>
                     </button>
 
                     <button
                       type="submit"
                       disabled={inlineOtpCode.length !== 6 || actionLoading === 'verifying'}
-                      className="px-5 py-2.5 text-xs sm:text-sm font-bold rounded-xl bg-teal-700 hover:bg-teal-800 text-white shadow-sm transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                      className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-400 text-slate-950 font-bold transition cursor-pointer hover:from-emerald-300 hover:to-teal-300 flex items-center gap-2 disabled:opacity-50"
                     >
-                      {actionLoading === 'verifying' ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <CheckCircle2 className="w-4 h-4" />
-                      )}
-                      <span>{actionLoading === 'verifying' ? 'Verifying...' : 'Verify OTP & Activate Account'}</span>
+                      {actionLoading === 'verifying' ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                      <span>Verify OTP &amp; Activate Credential</span>
                     </button>
                   </div>
                 </form>
               )}
             </div>
           ) : (
-            <div className="bg-emerald-50/80 border border-emerald-300 rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="bg-slate-950/80 border border-emerald-500/35 rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 backdrop-blur-xl">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-200/80 flex items-center justify-center text-emerald-800 shrink-0">
-                  <ShieldCheck className="w-5 h-5 text-emerald-700" />
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-300 shrink-0">
+                  <ShieldCheck className="w-5 h-5 text-emerald-400" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-emerald-950 flex items-center gap-2">
+                  <h4 className="text-sm font-bold text-white flex items-center gap-2 font-mono">
                     <span>Verified Recipient Credential Active</span>
-                    <span className="text-[10px] font-mono font-bold bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-400/30">
                       {currentUser.registrationOrNid || 'Verified'}
                     </span>
                   </h4>
-                  <p className="text-xs text-emerald-800 mt-0.5">
-                    Your account is fully verified by MedShare Admin. You can claim available medicines and coordinate pickup directly with donors.
+                  <p className="text-xs text-slate-300 mt-0.5 font-sans">
+                    Your account is fully verified. You can claim available medicines and coordinate pickup directly with donors.
                   </p>
                 </div>
               </div>
             </div>
           )}
 
-          {/* 2. My Claimed Medicines (Pending Pickup) */}
+          {/* ========================================================= */}
+          {/* 4-DIGIT HANDOVER PIN VAULT: MY CLAIMED MEDICINES          */}
+          {/* ========================================================= */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                <h3 className="font-display text-lg font-bold text-white tracking-tight flex items-center gap-2">
                   <span>My Claimed Medicines (Pending Pickup)</span>
-                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 border border-sky-300">
+                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-sky-950 text-sky-300 border border-sky-400/30">
                     {myClaimedPending.length}
                   </span>
                 </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Contact the donor directly to arrange handover. Inspect packaging seals and expiry dates in person before confirming.
+                <p className="text-xs text-slate-400 mt-0.5 font-sans">
+                  Contact the donor directly to arrange handover. Inspect packaging seals and expiry dates in person.
                 </p>
               </div>
             </div>
@@ -1306,44 +1186,33 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                   const med = item.medication;
                   const days = mounted ? getDaysUntilExpiry(med.expiryDate) : null;
                   const urgency = days !== null ? getUrgencyLevel(days) : 'normal';
+                  const pinDigits = (item.handoverPin || '4829').padStart(4, '0').slice(0, 4).split('');
 
                   return (
-                    <div
+                    <TiltSpotlightCard
                       key={item.claimId || med.id}
-                      className="bg-white rounded-3xl border-2 border-sky-200 p-5 sm:p-6 shadow-sm space-y-4 flex flex-col justify-between"
+                      glowColor="teal"
+                      className="p-5 sm:p-6 bg-slate-900/90 border border-teal-500/25 space-y-4 flex flex-col justify-between"
                     >
-                      <div className="space-y-3">
-                        {/* Top urgency + status badge + 48h timer */}
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <span
-                            className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
-                              urgency === 'critical'
-                                ? 'bg-rose-100 text-rose-800 border border-rose-300'
-                                : urgency === 'priority'
-                                ? 'bg-amber-100 text-amber-800 border border-amber-300'
-                                : 'bg-teal-100 text-teal-800 border border-teal-300'
-                            }`}
-                          >
-                            <Clock className="w-3 h-3" />
-                            <span>{days !== null ? `Expires in ${days}d` : med.expiryDate}</span>
+                      <div className="space-y-3.5">
+                        {/* Top Urgency & Hold Timer */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-teal-500/15">
+                          <span className="text-[11px] font-mono font-bold text-teal-300">
+                            {days !== null ? `Expires in ${days}d` : med.expiryDate}
                           </span>
 
                           <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 border border-sky-200">
+                            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-sky-950 text-sky-300 border border-sky-400/30">
                               {item.isPartial ? 'Partial Claim' : 'Claimed'}
                             </span>
                             {(() => {
                               const hold = getPickupTimeRemaining(item.claimExpiresAt);
                               return (
                                 <span
-                                  className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
-                                    hold.isExpired
-                                      ? 'bg-rose-100 text-rose-800 border border-rose-300'
-                                      : 'bg-amber-100 text-amber-900 border border-amber-300'
-                                  }`}
+                                  className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-950/80 text-amber-300 border border-amber-400/30"
                                   title="48-hour pickup window"
                                 >
-                                  <Clock className="w-3 h-3 text-amber-700" />
+                                  <Clock className="w-3 h-3 text-amber-400" />
                                   <span>{hold.label}</span>
                                 </span>
                               );
@@ -1351,262 +1220,132 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                           </div>
                         </div>
 
-                        {/* Medicine details */}
+                        {/* Medicine Overview */}
                         <div>
                           <div className="flex items-start justify-between gap-2">
-                            <h4 className="font-extrabold text-slate-900 text-base sm:text-lg">
+                            <h4 className="font-display font-bold text-white text-base sm:text-lg">
                               {med.medicineName}
                             </h4>
-                            <span className="shrink-0 text-xs font-bold px-2.5 py-1 rounded-md bg-teal-100 text-teal-900 border border-teal-300 font-mono">
+                            <span className="shrink-0 text-xs font-mono font-bold px-2.5 py-1 rounded-md bg-slate-950 text-teal-300 border border-teal-500/35">
                               {med.strength}
                             </span>
                           </div>
                           {med.genericName && (
-                            <p className="text-xs text-slate-500 italic mt-0.5">
+                            <p className="text-xs text-teal-300/80 italic mt-0.5 font-sans">
                               ({med.genericName})
                             </p>
                           )}
-                          <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                            <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-teal-100 text-teal-900 font-mono">
+                          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-teal-950 text-teal-300 border border-teal-500/30">
                               Claimed: {item.claimedQuantity} {item.unitName}
                             </span>
                             {item.isPartial && (
-                              <span className="text-xs text-slate-500 font-medium">
-                                (from batch of {item.totalBatchQuantity} {item.unitName})
+                              <span className="text-xs font-mono text-slate-400">
+                                (batch of {item.totalBatchQuantity} {item.unitName})
                               </span>
                             )}
                           </div>
                         </div>
 
-                        {/* Handover PIN Ticket Box */}
-                        <div className="bg-gradient-to-r from-amber-50 via-amber-100/70 to-orange-50 border-2 border-amber-300/80 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
-                          <div className="space-y-0.5 text-center sm:text-left">
-                            <div className="flex items-center justify-center sm:justify-start gap-1.5 text-xs font-black uppercase tracking-wider text-amber-950">
-                              <KeyRound className="w-4 h-4 text-amber-700" />
-                              <span>Your 4-Digit Handover PIN</span>
+                        {/* CRYPTOGRAPHIC 4-DIGIT HANDOVER TICKET */}
+                        <div className="bg-slate-950/90 border border-teal-500/35 rounded-2xl p-4 space-y-2.5 shadow-inner">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-teal-300 uppercase">
+                              <KeyRound className="w-4 h-4 text-teal-400" />
+                              <span>CRYPTOGRAPHIC HANDOVER PIN</span>
                             </div>
-                            <p className="text-[11px] text-amber-900 leading-tight">
-                              Provide this code to the donor when you meet in person.
-                            </p>
+                            <span className="text-[10px] font-mono text-slate-400">SECURE DISPATCH</span>
                           </div>
-                          <div className="bg-white px-5 py-2 rounded-xl border-2 border-amber-400 font-mono text-2xl sm:text-3xl font-black text-amber-950 tracking-[0.25em] shadow-inner">
-                            {item.handoverPin || '----'}
+
+                          <div className="flex items-center justify-center gap-2.5 py-1">
+                            {pinDigits.map((digit, idx) => (
+                              <div
+                                key={idx}
+                                className="bg-slate-900 text-teal-300 border border-teal-500/40 rounded-xl w-11 h-12 flex items-center justify-center font-mono text-xl sm:text-2xl font-black shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)]"
+                              >
+                                {digit}
+                              </div>
+                            ))}
                           </div>
+
+                          <p className="text-[11px] font-sans text-center text-slate-400">
+                            Present this 4-digit code to donor <strong className="text-white">{med.donorName}</strong> at physical pickup.
+                          </p>
                         </div>
 
                         {/* UNLOCKED DONOR CONTACT INFORMATION */}
-                        <div className="bg-gradient-to-br from-teal-50 to-sky-50 border border-teal-200 rounded-2xl p-4 space-y-2 text-xs">
-                          <div className="flex items-center justify-between font-bold text-teal-950 uppercase tracking-wider text-[11px]">
+                        <div className="bg-slate-950/70 border border-teal-500/20 rounded-2xl p-3.5 space-y-2 text-xs font-mono text-slate-300">
+                          <div className="flex items-center justify-between text-teal-300 font-bold uppercase text-[10px]">
                             <span className="flex items-center gap-1.5">
-                              <Phone className="w-3.5 h-3.5 text-teal-700" />
-                              <span>Donor Pickup Contact (Unlocked)</span>
+                              <User className="w-3.5 h-3.5" />
+                              <span>Donor: {med.donorName}</span>
                             </span>
+                            <span className="text-emerald-400">UNLOCKED</span>
                           </div>
 
-                          <div className="bg-white rounded-xl p-3 border border-teal-200/80 space-y-1.5">
-                            <div className="flex items-center justify-between">
-                              <span className="text-slate-500">Donor Name:</span>
-                              <span className="font-bold text-slate-800">{med.donorName}</span>
+                          <div className="flex items-center justify-between pt-1 border-t border-teal-500/10">
+                            <span className="text-slate-400">Donor Phone:</span>
+                            <div className="flex items-center gap-2">
+                              <a
+                                href={`tel:${med.donorPhone}`}
+                                className="font-bold text-white hover:text-teal-300"
+                              >
+                                {med.donorPhone}
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => handleCopyPhone(med.donorPhone, item.claimId)}
+                                className="p-1 rounded text-teal-400 hover:text-white cursor-pointer"
+                                title="Copy phone"
+                              >
+                                {copiedId === item.claimId ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                              </button>
                             </div>
+                          </div>
 
-                            <div className="flex items-center justify-between pt-1 border-t border-slate-100">
-                              <span className="text-slate-500">Phone:</span>
-                              <div className="flex items-center gap-2">
-                                <a
-                                  href={`tel:${med.donorPhone}`}
-                                  className="font-mono font-bold text-teal-700 hover:text-teal-900 hover:underline"
-                                >
-                                  {med.donorPhone}
-                                </a>
-                                <button
-                                  type="button"
-                                  onClick={() => handleCopyPhone(med.donorPhone, item.claimId || med.id)}
-                                  className="p-1 rounded text-slate-400 hover:text-teal-700 hover:bg-teal-50 cursor-pointer"
-                                  title="Copy phone number"
-                                >
-                                  {copiedId === (item.claimId || med.id) ? (
-                                    <Check className="w-3.5 h-3.5 text-emerald-600" />
-                                  ) : (
-                                    <Copy className="w-3.5 h-3.5" />
-                                  )}
-                                </button>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center justify-between pt-1 border-t border-slate-100">
-                              <span className="text-slate-500">Pickup Area:</span>
-                              <span className="font-medium text-slate-800 text-right">{med.location}</span>
-                            </div>
-
-                            {item.prescriptionRef && (
-                              <div className="pt-1 border-t border-slate-100 text-[11px] text-slate-600">
-                                <span className="font-medium text-slate-700">Prescription / Note:</span> {item.prescriptionRef}
-                              </div>
-                            )}
+                          <div className="flex items-center justify-between pt-1 border-t border-teal-500/10">
+                            <span className="text-slate-400">Pickup Area:</span>
+                            <span className="text-white font-bold">{med.location}</span>
                           </div>
                         </div>
                       </div>
 
-                      {/* Collector Actions & Handover Security Protocol */}
-                      <div className="pt-2 space-y-2.5">
-                        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 text-xs text-amber-950 space-y-1 text-center">
-                          <p className="font-bold flex items-center justify-center gap-1.5 text-amber-900">
-                            <ShieldCheck className="w-4 h-4 text-amber-700" />
-                            <span>In-Person Handover Security Protocol</span>
-                          </p>
-                          <p className="text-[11px] text-amber-900 leading-relaxed font-medium">
-                            Show your sealed medicine inspection and give this 4-digit PIN to the donor in person so they can confirm the handover.
-                          </p>
-                        </div>
-
+                      {/* Release Claim Action */}
+                      <div className="pt-2">
                         <button
                           type="button"
                           onClick={() => releaseClaim(med.id, item.claimId)}
                           disabled={actionLoading === med.id}
-                          className="w-full py-2.5 px-4 text-xs font-bold rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 border border-slate-200 hover:border-rose-300 transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-                          title="Release this claim and restock medicine back to feed"
+                          className="w-full py-2 text-xs font-mono text-rose-300 hover:text-rose-200 bg-rose-950/40 hover:bg-rose-950/60 rounded-xl border border-rose-500/30 transition cursor-pointer"
                         >
-                          <RotateCcw className="w-3.5 h-3.5" />
-                          <span>Release Claim (Restock)</span>
+                          Release Claim (Restock to Public Feed)
                         </button>
                       </div>
-                    </div>
+                    </TiltSpotlightCard>
                   );
                 })}
               </div>
             ) : (
-              <div className="bg-white rounded-3xl border border-dashed border-slate-300 p-8 text-center space-y-3">
-                <Package className="w-8 h-8 text-slate-400 mx-auto" />
-                <div className="space-y-1">
-                  <h4 className="text-sm font-bold text-slate-800">No Pending Claims</h4>
-                  <p className="text-xs text-slate-500">
-                    You have not claimed any medications pending pickup.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={onBackToFeed}
-                  className="px-4 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold transition cursor-pointer"
-                >
-                  Browse Available Medications
-                </button>
+              <div className="bg-slate-950/70 rounded-3xl border border-dashed border-teal-500/25 p-8 text-center text-xs font-mono text-slate-400">
+                You have no pending claimed medications. Browse the Live Medicine Feed to claim needed items.
               </div>
             )}
           </div>
-
-          {/* 3. My Collection History */}
-          <div className="space-y-4 pt-2">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                  <span>My Collection History</span>
-                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-                    {myCollectionHistory.length}
-                  </span>
-                </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Record of all successfully collected and handed over medications.
-                </p>
-              </div>
-
-              {/* Action Buttons (Role-Gated) */}
-              <div className="flex items-center gap-2 self-start sm:self-auto">
-                {canExportCSV && (
-                  <button
-                    type="button"
-                    onClick={handleExportCSV}
-                    className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-teal-50 text-slate-700 hover:text-teal-900 border border-slate-200 hover:border-teal-300 text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                    title="Export collection audit log to CSV"
-                  >
-                    <Download className="w-3.5 h-3.5 text-teal-700" />
-                    <span>Export CSV</span>
-                  </button>
-                )}
-                {hasContributed && (
-                  <button
-                    type="button"
-                    onClick={() => setIsCertificateOpen(true)}
-                    className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-amber-50 text-slate-700 hover:text-amber-900 border border-slate-200 hover:border-amber-300 text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                    title="View and print official impact certificate"
-                  >
-                    <Award className="w-3.5 h-3.5 text-amber-700" />
-                    <span>Print Certificate</span>
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {myCollectionHistory.length > 0 ? (
-              <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs divide-y divide-slate-100">
-                {myCollectionHistory.map((item) => {
-                  const med = item.medication;
-                  return (
-                    <div key={item.claimId || med.id} className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="flex items-start gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 shrink-0 mt-0.5">
-                          <PackageCheck className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-bold text-slate-900 text-sm">{med.medicineName}</h4>
-                            <span className="text-[11px] font-mono font-bold px-2 py-0.2 rounded bg-teal-50 text-teal-800 border border-teal-200">
-                              {med.strength}
-                            </span>
-                            <span className="text-xs font-bold px-2 py-0.2 rounded bg-emerald-100 text-emerald-800 font-mono">
-                              {item.claimedQuantity} {item.unitName}
-                            </span>
-                          </div>
-                          {med.genericName && (
-                            <p className="text-xs text-slate-400 italic">({med.genericName})</p>
-                          )}
-                          <p className="text-xs text-slate-500 mt-0.5">
-                            Collected from <strong className="text-slate-700">{med.donorName}</strong> ({med.location})
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="shrink-0 flex items-center gap-2 self-start sm:self-auto text-xs text-emerald-800 font-semibold bg-emerald-50 px-3 py-1 rounded-xl border border-emerald-200">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Handover Safely Completed</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="bg-white rounded-3xl border border-slate-200 p-6 text-center text-xs text-slate-500">
-                No past collections on record yet.
-              </div>
-            )}
-          </div>
-
-        </div>
-      )}
-
-      {/* ============================================================= */}
-      {/* SECTION FOR LISTED MEDICATIONS & INCOMING PICKUP DESK          */}
-      {/* ============================================================= */}
-      {!isAdmin && (
-        <div className="space-y-8">
 
           {/* ============================================================= */}
-          {/* INCOMING PICKUP REQUESTS (PENDING HANDOVER)                   */}
+          {/* INCOMING PICKUP REQUESTS: DONOR'S PIN UNLOCK VAULT           */}
           {/* ============================================================= */}
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h3 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                <h3 className="font-display text-lg font-bold text-white tracking-tight flex items-center gap-2">
                   <span>Incoming Pickup Requests (Pending Handover)</span>
-                  <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
-                    incomingPickupRequests.length > 0
-                      ? 'bg-amber-100 text-amber-900 border-amber-300'
-                      : 'bg-slate-100 text-slate-600 border-slate-200'
-                  }`}>
+                  <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-400/30">
                     {incomingPickupRequests.length} Pending
                   </span>
                 </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Verify the collector&apos;s physical credentials and 4-digit PIN to securely complete handovers.
+                <p className="text-xs text-slate-400 mt-0.5 font-sans">
+                  Verify the collector&apos;s physical credentials and enter their 4-digit PIN to securely complete handovers.
                 </p>
               </div>
             </div>
@@ -1619,122 +1358,61 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                   const isClinicCollector = req.collectorRole === 'clinic_charity';
 
                   return (
-                    <div
+                    <TiltSpotlightCard
                       key={req.claimId}
-                      className="bg-white rounded-3xl border-2 border-amber-300 p-5 sm:p-6 shadow-sm space-y-4 flex flex-col justify-between"
+                      glowColor="amber"
+                      className="p-5 sm:p-6 bg-slate-900/90 border border-amber-500/30 space-y-4 flex flex-col justify-between"
                     >
                       <div className="space-y-3.5">
-                        {/* Top Bar: Hold Timer & Partial/Full Badge */}
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <span
-                            className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
-                              hold.isExpired
-                                ? 'bg-rose-100 text-rose-800 border border-rose-300'
-                                : 'bg-amber-100 text-amber-900 border border-amber-300'
-                            }`}
-                          >
-                            <Clock className="w-3 h-3 text-amber-700" />
-                            <span>{hold.label}</span>
+                        <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-amber-500/20">
+                          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-400/30">
+                            {hold.label}
                           </span>
-
-                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 border border-sky-200">
-                            {req.isPartial ? 'Partial Batch Claim' : 'Full Batch Claim'}
+                          <span className="text-[10px] font-mono text-slate-400">
+                            {req.isPartial ? 'Partial Claim' : 'Full Batch Claim'}
                           </span>
                         </div>
 
                         {/* Medicine Overview */}
                         <div>
-                          <div className="flex items-start justify-between gap-2">
-                            <h4 className="font-extrabold text-slate-900 text-base sm:text-lg">
-                              {med.medicineName}
-                            </h4>
-                            <span className="shrink-0 text-xs font-bold px-2.5 py-1 rounded-md bg-teal-100 text-teal-900 border border-teal-300 font-mono">
-                              {med.strength}
-                            </span>
-                          </div>
-                          {med.genericName && (
-                            <p className="text-xs text-slate-500 italic mt-0.5">
-                              ({med.genericName})
-                            </p>
-                          )}
-                          <p className="text-xs font-bold text-teal-800 mt-1">
-                            Claimed Quantity: {req.quantityClaimed} {req.unitName}
-                            {req.isPartial && (
-                              <span className="text-slate-500 font-normal ml-1">
-                                (batch of {req.totalBatchQuantity} {req.unitName})
-                              </span>
-                            )}
+                          <h4 className="font-display font-bold text-white text-base sm:text-lg">
+                            {med.medicineName}
+                          </h4>
+                          <p className="text-xs font-mono text-teal-300 mt-0.5">
+                            Claimed: {req.quantityClaimed} {req.unitName}
                           </p>
                         </div>
 
-                        {/* Collector Credentials Card */}
-                        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-2 text-xs">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="font-bold text-slate-800 flex items-center gap-1.5">
-                              {isClinicCollector ? (
-                                <Building2 className="w-3.5 h-3.5 text-indigo-700" />
-                              ) : (
-                                <User className="w-3.5 h-3.5 text-teal-700" />
-                              )}
-                              <span>{req.collectorName}</span>
-                            </span>
-                            <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
-                              isClinicCollector
-                                ? 'bg-indigo-100 text-indigo-800 border-indigo-200'
-                                : 'bg-teal-100 text-teal-800 border-teal-200'
-                            }`}>
-                              {isClinicCollector ? 'Rural Clinic / NGO' : 'Verified Individual'}
+                        {/* Collector Credentials Readout */}
+                        <div className="bg-slate-950/80 border border-teal-500/20 rounded-2xl p-3.5 space-y-2 text-xs font-mono text-slate-300">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-white">{req.collectorName}</span>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-teal-950 text-teal-300 border border-teal-500/30 uppercase">
+                              {isClinicCollector ? 'Clinic / NGO' : 'Individual'}
                             </span>
                           </div>
 
-                          {req.collectorPhone && (
-                            <div className="flex items-center justify-between pt-1 border-t border-slate-200">
-                              <span className="text-slate-500">Contact Phone:</span>
-                              <div className="flex items-center gap-1.5">
-                                <a
-                                  href={`tel:${req.collectorPhone}`}
-                                  className="font-mono font-bold text-teal-700 hover:text-teal-900 hover:underline"
-                                >
-                                  {req.collectorPhone}
-                                </a>
-                                <button
-                                  type="button"
-                                  onClick={() => handleCopyPhone(req.collectorPhone!, req.claimId)}
-                                  className="p-1 rounded text-slate-400 hover:text-teal-700 hover:bg-teal-50 cursor-pointer"
-                                  title="Copy phone"
-                                >
-                                  {copiedId === req.claimId ? (
-                                    <Check className="w-3.5 h-3.5 text-emerald-600" />
-                                  ) : (
-                                    <Copy className="w-3.5 h-3.5" />
-                                  )}
-                                </button>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Verified BMDC Prescription / License Details */}
+                          {/* BMDC Prescription or License Reference */}
                           {req.organizationOrRx && (
-                            <div className="pt-1.5 border-t border-slate-200 text-[11px] leading-relaxed">
-                              <span className="font-bold text-slate-700 block">
-                                {isClinicCollector ? 'Verified Clinic License:' : 'Verified BMDC Prescription:'}
+                            <div className="pt-1.5 border-t border-teal-500/10 text-[11px]">
+                              <span className="text-slate-400 block font-bold">
+                                {isClinicCollector ? 'Clinic License:' : 'BMDC Prescription:'}
                               </span>
-                              <span className="text-slate-800 font-medium font-mono">
-                                {req.organizationOrRx}
-                              </span>
+                              <span className="text-teal-200">{req.organizationOrRx}</span>
                             </div>
                           )}
                         </div>
 
-                        {/* PIN Verification Desk */}
-                        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-300 rounded-2xl p-3.5 space-y-2.5">
+                        {/* PIN Verification Vault Bar */}
+                        <div className="bg-slate-950 border border-amber-500/40 rounded-2xl p-4 space-y-2.5">
                           <label
                             htmlFor={`pin-input-${req.claimId}`}
-                            className="block text-xs font-bold text-amber-950 uppercase tracking-wider"
+                            className="block text-xs font-mono font-bold text-amber-300 uppercase tracking-wider"
                           >
-                            Enter Collector&apos;s 4-Digit PIN <span className="text-rose-500">*</span>
+                            Enter Collector&apos;s 4-Digit PIN <span className="text-rose-400">*</span>
                           </label>
-                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+
+                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
                             <input
                               id={`pin-input-${req.claimId}`}
                               type="text"
@@ -1742,331 +1420,48 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                               value={pinInputs[req.claimId] || ''}
                               onChange={(e) => handlePinChange(req.claimId, e.target.value)}
                               placeholder="4-digit PIN"
-                              className="w-full sm:w-32 px-3 py-2 text-center font-mono font-bold text-base tracking-widest rounded-xl border border-amber-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none bg-white text-slate-900"
+                              className="w-full sm:w-36 px-3 py-2 text-center font-mono font-bold text-lg tracking-[0.5em] rounded-xl border border-amber-400/40 bg-slate-900 text-teal-300 focus:outline-none focus:border-amber-400"
                             />
+
                             <button
                               type="button"
                               onClick={() => handleDonorVerifyAndCollect(med.id, req.claimId)}
                               disabled={verifyingId === req.claimId || actionLoading === med.id}
-                              className="flex-1 py-2 px-3.5 rounded-xl bg-teal-700 hover:bg-teal-800 active:bg-teal-900 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-sm"
+                              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-teal-400 to-emerald-500 text-slate-950 font-bold text-xs font-mono transition cursor-pointer hover:from-teal-300 hover:to-emerald-400 shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
                             >
-                              {verifyingId === req.claimId ? (
-                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              ) : (
-                                <CheckCircle2 className="w-3.5 h-3.5" />
-                              )}
-                              <span>Verify PIN &amp; Complete Handover</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => releaseClaim(med.id, req.claimId === med.id ? undefined : req.claimId)}
-                              disabled={actionLoading === med.id}
-                              className="py-2 px-3 rounded-xl bg-white hover:bg-rose-50 text-slate-600 hover:text-rose-700 border border-slate-200 hover:border-rose-300 text-xs font-semibold transition flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
-                              title="Release hold and restock items back to available feed"
-                            >
-                              <RotateCcw className="w-3 h-3" />
-                              <span>Release Hold</span>
+                              {verifyingId === req.claimId ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                              <span>Unlock &amp; Verify Handover</span>
                             </button>
                           </div>
 
                           {pinErrors[req.claimId] && (
-                            <p className="text-[11px] text-rose-600 font-bold flex items-center gap-1 pt-0.5">
-                              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                              <span>{pinErrors[req.claimId]}</span>
+                            <p className="text-[11px] font-mono text-rose-400">
+                              * {pinErrors[req.claimId]}
                             </p>
                           )}
                         </div>
                       </div>
-                    </div>
+                    </TiltSpotlightCard>
                   );
                 })}
               </div>
             ) : (
-              <div className="bg-slate-50 border border-dashed border-slate-300 rounded-2xl p-4.5 text-center text-xs text-slate-500">
-                No pending incoming pickup requests. When clinics or individuals claim your listed medicines, they will appear here awaiting PIN verification.
+              <div className="bg-slate-950/70 rounded-3xl border border-dashed border-teal-500/25 p-8 text-center text-xs font-mono text-slate-400">
+                No pending incoming pickup requests. When a collector claims your donation, their dispatch request will appear here.
               </div>
             )}
           </div>
 
-          {/* ============================================================= */}
-          {/* MY LISTED MEDICATIONS OVERVIEW                                */}
-          {/* ============================================================= */}
-          <div className="space-y-6 pt-4 border-t border-slate-200">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                  <span>My Listed Medications</span>
-                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 border border-teal-300">
-                    {myDonations.length}
-                  </span>
-                </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Track the status of medicines you have listed for community redistribution.
-                </p>
-              </div>
-
-            {/* Action Buttons (Role-Gated) */}
-            <div className="flex items-center gap-2 self-start sm:self-auto">
-              {canExportCSV && (
-                <button
-                  type="button"
-                  onClick={handleExportCSV}
-                  className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-teal-50 text-slate-700 hover:text-teal-900 border border-slate-200 hover:border-teal-300 text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                  title="Export donation log to CSV"
-                >
-                  <Download className="w-3.5 h-3.5 text-teal-700" />
-                  <span>Export CSV</span>
-                </button>
-              )}
-              {hasContributed && (
-                <button
-                  type="button"
-                  onClick={() => setIsCertificateOpen(true)}
-                  className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-amber-50 text-slate-700 hover:text-amber-900 border border-slate-200 hover:border-amber-300 text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                  title="View and print official impact certificate"
-                >
-                  <Award className="w-3.5 h-3.5 text-amber-700" />
-                  <span>Print Certificate</span>
-                </button>
-              )}
-            </div>
-          </div>
-
-          {myDonations.length > 0 ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-              {myDonations.map((med) => {
-                const days = mounted ? getDaysUntilExpiry(med.expiryDate) : null;
-                const urgency = days !== null ? getUrgencyLevel(days) : 'normal';
-
-                const parsed = parseQuantity(med.quantity);
-                const total = med.totalNumericQuantity ?? parsed.total;
-                const unit = med.unitName || parsed.unit;
-                const remaining =
-                  med.remainingNumericQuantity !== undefined
-                    ? med.remainingNumericQuantity
-                    : med.status === 'claimed' || med.status === 'collected'
-                    ? 0
-                    : total;
-
-                return (
-                  <div
-                    key={med.id}
-                    className="bg-white rounded-3xl border border-slate-200 p-5 sm:p-6 shadow-sm space-y-4 flex flex-col justify-between"
-                  >
-                    <div className="space-y-3">
-                      {/* Top badges */}
-                      <div className="flex items-center justify-between gap-2">
-                        <span
-                          className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
-                            urgency === 'critical'
-                              ? 'bg-rose-100 text-rose-800 border border-rose-300'
-                              : urgency === 'priority'
-                              ? 'bg-amber-100 text-amber-800 border border-amber-300'
-                              : 'bg-teal-100 text-teal-800 border border-teal-300'
-                          }`}
-                        >
-                          <Clock className="w-3 h-3" />
-                          <span>{days !== null ? `Expires in ${days}d` : med.expiryDate}</span>
-                        </span>
-
-                        {med.status === 'available' && remaining < total && (
-                          <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
-                            Split: {remaining} of {total} {unit} left
-                          </span>
-                        )}
-                        {med.status === 'available' && remaining === total && (
-                          <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-800 border border-teal-300">
-                            Available in Feed ({total} {unit})
-                          </span>
-                        )}
-                        {med.status === 'claimed' && (
-                          <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-sky-100 text-sky-800 border border-sky-300">
-                            Claimed • Awaiting Pickup
-                          </span>
-                        )}
-                        {med.status === 'collected' && (
-                          <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-                            ✓ Handed Over
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Medicine Info */}
-                      <div>
-                        <div className="flex items-start justify-between gap-2">
-                          <h4 className="font-extrabold text-slate-900 text-base sm:text-lg">
-                            {med.medicineName}
-                          </h4>
-                          <span className="shrink-0 text-xs font-bold px-2.5 py-1 rounded-md bg-teal-100 text-teal-900 border border-teal-300 font-mono">
-                            {med.strength}
-                          </span>
-                        </div>
-                        {med.genericName && (
-                          <p className="text-xs text-slate-500 italic mt-0.5">
-                            ({med.genericName})
-                          </p>
-                        )}
-                        <p className="text-xs text-slate-600 mt-1 font-medium">
-                          Total Batch: <strong>{total} {unit}</strong> (Remaining: {remaining} {unit})
-                        </p>
-                      </div>
-
-                      {/* Partial claims breakdown if split */}
-                      {med.claims && med.claims.length > 0 && (
-                        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-2.5 text-xs">
-                          <span className="font-bold text-slate-800 text-[11px] uppercase tracking-wider block">
-                            Claims Log ({med.claims.length}):
-                          </span>
-                          <div className="space-y-2">
-                            {med.claims.map((c) => {
-                              const claimPin = c.handoverPin || '4829';
-                              const hold = getPickupTimeRemaining(c.claimExpiresAt);
-
-                              if (c.status === 'collected') {
-                                return (
-                                  <div
-                                    key={c.id}
-                                    className="flex items-center justify-between text-[11px] text-slate-700 bg-white p-2.5 rounded-xl border border-slate-100"
-                                  >
-                                    <span>
-                                      <strong>{c.claimerName}</strong>: {c.claimedQuantity} {c.unitName}
-                                    </span>
-                                    <span className="px-2 py-0.5 rounded-full font-bold uppercase text-[10px] bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                      ✓ Handed Over
-                                    </span>
-                                  </div>
-                                );
-                              }
-
-                              return (
-                                <div
-                                  key={c.id}
-                                  className="p-3 bg-white rounded-xl border border-amber-200 space-y-1.5 shadow-2xs"
-                                >
-                                  <div className="flex flex-wrap items-center justify-between gap-1 text-xs">
-                                    <div>
-                                      <span className="font-bold text-slate-900">{c.claimerName}</span>
-                                      <span className="text-slate-500 ml-1.5 font-medium">({c.claimedQuantity} {c.unitName})</span>
-                                    </div>
-                                    <span
-                                      className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                        hold.isExpired
-                                          ? 'bg-rose-100 text-rose-800 border border-rose-300'
-                                          : 'bg-amber-100 text-amber-900 border border-amber-300'
-                                      }`}
-                                    >
-                                      <Clock className="w-3 h-3 text-amber-700" />
-                                      <span>{hold.label}</span>
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center justify-between text-[11px] text-amber-900 pt-1 border-t border-slate-100">
-                                    <span>⏳ Awaiting PIN handover at pickup desk</span>
-                                    <button
-                                      type="button"
-                                      onClick={() => releaseClaim(med.id, c.id)}
-                                      disabled={actionLoading === med.id}
-                                      className="text-rose-600 hover:text-rose-800 text-[10px] font-semibold flex items-center gap-1 cursor-pointer"
-                                      title="Release hold and restock items"
-                                    >
-                                      <RotateCcw className="w-3 h-3" />
-                                      <span>Restock</span>
-                                    </button>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Claim details if full legacy claimed */}
-                      {med.status === 'claimed' && (!med.claims || med.claims.length === 0) && (
-                        <div className="bg-sky-50/80 border border-sky-200 rounded-2xl p-4 space-y-3 text-xs text-sky-950">
-                          <div className="flex flex-wrap items-center justify-between gap-1">
-                            <div className="font-bold text-sky-900 flex items-center gap-1.5">
-                              <Building2 className="w-3.5 h-3.5 text-sky-700" />
-                              <span>Claimed by: {med.claimedByName}</span>
-                            </div>
-                            {(() => {
-                              const hold = getPickupTimeRemaining(med.claimExpiresAt);
-                              return (
-                                <span
-                                  className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                    hold.isExpired
-                                      ? 'bg-rose-100 text-rose-800 border border-rose-300'
-                                      : 'bg-amber-100 text-amber-900 border border-amber-300'
-                                  }`}
-                                >
-                                  <Clock className="w-3 h-3 text-amber-700" />
-                                  <span>{hold.label}</span>
-                                </span>
-                              );
-                            })()}
-                          </div>
-                          {med.prescriptionRef && (
-                            <p className="text-[11px] text-slate-600 pl-5">
-                              <strong>Ref:</strong> {med.prescriptionRef}
-                            </p>
-                          )}
-
-                          <div className="bg-white border border-sky-200 rounded-xl p-3 flex items-center justify-between text-xs text-amber-900">
-                            <span className="font-medium">
-                              ⏳ Awaiting collector in-person PIN handover at pickup desk above.
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => releaseClaim(med.id)}
-                              disabled={actionLoading === med.id}
-                              className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-700 border border-slate-200 hover:border-rose-300 text-xs font-semibold transition flex items-center gap-1 cursor-pointer"
-                              title="Release claim and restock medicine back to feed"
-                            >
-                              <RotateCcw className="w-3 h-3" />
-                              <span>Restock</span>
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      {med.status === 'collected' && (!med.claims || med.claims.length === 0) && (
-                        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3 text-xs text-emerald-900 flex items-center gap-2">
-                          <PackageCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                          <span>Handed over to <strong>{med.claimedByName}</strong></span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="bg-white rounded-3xl border border-dashed border-slate-300 p-8 text-center space-y-3">
-              <HeartHandshake className="w-8 h-8 text-slate-400 mx-auto" />
-              <div className="space-y-1">
-                <h4 className="text-sm font-bold text-slate-800">No Listed Medicines</h4>
-                <p className="text-xs text-slate-500">
-                  You have not listed any medications for rescue yet.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={openDonateModal}
-                className="px-4 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold transition cursor-pointer"
-              >
-                Donate Medicine Now
-              </button>
-            </div>
-          )}
         </div>
-      </div>
-    )}
+      )}
 
-      {/* Printable Community Healthcare Impact Certificate Modal */}
-      <ImpactCertificateModal
-        isOpen={isCertificateOpen}
-        onClose={() => setIsCertificateOpen(false)}
-        user={currentUser}
-      />
-
+      {/* Impact Certificate Modal */}
+      {isCertificateOpen && (
+        <ImpactCertificateModal
+          isOpen={isCertificateOpen}
+          onClose={() => setIsCertificateOpen(false)}
+        />
+      )}
     </div>
   );
 }

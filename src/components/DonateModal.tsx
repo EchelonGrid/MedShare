@@ -11,6 +11,7 @@ import {
   getAutocompleteSuggestions,
   AutocompleteSuggestion,
 } from '@/lib/medicine-dictionary';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
   Pill,
@@ -23,6 +24,9 @@ import {
   CheckCircle2,
   Clock,
   Sparkles,
+  Check,
+  Shield,
+  Layers,
 } from 'lucide-react';
 
 interface DonateModalProps {
@@ -56,7 +60,7 @@ export default function DonateModal({
   const [equivalentBrands, setEquivalentBrands] = useState<string[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
 
-  // 3 Mandatory Safety Checkboxes
+  // 3 Mandatory Safety Cards
   const [safety1, setSafety1] = useState(false);
   const [safety2, setSafety2] = useState(false);
   const [safety3, setSafety3] = useState(false);
@@ -118,7 +122,6 @@ export default function DonateModal({
     setSuggestions(suggs);
     setShowDropdown(suggs.length > 0);
 
-    // Auto-resolve if exact or close dictionary match
     const match = lookupMedicineByBrandOrName(val);
     if (match) {
       setGenericName(match.genericName);
@@ -139,14 +142,12 @@ export default function DonateModal({
 
   if (!isOpen || !currentUser) return null;
 
-  // Compute minDate and daysRemaining safely once mounted
   const minDate = mounted ? (() => {
     const d = new Date();
     d.setDate(d.getDate() + 1);
     return d.toISOString().split('T')[0];
   })() : undefined;
 
-  // Expiry date validation
   const daysUntilExpiry = mounted && expiryDate ? getDaysUntilExpiry(expiryDate) : null;
   const isDateInFuture = daysUntilExpiry !== null && daysUntilExpiry > 0;
   const isSafetyConfirmed = safety1 && safety2 && safety3;
@@ -186,7 +187,6 @@ export default function DonateModal({
       await fulfillMedicineRequest(prefillRequest.id, currentUser.name);
     }
 
-    // Reset fields
     setMedicineName('');
     setGenericName('');
     setStrength('');
@@ -210,196 +210,143 @@ export default function DonateModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="donate-modal-title"
-      className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4"
     >
-      {/* Click outside backdrop */}
-      <div
-        className="fixed inset-0"
-        onClick={onClose}
-        aria-hidden="true"
-      />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 12 }}
+        transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+        className="relative w-full max-w-xl max-h-[90vh] overflow-y-auto bg-slate-900/95 text-white rounded-3xl border border-teal-500/30 shadow-2xl z-10 my-6"
+      >
+        {/* Specular Top Rim */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-teal-400/40 to-transparent rounded-t-3xl" />
 
-      {/* Modal Dialog Card */}
-      <div className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden z-10 my-8">
-        
         {/* Header */}
-        <div className="bg-gradient-to-r from-teal-700 to-teal-800 text-white px-6 py-5 flex items-start justify-between">
+        <div className="p-5 sm:p-6 border-b border-teal-500/20 flex items-start justify-between sticky top-0 bg-slate-900/90 backdrop-blur-xl z-20">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center border border-white/20">
-              <Pill className="w-5 h-5 text-teal-100" />
+            <div className="w-10 h-10 rounded-xl bg-teal-500/20 border border-teal-400/30 flex items-center justify-center text-teal-300">
+              <Pill className="w-5 h-5" />
             </div>
             <div>
-              <h2 id="donate-modal-title" className="text-lg sm:text-xl font-bold tracking-tight">
+              <h2 id="donate-modal-title" className="font-display text-lg sm:text-xl font-bold tracking-tight text-white">
                 Donate Unused Medicine
               </h2>
-              <p className="text-xs text-teal-100/90 mt-0.5">
-                List sealed, unexpired medicines for rural clinics and verified individuals
+              <p className="text-xs text-teal-300/80 font-mono mt-0.5">
+                List sealed, unexpired medicines for rural clinics &amp; verified patients
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-teal-200 hover:text-white hover:bg-white/10 transition cursor-pointer"
+            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
             aria-label="Close modal"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Current Donor Notice */}
-        <div className="bg-teal-50/80 border-b border-teal-100 px-6 py-2.5 flex items-center justify-between text-xs text-teal-900">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-teal-500" />
-            <span>Listing as: <strong className="font-semibold">{currentUser.name}</strong></span>
-          </div>
-          <span className="text-[11px] font-mono font-medium px-2 py-0.5 rounded bg-teal-100 text-teal-800 uppercase">
-            {currentUser.role === 'clinic_charity' ? 'Rural Clinic / NGO' : currentUser.role === 'admin' ? 'Administrator' : 'Community Member'}
-          </span>
-        </div>
-
-        {/* Fulfilling Urgent Request Banner */}
+        {/* Prefill Request Notice */}
         {prefillRequest && (
-          <div className="bg-sky-50 border-b border-sky-200 px-6 py-3 flex items-start gap-2.5 text-xs text-sky-950 animate-in fade-in">
-            <Sparkles className="w-4 h-4 text-sky-600 shrink-0 mt-0.5" />
-            <div className="space-y-0.5">
-              <div className="font-bold text-sky-900">
-                Fulfilling Urgent Request for {prefillRequest.requesterName}
-              </div>
-              <p className="text-sky-800 leading-snug">
-                Needed: <strong>{prefillRequest.quantityNeeded}</strong> in <strong>{prefillRequest.location}</strong>. 
-                Upon submitting, this request will automatically be marked as fulfilled on the board.
-              </p>
+          <div className="mx-6 mt-4 p-3 rounded-2xl bg-teal-950/80 border border-teal-500/35 flex items-center gap-2 text-xs font-mono text-teal-200">
+            <Sparkles className="w-4 h-4 text-teal-300 shrink-0" />
+            <div>
+              Fulfilling urgent request from <strong className="text-white">{prefillRequest.requesterName}</strong> ({prefillRequest.location})
             </div>
           </div>
         )}
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-4 font-mono text-xs">
           
-          {/* Row 1: Medicine Name & Strength */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-            <div className="sm:col-span-2 relative">
-              <label htmlFor="med-name" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                Medicine Name <span className="text-rose-500">*</span>
-              </label>
-              <div className="relative">
-                <input
-                  id="med-name"
-                  type="text"
-                  required
-                  autoComplete="off"
-                  value={medicineName}
-                  onChange={(e) => handleMedicineNameChange(e.target.value)}
-                  onFocus={() => {
-                    if (suggestions.length > 0) setShowDropdown(true);
-                  }}
-                  placeholder="e.g. Napa Extend, Sergel, Amdocal"
-                  className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition"
-                />
-              </div>
-
-              {/* Autocomplete Dropdown */}
-              {showDropdown && suggestions.length > 0 && (
-                <div className="absolute top-full left-0 right-0 z-30 mt-1 bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden divide-y divide-slate-100 animate-in fade-in">
-                  <div className="p-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50 flex items-center justify-between">
-                    <span>Smart Drug Dictionary Suggestions</span>
-                    <button
-                      type="button"
-                      onClick={() => setShowDropdown(false)}
-                      className="text-slate-400 hover:text-slate-700"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                  {suggestions.map((s) => (
-                    <button
-                      key={s.name}
-                      type="button"
-                      onClick={() => handleSelectSuggestion(s)}
-                      className="w-full px-3.5 py-2.5 text-left hover:bg-teal-50/80 transition flex items-center justify-between gap-2 cursor-pointer"
-                    >
-                      <div>
-                        <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                          <span>{s.name}</span>
-                          <span className="text-[10px] font-normal text-slate-500">
-                            ({s.genericName})
-                          </span>
-                        </div>
-                        <div className="text-[10px] text-teal-700 font-medium">
-                          {s.category} • Strengths: {s.commonStrengths.join(', ')}
-                        </div>
-                      </div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-teal-100 text-teal-800 uppercase">
-                        {s.type}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label htmlFor="med-strength" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                Strength <span className="text-rose-500">*</span>
-              </label>
+          {/* Medicine Name with Autocomplete */}
+          <div className="relative space-y-1">
+            <label className="block text-slate-300 font-bold uppercase">
+              Medicine Brand Name <span className="text-rose-400">*</span>
+            </label>
+            <div className="relative">
               <input
-                id="med-strength"
                 type="text"
                 required
-                value={strength}
-                onChange={(e) => setStrength(e.target.value)}
-                placeholder="e.g. 665mg, 20mg"
-                className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition"
+                value={medicineName}
+                onChange={(e) => handleMedicineNameChange(e.target.value)}
+                placeholder="e.g. Napa Extend, Seclo, Maxpro, Ciprocin..."
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-teal-500/30 text-white placeholder-slate-500 focus:border-teal-400 outline-none"
               />
-              {/* Quick-Click Strength Pills */}
-              {commonStrengths.length > 0 && (
-                <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                  <span className="text-[10px] text-slate-500 font-semibold">Quick:</span>
-                  {commonStrengths.map((str) => (
-                    <button
-                      key={str}
-                      type="button"
-                      onClick={() => setStrength(str)}
-                      className={`text-[11px] font-mono px-2 py-0.5 rounded-md border transition cursor-pointer ${
-                        strength === str
-                          ? 'bg-teal-700 text-white border-teal-700 font-bold'
-                          : 'bg-teal-50 text-teal-800 border-teal-200 hover:bg-teal-100'
-                      }`}
-                    >
-                      {str}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
+
+            {/* Monospace Autocomplete Dropdown */}
+            {showDropdown && suggestions.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 z-30 bg-slate-950 border border-teal-500/40 rounded-xl shadow-2xl overflow-hidden divide-y divide-teal-500/15">
+                {suggestions.map((s) => (
+                  <button
+                    key={s.name}
+                    type="button"
+                    onClick={() => handleSelectSuggestion(s)}
+                    className="w-full text-left p-3 hover:bg-teal-950/70 transition flex items-center justify-between text-xs"
+                  >
+                    <div>
+                      <span className="font-bold text-white">{s.name}</span>
+                      <span className="text-teal-300/80 ml-2">({s.genericName})</span>
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-slate-900 text-teal-400 border border-teal-500/30">
+                      {s.category}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Row 2: Generic Name & Therapeutic Category */}
+          {/* Quick Strength Tags */}
+          {commonStrengths.length > 0 && (
+            <div className="space-y-1 pt-1">
+              <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-bold">
+                Quick Select Strength:
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {commonStrengths.map((str) => (
+                  <button
+                    key={str}
+                    type="button"
+                    onClick={() => setStrength(str)}
+                    className={`px-2.5 py-1 text-[11px] font-mono rounded-lg border transition cursor-pointer ${
+                      strength === str
+                        ? 'bg-teal-500 text-slate-950 border-teal-300 font-bold shadow-xs'
+                        : 'bg-slate-950 text-teal-300 border-teal-500/30 hover:border-teal-400'
+                    }`}
+                  >
+                    {str}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Generic Name & Category Row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label htmlFor="generic-name" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                Generic Drug Name <span className="text-slate-400 font-normal lowercase">(auto-resolved)</span>
+              <label className="block text-slate-300 font-bold uppercase mb-1">
+                Generic Drug Name
               </label>
               <input
-                id="generic-name"
                 type="text"
                 value={genericName}
                 onChange={(e) => setGenericName(e.target.value)}
-                placeholder="e.g. Paracetamol, Esomeprazole, Amlodipine"
-                className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition"
+                placeholder="e.g. Paracetamol"
+                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-teal-500/30 text-white placeholder-slate-500 focus:border-teal-400 outline-none"
               />
             </div>
 
             <div>
-              <label htmlFor="med-category" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                Therapeutic Category <span className="text-rose-500">*</span>
+              <label className="block text-slate-300 font-bold uppercase mb-1">
+                Therapeutic Category <span className="text-rose-400">*</span>
               </label>
               <select
-                id="med-category"
                 value={category}
                 onChange={(e) => setCategory(e.target.value as MedicineCategory)}
-                className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition bg-white"
+                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-teal-500/30 text-white focus:border-teal-400 outline-none cursor-pointer"
               >
                 {MEDICINE_CATEGORIES.map((cat) => (
                   <option key={cat} value={cat}>
@@ -410,222 +357,195 @@ export default function DonateModal({
             </div>
           </div>
 
-          {/* Equivalent Brands Helper Note */}
-          {equivalentBrands.length > 0 && (
-            <div className="bg-teal-50/80 border border-teal-200 rounded-2xl p-3 text-xs text-teal-900 flex items-start gap-2.5">
-              <Sparkles className="w-4 h-4 text-teal-700 shrink-0 mt-0.5" />
-              <div className="leading-relaxed">
-                <span className="font-bold text-teal-950">Generic Equivalence: </span>
-                <span>
-                  Shares the same active chemical (<em>{genericName}</em>) with:{' '}
-                  <strong>{equivalentBrands.slice(0, 5).join(', ')}</strong>.
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* Row 2: Quantity & Packaging */}
-          <div>
-            <label htmlFor="med-quantity" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-              Quantity &amp; Packaging <span className="text-rose-500">*</span>
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                <Package className="w-4 h-4" />
-              </div>
+          {/* Strength, Quantity & Expiry Date Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+            <div>
+              <label className="block text-slate-300 font-bold uppercase mb-1">
+                Strength <span className="text-rose-400">*</span>
+              </label>
               <input
-                id="med-quantity"
+                type="text"
+                required
+                value={strength}
+                onChange={(e) => setStrength(e.target.value)}
+                placeholder="e.g. 500mg, 665mg"
+                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-teal-500/30 text-white focus:border-teal-400 outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-slate-300 font-bold uppercase mb-1">
+                Quantity <span className="text-rose-400">*</span>
+              </label>
+              <input
                 type="text"
                 required
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
-                placeholder="e.g. 2 sealed blister strips (20 tablets) or 1 unopened bottle"
-                className="w-full pl-9 pr-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition"
+                placeholder="e.g. 20 tablets"
+                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-teal-500/30 text-white focus:border-teal-400 outline-none"
               />
             </div>
-            <p className="text-[11px] text-slate-500 mt-1">
-              Must be factory-sealed and intact. Loose tablets or opened bottles are rejected.
-            </p>
-          </div>
 
-          {/* Row 3: Expiry Date with live helper badge */}
-          <div>
-            <label htmlFor="med-expiry" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-              Expiry Date <span className="text-rose-500">*</span>
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                <Calendar className="w-4 h-4" />
-              </div>
+            <div>
+              <label className="block text-slate-300 font-bold uppercase mb-1">
+                Expiry Date <span className="text-rose-400">*</span>
+              </label>
               <input
-                id="med-expiry"
                 type="date"
                 required
                 min={minDate}
                 value={expiryDate}
                 onChange={(e) => setExpiryDate(e.target.value)}
-                className="w-full pl-9 pr-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition cursor-pointer"
+                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-teal-500/30 text-white focus:border-teal-400 outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Location & Phone Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div>
+              <label className="block text-slate-300 font-bold uppercase mb-1">
+                Pickup Location <span className="text-rose-400">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="e.g. Bogura SZMCH Annex"
+                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-teal-500/30 text-white focus:border-teal-400 outline-none"
               />
             </div>
 
-            {/* Inline validation & live urgency preview */}
-            {expiryDate && (
-              <div className="mt-2">
-                {!isDateInFuture ? (
-                  <div className="flex items-center gap-1.5 text-xs text-rose-600 font-medium">
-                    <AlertTriangle className="w-4 h-4 shrink-0" />
-                    <span>Selected date has already passed or is today. Expiry must be in the future.</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    {daysUntilExpiry !== null && (
-                      <span
-                        className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full ${
-                          getUrgencyLevel(daysUntilExpiry) === 'critical'
-                            ? 'bg-rose-100 text-rose-800 border border-rose-300'
-                            : getUrgencyLevel(daysUntilExpiry) === 'priority'
-                            ? 'bg-amber-100 text-amber-800 border border-amber-300'
-                            : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                        }`}
-                      >
-                        <Clock className="w-3.5 h-3.5" />
-                        <span>
-                          Expires in {daysUntilExpiry} {daysUntilExpiry === 1 ? 'day' : 'days'}
-                          {getUrgencyLevel(daysUntilExpiry) === 'critical' && ' • Critical Urgent Item'}
-                          {getUrgencyLevel(daysUntilExpiry) === 'priority' && ' • Priority Rescue Window'}
-                        </span>
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Row 4: Pickup Location & Contact Phone */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label htmlFor="med-location" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                Pickup Area / Location <span className="text-rose-500">*</span>
+              <label className="block text-slate-300 font-bold uppercase mb-1">
+                Pickup Phone <span className="text-rose-400">*</span>
               </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                  <MapPin className="w-4 h-4" />
-                </div>
-                <input
-                  id="med-location"
-                  type="text"
-                  required
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="e.g. North Hill Pharmacy Annex"
-                  className="w-full pl-9 pr-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition"
-                />
-              </div>
+              <input
+                type="tel"
+                required
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="e.g. +880 1711-234567"
+                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-teal-500/30 text-white focus:border-teal-400 outline-none"
+              />
+            </div>
+          </div>
+
+          {/* ========================================================= */}
+          {/* 3-POINT MANDATORY INTERACTIVE TACTILE SAFETY CARDS        */}
+          {/* ========================================================= */}
+          <div className="pt-2 space-y-2.5">
+            <div className="flex items-center gap-2 text-teal-300 font-bold uppercase tracking-wider text-[11px]">
+              <ShieldCheck className="w-4 h-4 text-teal-400" />
+              <span>3-Point Mandatory Safety Confirmation Gate</span>
             </div>
 
-            <div>
-              <label htmlFor="med-phone" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                Pickup Contact Phone <span className="text-rose-500">*</span>
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                  <Phone className="w-4 h-4" />
+            <div className="grid grid-cols-1 gap-2.5">
+              {/* Card 1 */}
+              <div
+                onClick={() => setSafety1(!safety1)}
+                className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between select-none ${
+                  safety1
+                    ? 'bg-emerald-950/70 border-emerald-500/60 text-emerald-200 shadow-[0_0_15px_rgba(16,185,129,0.15)]'
+                    : 'bg-slate-950 border-teal-500/25 text-slate-400 hover:border-teal-500/50'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-6 h-6 rounded-lg flex items-center justify-center border ${
+                      safety1 ? 'bg-emerald-500 text-slate-950 border-emerald-400' : 'bg-slate-900 border-slate-700'
+                    }`}
+                  >
+                    {safety1 && <Check className="w-4 h-4 stroke-[3]" />}
+                  </div>
+                  <div>
+                    <span className="font-bold text-white block">1. Factory Sealed Packaging Intact</span>
+                    <span className="text-[10px]">Unopened blister pack / foil seal is 100% intact.</span>
+                  </div>
                 </div>
-                <input
-                  id="med-phone"
-                  type="tel"
-                  required
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="e.g. +1 (555) 234-5678"
-                  className="w-full pl-9 pr-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition"
-                />
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900">
+                  {safety1 ? 'CONFIRMED' : 'CLICK TO CONFIRM'}
+                </span>
+              </div>
+
+              {/* Card 2 */}
+              <div
+                onClick={() => setSafety2(!safety2)}
+                className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between select-none ${
+                  safety2
+                    ? 'bg-emerald-950/70 border-emerald-500/60 text-emerald-200 shadow-[0_0_15px_rgba(16,185,129,0.15)]'
+                    : 'bg-slate-950 border-teal-500/25 text-slate-400 hover:border-teal-500/50'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-6 h-6 rounded-lg flex items-center justify-center border ${
+                      safety2 ? 'bg-emerald-500 text-slate-950 border-emerald-400' : 'bg-slate-900 border-slate-700'
+                    }`}
+                  >
+                    {safety2 && <Check className="w-4 h-4 stroke-[3]" />}
+                  </div>
+                  <div>
+                    <span className="font-bold text-white block">2. Unexpired &amp; Standard Storage</span>
+                    <span className="text-[10px]">Unexpired medication stored at normal room conditions.</span>
+                  </div>
+                </div>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900">
+                  {safety2 ? 'CONFIRMED' : 'CLICK TO CONFIRM'}
+                </span>
+              </div>
+
+              {/* Card 3 */}
+              <div
+                onClick={() => setSafety3(!safety3)}
+                className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between select-none ${
+                  safety3
+                    ? 'bg-emerald-950/70 border-emerald-500/60 text-emerald-200 shadow-[0_0_15px_rgba(16,185,129,0.15)]'
+                    : 'bg-slate-950 border-teal-500/25 text-slate-400 hover:border-teal-500/50'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-6 h-6 rounded-lg flex items-center justify-center border ${
+                      safety3 ? 'bg-emerald-500 text-slate-950 border-emerald-400' : 'bg-slate-900 border-slate-700'
+                    }`}
+                  >
+                    {safety3 && <Check className="w-4 h-4 stroke-[3]" />}
+                  </div>
+                  <div>
+                    <span className="font-bold text-white block">3. Valid Solid Formulation</span>
+                    <span className="text-[10px]">NOT opened liquid syrup or unmonitored cold-chain item.</span>
+                  </div>
+                </div>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900">
+                  {safety3 ? 'CONFIRMED' : 'CLICK TO CONFIRM'}
+                </span>
               </div>
             </div>
           </div>
 
-          {/* Mandatory Safety Confirmation Gate */}
-          <div className="bg-amber-50/80 border border-amber-200 rounded-2xl p-4 space-y-3">
-            <div className="flex items-center gap-2 text-amber-900 font-bold text-xs uppercase tracking-wider">
-              <ShieldCheck className="w-4 h-4 text-amber-700" />
-              <span>Mandatory Safety Confirmation Gate</span>
-            </div>
-            <p className="text-[11px] text-amber-800 leading-snug">
-              To protect recipient health, all 3 confirmations below must be acknowledged before this medicine can be listed:
-            </p>
-
-            <div className="space-y-2.5 pt-1">
-              <label className="flex items-start gap-2.5 text-xs text-slate-800 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={safety1}
-                  onChange={(e) => setSafety1(e.target.checked)}
-                  className="mt-0.5 rounded border-amber-400 text-teal-600 focus:ring-teal-500 cursor-pointer h-4 w-4"
-                />
-                <span className="leading-tight">
-                  I confirm this medicine is in a <strong>sealed, intact blister pack/strip</strong> and has not been opened.
-                </span>
-              </label>
-
-              <label className="flex items-start gap-2.5 text-xs text-slate-800 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={safety2}
-                  onChange={(e) => setSafety2(e.target.checked)}
-                  className="mt-0.5 rounded border-amber-400 text-teal-600 focus:ring-teal-500 cursor-pointer h-4 w-4"
-                />
-                <span className="leading-tight">
-                  I confirm this medicine is <strong>unexpired</strong> and has been kept at <strong>normal room temperature</strong>.
-                </span>
-              </label>
-
-              <label className="flex items-start gap-2.5 text-xs text-slate-800 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={safety3}
-                  onChange={(e) => setSafety3(e.target.checked)}
-                  className="mt-0.5 rounded border-amber-400 text-teal-600 focus:ring-teal-500 cursor-pointer h-4 w-4"
-                />
-                <span className="leading-tight">
-                  I confirm this is <strong>NOT an opened liquid syrup</strong> or a drug that requires refrigeration (such as insulin).
-                </span>
-              </label>
-            </div>
-
-            {!isSafetyConfirmed && touched && (
-              <p className="text-[11px] text-rose-600 font-medium pt-1">
-                * Please check all 3 safety confirmations to proceed.
-              </p>
-            )}
-          </div>
-
-          {/* Action Buttons */}
-          <div className="pt-2 flex items-center justify-end gap-3 border-t border-slate-100">
+          {/* Form Actions */}
+          <div className="pt-3 flex items-center justify-end gap-3 border-t border-teal-500/20">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer"
+              className="px-4 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition cursor-pointer"
             >
               Cancel
             </button>
-
             <button
               type="submit"
-              disabled={!isFormValid || actionLoading === 'donating'}
-              className={`px-5 py-2.5 text-xs sm:text-sm font-bold rounded-xl transition flex items-center gap-2 ${
-                isFormValid && actionLoading !== 'donating'
-                  ? 'bg-teal-700 hover:bg-teal-800 active:bg-teal-900 text-white shadow-md hover:shadow cursor-pointer'
-                  : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'
-              }`}
+              disabled={!isFormValid || actionLoading === 'adding'}
+              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-teal-400 to-emerald-500 text-slate-950 font-bold transition cursor-pointer hover:from-teal-300 hover:to-emerald-400 disabled:opacity-50 flex items-center gap-2 shadow-md"
             >
               <CheckCircle2 className="w-4 h-4" />
-              <span>{actionLoading === 'donating' ? 'Listing Medicine...' : 'List Medicine for Rescue'}</span>
+              <span>{actionLoading === 'adding' ? 'Listing...' : 'List Medicine for Rescue'}</span>
             </button>
           </div>
-
         </form>
-      </div>
+      </motion.div>
     </div>
   );
 }

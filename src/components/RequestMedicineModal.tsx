@@ -9,6 +9,7 @@ import {
   getAutocompleteSuggestions,
   AutocompleteSuggestion,
 } from '@/lib/medicine-dictionary';
+import { motion } from 'framer-motion';
 import {
   X,
   Pill,
@@ -22,6 +23,7 @@ import {
   Clock,
   Sparkles,
   Loader2,
+  Radio,
 } from 'lucide-react';
 
 interface RequestMedicineModalProps {
@@ -112,19 +114,18 @@ export default function RequestMedicineModal({
   // Verification & Role Gate
   if (!currentUser) {
     return (
-      <div
-        role="dialog"
-        aria-modal="true"
-        className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4"
-      >
-        <div className="fixed inset-0" onClick={onClose} />
-        <div className="relative w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 text-center space-y-4 shadow-2xl z-10">
-          <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700">
+      <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="relative w-full max-w-md bg-slate-900 border border-teal-500/30 rounded-3xl p-6 sm:p-8 text-center space-y-4 shadow-2xl text-white font-mono"
+        >
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-500/15 border border-amber-400/30 flex items-center justify-center text-amber-300">
             <AlertTriangle className="w-7 h-7" />
           </div>
-          <h3 className="text-lg font-bold text-slate-900">Sign In to Post Urgent Request</h3>
-          <p className="text-xs text-slate-600 leading-relaxed">
-            Only verified clinics, charities, and individual patients can post urgent medicine shortages for donor fulfillment.
+          <h3 className="font-display text-lg font-bold text-white">Sign In to Post Urgent Request</h3>
+          <p className="text-xs text-slate-300 leading-relaxed font-sans">
+            Only verified clinics, charities, and individual patients can broadcast urgent medicine shortages for donor fulfillment.
           </p>
           <div className="flex items-center justify-center gap-3 pt-2">
             <button
@@ -133,38 +134,37 @@ export default function RequestMedicineModal({
                 onClose();
                 openAuthModal('login', 'Please sign in to post an urgent medicine request.');
               }}
-              className="px-4 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold transition cursor-pointer"
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-teal-400 to-emerald-500 text-slate-950 text-xs font-bold transition cursor-pointer"
             >
               Sign In
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 text-xs font-semibold transition cursor-pointer"
+              className="px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold transition cursor-pointer"
             >
               Cancel
             </button>
           </div>
-        </div>
+        </motion.div>
       </div>
     );
   }
 
   if (!currentUser.isVerified) {
     return (
-      <div
-        role="dialog"
-        aria-modal="true"
-        className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4"
-      >
-        <div className="fixed inset-0" onClick={onClose} />
-        <div className="relative w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 text-center space-y-4 shadow-2xl z-10">
-          <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700">
+      <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="relative w-full max-w-md bg-slate-900 border border-amber-500/35 rounded-3xl p-6 sm:p-8 text-center space-y-4 shadow-2xl text-white font-mono"
+        >
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-500/15 border border-amber-400/30 flex items-center justify-center text-amber-300">
             <AlertTriangle className="w-7 h-7" />
           </div>
-          <h3 className="text-lg font-bold text-slate-900">Verification Required</h3>
-          <p className="text-xs text-slate-600 leading-relaxed">
-            To prevent misuse and protect healthcare supply integrity, collectors must verify their Government NID or Clinic License before posting public requests.
+          <h3 className="font-display text-lg font-bold text-white">Verification Required</h3>
+          <p className="text-xs text-slate-300 leading-relaxed font-sans">
+            To prevent misuse, collectors must verify their Government NID or Clinic License before broadcasting public shortage dispatches.
           </p>
           <div className="flex items-center justify-center gap-3 pt-2">
             <button
@@ -173,24 +173,23 @@ export default function RequestMedicineModal({
                 onClose();
                 openVerifyModal('Please verify your credentials to post urgent medicine requests.');
               }}
-              className="px-4 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold transition cursor-pointer"
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-400 text-slate-950 text-xs font-bold transition cursor-pointer"
             >
               Verify Account Now
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 text-xs font-semibold transition cursor-pointer"
+              className="px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold transition cursor-pointer"
             >
               Cancel
             </button>
           </div>
-        </div>
+        </motion.div>
       </div>
     );
   }
 
-  // Field validation
   const isFormValid =
     medicineName.trim().length > 0 &&
     strength.trim().length > 0 &&
@@ -203,6 +202,7 @@ export default function RequestMedicineModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setTouched(true);
+
     if (!isFormValid) return;
 
     await addMedicineRequest({
@@ -218,7 +218,7 @@ export default function RequestMedicineModal({
     });
 
     onClose();
-    onSuccess?.(`Urgent request for ${medicineName.trim()} has been posted to the board!`);
+    onSuccess?.(`Urgent request for ${medicineName} broadcasted to all community donors.`);
   };
 
   return (
@@ -226,191 +226,130 @@ export default function RequestMedicineModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="request-modal-title"
-      className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4"
     >
-      <div className="fixed inset-0" onClick={onClose} aria-hidden="true" />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 12 }}
+        transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+        className="relative w-full max-w-xl max-h-[90vh] overflow-y-auto bg-slate-900/95 text-white rounded-3xl border border-teal-500/30 shadow-2xl z-10 my-6"
+      >
+        {/* Specular Top Rim */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-teal-400/40 to-transparent rounded-t-3xl" />
 
-      <div className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden z-10 my-8">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-teal-700 via-teal-800 to-slate-900 text-white px-6 py-5 flex items-start justify-between">
+        {/* Modal Header */}
+        <div className="p-5 sm:p-6 border-b border-teal-500/20 flex items-start justify-between sticky top-0 bg-slate-900/90 backdrop-blur-xl z-20">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-teal-500/20 flex items-center justify-center border border-teal-400/30 text-teal-200">
-              <Pill className="w-5 h-5 text-teal-200" />
+            <div className="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-400/30 flex items-center justify-center text-rose-300">
+              <Radio className="w-5 h-5 text-rose-400 animate-pulse" />
             </div>
             <div>
-              <h2 id="request-modal-title" className="text-lg sm:text-xl font-bold tracking-tight">
-                Post Urgent Medicine Request
+              <h2 id="request-modal-title" className="font-display text-lg sm:text-xl font-bold tracking-tight text-white">
+                Broadcast Urgent Medicine Shortage
               </h2>
-              <p className="text-xs text-teal-100/90 mt-0.5">
-                Broadcast critical medication shortages for verified donor fulfillment
+              <p className="text-xs text-rose-300/80 font-mono mt-0.5">
+                Direct Dispatch Request • Community Donor Match
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-teal-200 hover:text-white hover:bg-white/10 transition cursor-pointer"
+            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
             aria-label="Close modal"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Requester Identity Banner */}
-        <div className="bg-teal-50/80 border-b border-teal-100 px-6 py-2.5 flex items-center justify-between text-xs text-teal-950">
-          <div className="flex items-center gap-2">
-            {currentUser.role === 'clinic_charity' ? (
-              <Building2 className="w-4 h-4 text-teal-700" />
-            ) : (
-              <User className="w-4 h-4 text-teal-700" />
-            )}
-            <span>
-              Requesting as:{' '}
-              <strong className="font-semibold text-teal-900">{currentUser.name}</strong>
-            </span>
-          </div>
-          <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-teal-100 text-teal-800 uppercase">
-            {currentUser.role === 'clinic_charity' ? 'Rural Clinic' : currentUser.role === 'admin' ? 'Administrator' : 'Individual Recipient'}
-          </span>
-        </div>
-
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
-          {/* Row 1: Medicine Name & Strength */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-            <div className="sm:col-span-2 relative">
-              <label
-                htmlFor="req-med-name"
-                className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1"
-              >
-                Medicine Name <span className="text-rose-500">*</span>
-              </label>
-              <div className="relative">
-                <input
-                  id="req-med-name"
-                  type="text"
-                  required
-                  autoComplete="off"
-                  value={medicineName}
-                  onChange={(e) => handleMedicineNameChange(e.target.value)}
-                  onFocus={() => {
-                    if (suggestions.length > 0) setShowDropdown(true);
-                  }}
-                  placeholder="e.g. Insulin Mixtard 30/70, Azithromycin, Napa"
-                  className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition"
-                />
+        <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-4 font-mono text-xs">
+          
+          {/* Medicine Name with Autocomplete */}
+          <div className="relative space-y-1">
+            <label className="block text-slate-300 font-bold uppercase">
+              Medicine Brand Name <span className="text-rose-400">*</span>
+            </label>
+            <input
+              type="text"
+              required
+              value={medicineName}
+              onChange={(e) => handleMedicineNameChange(e.target.value)}
+              placeholder="e.g. Insulin Glargine, Napa Extend, Seclo..."
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-teal-500/30 text-white placeholder-slate-500 focus:border-teal-400 outline-none"
+            />
+
+            {showDropdown && suggestions.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 z-30 bg-slate-950 border border-teal-500/40 rounded-xl shadow-2xl overflow-hidden divide-y divide-teal-500/15">
+                {suggestions.map((s) => (
+                  <button
+                    key={s.name}
+                    type="button"
+                    onClick={() => handleSelectSuggestion(s)}
+                    className="w-full text-left p-3 hover:bg-teal-950/70 transition flex items-center justify-between text-xs"
+                  >
+                    <div>
+                      <span className="font-bold text-white">{s.name}</span>
+                      <span className="text-teal-300/80 ml-2">({s.genericName})</span>
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-slate-900 text-teal-400 border border-teal-500/30">
+                      {s.category}
+                    </span>
+                  </button>
+                ))}
               </div>
-
-              {/* Autocomplete Dropdown */}
-              {showDropdown && suggestions.length > 0 && (
-                <div className="absolute top-full left-0 right-0 z-30 mt-1 bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden divide-y divide-slate-100 animate-in fade-in">
-                  <div className="p-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50 flex items-center justify-between">
-                    <span>Smart Drug Dictionary Suggestions</span>
-                    <button
-                      type="button"
-                      onClick={() => setShowDropdown(false)}
-                      className="text-slate-400 hover:text-slate-700"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                  {suggestions.map((s) => (
-                    <button
-                      key={s.name}
-                      type="button"
-                      onClick={() => handleSelectSuggestion(s)}
-                      className="w-full px-3.5 py-2.5 text-left hover:bg-teal-50/80 transition flex items-center justify-between gap-2 cursor-pointer"
-                    >
-                      <div>
-                        <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                          <span>{s.name}</span>
-                          <span className="text-[10px] font-normal text-slate-500">
-                            ({s.genericName})
-                          </span>
-                        </div>
-                        <div className="text-[10px] text-teal-700 font-medium">
-                          {s.category} • Strengths: {s.commonStrengths.join(', ')}
-                        </div>
-                      </div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-teal-100 text-teal-800 uppercase">
-                        {s.type}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label
-                htmlFor="req-strength"
-                className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1"
-              >
-                Strength <span className="text-rose-500">*</span>
-              </label>
-              <input
-                id="req-strength"
-                type="text"
-                required
-                value={strength}
-                onChange={(e) => setStrength(e.target.value)}
-                placeholder="e.g. 500mg, 100 IU/ml"
-                className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition"
-              />
-              {/* Quick-Click Strength Pills */}
-              {commonStrengths.length > 0 && (
-                <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                  <span className="text-[10px] text-slate-500 font-semibold">Quick:</span>
-                  {commonStrengths.map((str) => (
-                    <button
-                      key={str}
-                      type="button"
-                      onClick={() => setStrength(str)}
-                      className={`text-[11px] font-mono px-2 py-0.5 rounded-md border transition cursor-pointer ${
-                        strength === str
-                          ? 'bg-teal-700 text-white border-teal-700 font-bold'
-                          : 'bg-teal-50 text-teal-800 border-teal-200 hover:bg-teal-100'
-                      }`}
-                    >
-                      {str}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            )}
           </div>
 
-          {/* Generic Drug Name & Therapeutic Category */}
+          {/* Quick Strengths */}
+          {commonStrengths.length > 0 && (
+            <div className="space-y-1 pt-1">
+              <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-bold">
+                Quick Select Strength:
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {commonStrengths.map((str) => (
+                  <button
+                    key={str}
+                    type="button"
+                    onClick={() => setStrength(str)}
+                    className={`px-2.5 py-1 text-[11px] rounded-lg border transition cursor-pointer ${
+                      strength === str
+                        ? 'bg-rose-500 text-white border-rose-400 font-bold'
+                        : 'bg-slate-950 text-teal-300 border-teal-500/30'
+                    }`}
+                  >
+                    {str}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Generic Name & Category */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label
-                htmlFor="req-generic"
-                className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1"
-              >
-                Generic Drug Name <span className="text-slate-400 font-normal lowercase">(auto-resolved)</span>
+              <label className="block text-slate-300 font-bold uppercase mb-1">
+                Generic Drug Name
               </label>
               <input
-                id="req-generic"
                 type="text"
                 value={genericName}
                 onChange={(e) => setGenericName(e.target.value)}
-                placeholder="e.g. Biphasic Isophane Insulin, Azithromycin Dihydrate"
-                className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition"
+                placeholder="e.g. Paracetamol"
+                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-teal-500/30 text-white focus:border-teal-400 outline-none"
               />
             </div>
 
             <div>
-              <label
-                htmlFor="req-category"
-                className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1"
-              >
-                Therapeutic Category <span className="text-rose-500">*</span>
+              <label className="block text-slate-300 font-bold uppercase mb-1">
+                Therapeutic Category <span className="text-rose-400">*</span>
               </label>
               <select
-                id="req-category"
                 value={category}
                 onChange={(e) => setCategory(e.target.value as MedicineCategory)}
-                className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition bg-white"
+                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-teal-500/30 text-white focus:border-teal-400 outline-none cursor-pointer"
               >
                 {MEDICINE_CATEGORIES.map((cat) => (
                   <option key={cat} value={cat}>
@@ -421,56 +360,48 @@ export default function RequestMedicineModal({
             </div>
           </div>
 
-          {/* Equivalent Brands Helper Note */}
-          {equivalentBrands.length > 0 && (
-            <div className="bg-teal-50/80 border border-teal-200 rounded-2xl p-3 text-xs text-teal-900 flex items-start gap-2.5">
-              <Sparkles className="w-4 h-4 text-teal-700 shrink-0 mt-0.5" />
-              <div className="leading-relaxed">
-                <span className="font-bold text-teal-950">Generic Equivalence: </span>
-                <span>
-                  Accepts equivalent brands sharing active chemical (<em>{genericName}</em>):{' '}
-                  <strong>{equivalentBrands.slice(0, 5).join(', ')}</strong>.
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* Row 2: Quantity Needed & Urgency */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          {/* Strength, Quantity Needed & Urgency Level */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
             <div>
-              <label
-                htmlFor="req-quantity"
-                className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1"
-              >
-                Quantity Needed <span className="text-rose-500">*</span>
+              <label className="block text-slate-300 font-bold uppercase mb-1">
+                Strength <span className="text-rose-400">*</span>
               </label>
               <input
-                id="req-quantity"
                 type="text"
                 required
-                value={quantityNeeded}
-                onChange={(e) => setQuantityNeeded(e.target.value)}
-                placeholder="e.g. 4 strips (24 tablets) or 3 vials"
-                className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition"
+                value={strength}
+                onChange={(e) => setStrength(e.target.value)}
+                placeholder="e.g. 500mg, 100IU"
+                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-teal-500/30 text-white focus:border-teal-400 outline-none"
               />
             </div>
 
             <div>
-              <label
-                htmlFor="req-urgency"
-                className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1"
-              >
-                Urgency Level <span className="text-rose-500">*</span>
+              <label className="block text-slate-300 font-bold uppercase mb-1">
+                Quantity Needed <span className="text-rose-400">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={quantityNeeded}
+                onChange={(e) => setQuantityNeeded(e.target.value)}
+                placeholder="e.g. 30 tablets, 2 vials"
+                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-teal-500/30 text-white focus:border-teal-400 outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-slate-300 font-bold uppercase mb-1">
+                Urgency Level <span className="text-rose-400">*</span>
               </label>
               <select
-                id="req-urgency"
                 value={urgency}
                 onChange={(e) => setUrgency(e.target.value as RequestUrgency)}
-                className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition bg-white"
+                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-teal-500/30 text-white focus:border-teal-400 outline-none cursor-pointer"
               >
-                <option value="critical">🚨 Critical - Needed within 48h</option>
-                <option value="high">⚠️ High - Needed this week</option>
-                <option value="routine">📋 Routine - Clinic Stock Refill</option>
+                <option value="critical">🚨 Critical (Within 48h)</option>
+                <option value="high">🟠 High Priority (This week)</option>
+                <option value="routine">🔵 Routine Stock Refill</option>
               </select>
             </div>
           </div>
@@ -478,126 +409,82 @@ export default function RequestMedicineModal({
           {/* Location & Contact Phone */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label
-                htmlFor="req-loc"
-                className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1"
-              >
-                Delivery / Pickup Area <span className="text-rose-500">*</span>
+              <label className="block text-slate-300 font-bold uppercase mb-1">
+                Requester Location <span className="text-rose-400">*</span>
               </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                  <MapPin className="w-4 h-4" />
-                </div>
-                <input
-                  id="req-loc"
-                  type="text"
-                  required
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="e.g. Jaleswaritola, Bogura"
-                  className="w-full pl-9 pr-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition"
-                />
-              </div>
+              <input
+                type="text"
+                required
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="e.g. Bogura SZMCH Area"
+                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-teal-500/30 text-white focus:border-teal-400 outline-none"
+              />
             </div>
 
             <div>
-              <label
-                htmlFor="req-phone"
-                className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1"
-              >
-                Direct Contact Phone <span className="text-rose-500">*</span>
+              <label className="block text-slate-300 font-bold uppercase mb-1">
+                Contact Phone <span className="text-rose-400">*</span>
               </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                  <Phone className="w-4 h-4" />
-                </div>
-                <input
-                  id="req-phone"
-                  type="tel"
-                  required
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="e.g. +880 1712-000000"
-                  className="w-full pl-9 pr-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition font-mono"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Clinical Reason or Prescription Reference */}
-          <div>
-            <label
-              htmlFor="req-reason"
-              className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1"
-            >
-              Clinical Reason / Prescription Reference <span className="text-rose-500">*</span>
-            </label>
-            <div className="relative">
-              <textarea
-                id="req-reason"
-                required
-                rows={3}
-                value={reasonOrPrescription}
-                onChange={(e) => setReasonOrPrescription(e.target.value)}
-                placeholder={
-                  currentUser.role === 'clinic_charity'
-                    ? 'e.g. Free rural clinic stockout: 12 patients waiting for urgent antibiotic replenishment.'
-                    : 'e.g. Dr. A. Rahman Rx #PB-2841 - Advised for 14-day post-surgery recovery course.'
-                }
-                className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition"
-              />
-            </div>
-          </div>
-
-          {/* Safety & Authenticity Declaration */}
-          <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-4 space-y-2">
-            <label className="flex items-start gap-2.5 text-xs text-slate-800 cursor-pointer select-none">
               <input
-                type="checkbox"
-                checked={declaration}
-                onChange={(e) => setDeclaration(e.target.checked)}
-                className="mt-0.5 rounded border-amber-400 text-teal-600 focus:ring-teal-500 cursor-pointer h-4 w-4"
+                type="tel"
+                required
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+880 1711-234567"
+                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-teal-500/30 text-white focus:border-teal-400 outline-none"
               />
-              <span className="leading-relaxed">
-                I declare that this medicine request represents a genuine clinical shortage or medical necessity, and I will physically inspect the sealed packaging and expiry date upon collection.
-              </span>
-            </label>
-            {!declaration && touched && (
-              <p className="text-[11px] text-rose-600 font-medium pl-6">
-                * Please check the declaration to broadcast this request.
-              </p>
-            )}
+            </div>
           </div>
+
+          {/* Clinical Reason or Rx Note */}
+          <div className="space-y-1">
+            <label className="block text-slate-300 font-bold uppercase">
+              Clinical Need / Rx Reference <span className="text-rose-400">*</span>
+            </label>
+            <textarea
+              required
+              rows={2}
+              value={reasonOrPrescription}
+              onChange={(e) => setReasonOrPrescription(e.target.value)}
+              placeholder="e.g. Critical stockout for ICU patient with BMDC verified Rx; or rural clinic supply exhaustion."
+              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-teal-500/30 text-white focus:border-teal-400 outline-none font-sans text-xs"
+            />
+          </div>
+
+          {/* Declaration */}
+          <label className="flex items-start gap-2.5 pt-1 text-slate-300 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={declaration}
+              onChange={(e) => setDeclaration(e.target.checked)}
+              className="mt-0.5 rounded border-teal-500 text-teal-500 focus:ring-0 cursor-pointer h-4 w-4"
+            />
+            <span className="leading-snug font-sans">
+              I certify this is an authentic medical necessity and all accepted donations will be inspected in person.
+            </span>
+          </label>
 
           {/* Action Buttons */}
-          <div className="pt-2 flex items-center justify-end gap-3 border-t border-slate-100">
+          <div className="pt-3 flex items-center justify-end gap-3 border-t border-teal-500/20">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer"
+              className="px-4 py-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition cursor-pointer"
             >
               Cancel
             </button>
-
             <button
               type="submit"
-              disabled={!isFormValid || actionLoading === 'requesting'}
-              className={`px-5 py-2.5 text-xs sm:text-sm font-bold rounded-xl transition flex items-center gap-2 ${
-                isFormValid && actionLoading !== 'requesting'
-                  ? 'bg-teal-700 hover:bg-teal-800 active:bg-teal-900 text-white shadow-md hover:shadow cursor-pointer'
-                  : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'
-              }`}
+              disabled={!isFormValid || actionLoading === 'adding_request'}
+              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 via-rose-600 to-amber-600 text-white font-bold transition cursor-pointer hover:opacity-90 disabled:opacity-50 flex items-center gap-2 shadow-md"
             >
-              {actionLoading === 'requesting' ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <CheckCircle2 className="w-4 h-4" />
-              )}
-              <span>{actionLoading === 'requesting' ? 'Posting Request...' : 'Broadcast Urgent Request'}</span>
+              <Radio className="w-4 h-4" />
+              <span>{actionLoading === 'adding_request' ? 'Broadcasting...' : 'Broadcast Shortage Dispatch'}</span>
             </button>
           </div>
         </form>
-      </div>
+      </motion.div>
     </div>
   );
 }

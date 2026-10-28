@@ -5,6 +5,7 @@ import { Medication } from '@/types/medshare';
 import { useMedShare } from '@/context/MedShareContext';
 import { getDaysUntilExpiry, getUrgencyLevel, parseQuantity } from '@/lib/seed';
 import { useIsMounted } from '@/lib/useIsMounted';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
   Pill,
@@ -23,6 +24,9 @@ import {
   KeyRound,
   Clock,
   Stethoscope,
+  Minus,
+  Plus,
+  Sparkles,
 } from 'lucide-react';
 
 export function validateBmdcNumber(value: string): boolean {
@@ -77,7 +81,7 @@ export default function ClaimModal({
   const [copiedPhone, setCopiedPhone] = useState(false);
   const [touched, setTouched] = useState(false);
 
-  // Structured BMDC Doctor's Prescription Form State (For verified individuals)
+  // Structured BMDC Doctor's Prescription Form State
   const [doctorName, setDoctorName] = useState('');
   const [bmdcNumber, setBmdcNumber] = useState('');
   const [hospitalName, setHospitalName] = useState('');
@@ -158,9 +162,11 @@ export default function ClaimModal({
   const isIndividualRxValid =
     isDoctorNameValid && isBmdcValid && isHospitalValid && isDateValid && isDosageValid;
 
-  const isPrescriptionValid = !isIndividual || isIndividualRxValid;
-  const isClaimAmountValid = claimAmount > 0 && claimAmount <= remainingQty;
-  const isFormValid = isPrescriptionValid && isClaimAmountValid && inspectionConfirmed;
+  const isFormValid =
+    inspectionConfirmed &&
+    claimAmount > 0 &&
+    claimAmount <= remainingQty &&
+    (isClinic ? true : isIndividualRxValid);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -168,17 +174,20 @@ export default function ClaimModal({
 
     if (!isFormValid) return;
 
-    const refString = isIndividual
-      ? `Rx: ${doctorName.trim()} (BMDC: ${bmdcNumber.trim().toUpperCase()}, ${hospitalName.trim()}) • Issued: ${issueDate} • Dosage: ${dosageSchedule}`
-      : pickupNote.trim()
-      ? `Pickup Note: ${pickupNote.trim()}`
-      : undefined;
+    let prescriptionRef = '';
+    if (isIndividual) {
+      prescriptionRef = `Rx: ${doctorName.trim()} (BMDC: ${bmdcNumber.trim().toUpperCase()}, ${hospitalName.trim()}) • Issued: ${issueDate} • Dosage: ${dosageSchedule}`;
+    } else if (isClinic) {
+      prescriptionRef = `${currentUser.organizationName || currentUser.name} (${currentUser.registrationOrNid || 'Verified Clinic'})`;
+    } else if (pickupNote.trim()) {
+      prescriptionRef = `Pickup Note: ${pickupNote.trim()}`;
+    }
 
-    const res = await claimMedication(medication.id, refString, claimAmount);
+    const res = await claimMedication(medication.id, prescriptionRef, claimAmount);
     if (res && res.pin) {
       setAssignedPin(res.pin);
+      setIsSubmitted(true);
     }
-    setIsSubmitted(true);
   };
 
   const handleCopyPhone = () => {
@@ -189,135 +198,100 @@ export default function ClaimModal({
     }
   };
 
-  const handleDoneAndSwitch = () => {
-    onSuccess(`"${medication.medicineName}" successfully claimed! Donor contact is revealed below.`);
-    onViewClaimed?.(medication.id);
-    onClose();
-  };
+  const splitPercentage = remainingQty > 0 ? (claimAmount / remainingQty) * 100 : 100;
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="claim-modal-title"
-      className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-150"
-    >
-      {/* Click outside backdrop */}
-      <div className="fixed inset-0" onClick={handleModalClose} aria-hidden="true" />
+    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 12 }}
+        transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+        className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border border-teal-500/30 bg-slate-900/95 text-white shadow-2xl space-y-0"
+      >
+        {/* Specular Top Rim */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-teal-400/40 to-transparent rounded-t-3xl" />
 
-      {/* Modal Dialog Card */}
-      <div className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden z-10 my-8">
-        
         {/* Modal Header */}
-        <div className="bg-gradient-to-r from-teal-700 via-teal-800 to-slate-900 text-white px-6 py-5 flex items-start justify-between">
+        <div className="p-5 sm:p-6 border-b border-teal-500/20 flex items-center justify-between sticky top-0 bg-slate-900/90 backdrop-blur-xl z-20">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-teal-500/20 flex items-center justify-center border border-teal-400/30 text-teal-200">
-              <Pill className="w-5 h-5 text-teal-200" />
+            <div className="w-10 h-10 rounded-xl bg-teal-500/20 border border-teal-400/30 flex items-center justify-center text-teal-300">
+              <Pill className="w-5 h-5" />
             </div>
             <div>
-              <h2 id="claim-modal-title" className="text-lg sm:text-xl font-bold tracking-tight">
-                {isSubmitted ? 'Medication Claimed!' : 'Claim Unused Medicine'}
-              </h2>
-              <p className="text-xs text-teal-100/90 mt-0.5">
-                {isSubmitted
-                  ? 'Coordinate pickup directly with the donor'
-                  : 'Reserve sealed surplus medication for healthcare distribution'}
+              <h3 className="font-display text-lg sm:text-xl font-extrabold text-white">
+                {isSubmitted ? 'Medicine Claim Reserved' : 'Claim Medication'}
+              </h3>
+              <p className="text-xs text-teal-300/80 font-mono">
+                {isSubmitted ? 'Dispatch Handover Authorization Ticket' : 'Verified Clinical Handover Protocol'}
               </p>
             </div>
           </div>
+
           <button
             type="button"
             onClick={handleModalClose}
-            className="p-1.5 rounded-lg text-teal-200 hover:text-white hover:bg-white/10 transition cursor-pointer"
-            aria-label="Close claim modal"
+            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+            title="Close"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
+        {/* Modal Body */}
         {!isSubmitted ? (
-          /* ========================================================== */
-          /* 1. Claim Form Screen                                       */
-          /* ========================================================== */
-          <form onSubmit={handleSubmit} className="p-6 space-y-5">
-            
-            {/* Medicine Summary Box */}
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4.5 space-y-3">
+          <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-5">
+            {/* Medication Summary Strip */}
+            <div className="bg-slate-950/70 border border-teal-500/20 rounded-2xl p-4 space-y-2">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h3 className="font-extrabold text-slate-900 text-base leading-tight">
+                  <h4 className="font-display font-extrabold text-white text-base sm:text-lg">
                     {medication.medicineName}
-                  </h3>
+                  </h4>
                   {medication.genericName && (
-                    <p className="text-xs text-slate-500 italic mt-0.5">
+                    <p className="text-xs text-teal-300/85 italic font-sans">
                       ({medication.genericName})
                     </p>
                   )}
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs font-bold px-2 py-0.5 rounded bg-teal-100 text-teal-900 font-mono">
-                      {medication.strength}
-                    </span>
-                    <span className="text-xs text-slate-600 font-medium">
-                      {medication.quantity}
-                    </span>
-                  </div>
                 </div>
-
-                {/* Expiry urgency pill */}
-                <div className="shrink-0 text-right">
-                  <span
-                    className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full ${
-                      urgency === 'critical'
-                        ? 'bg-rose-100 text-rose-800 border border-rose-300'
-                        : urgency === 'priority'
-                        ? 'bg-amber-100 text-amber-800 border border-amber-300'
-                        : 'bg-teal-100 text-teal-800 border border-teal-300'
-                    }`}
-                  >
-                    <Calendar className="w-3 h-3" />
-                    <span>
-                      {daysRemaining !== null ? `Expires in ${daysRemaining}d` : medication.expiryDate}
-                    </span>
-                  </span>
-                </div>
+                <span className="shrink-0 text-xs font-mono font-bold px-2.5 py-1 rounded-md bg-slate-900 text-teal-300 border border-teal-500/35">
+                  {medication.strength}
+                </span>
               </div>
 
-              {/* Donor & Location Details */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-slate-200/70 text-xs text-slate-600">
-                <div className="flex items-center gap-2 truncate">
-                  <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                  <span className="truncate">Pickup: <strong className="text-slate-800 font-medium">{medication.location}</strong></span>
-                </div>
-                <div className="flex items-center gap-2 truncate">
-                  <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                  <span className="truncate">Donor: <span className="text-slate-800 font-medium">{medication.donorName}</span></span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1.5 text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                <span>Verified donor listing: sealed packaging, factory unexpired.</span>
+              <div className="flex flex-wrap items-center gap-3 text-xs font-mono text-slate-300 pt-1 border-t border-teal-500/10">
+                <span className="flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5 text-teal-400" />
+                  <span>Expiry: {medication.expiryDate}</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 text-teal-400" />
+                  <span>{medication.location}</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <User className="w-3.5 h-3.5 text-teal-400" />
+                  <span>Donor: {medication.donorName}</span>
+                </span>
               </div>
             </div>
 
-            {/* Partial Claim Quantity Selector (When remainingQty > 1) */}
-            {remainingQty > 1 ? (
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-4.5 space-y-3">
+            {/* ========================================================= */}
+            {/* INTERACTIVE QUANTITY SPLIT VISUALIZER                     */}
+            {/* ========================================================= */}
+            {remainingQty > 1 && (
+              <div className="bg-slate-950/80 border border-teal-500/25 rounded-2xl p-4 sm:p-5 space-y-3.5">
                 <div className="flex items-center justify-between">
-                  <label
-                    htmlFor="claim-quantity"
-                    className="block text-xs font-bold text-slate-700 uppercase tracking-wider"
-                  >
-                    Quantity to Claim <span className="text-rose-500">*</span>
+                  <label className="block text-xs font-mono font-bold text-teal-300 uppercase tracking-wider">
+                    Quantity to Claim <span className="text-rose-400">*</span>
                   </label>
-                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-800 border border-teal-200 font-mono">
+                  <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-teal-950 text-teal-300 border border-teal-500/30">
                     Max: {remainingQty} {unitName}
                   </span>
                 </div>
 
-                {/* Slider + Numeric Input Row */}
-                <div className="space-y-2.5">
-                  <div className="flex items-center gap-3.5">
+                {/* Range Slider + Stepper Controls */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
                     <input
                       type="range"
                       min={1}
@@ -325,357 +299,220 @@ export default function ClaimModal({
                       step={1}
                       value={claimAmount}
                       onChange={(e) => setClaimAmount(parseInt(e.target.value, 10) || 1)}
-                      className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-teal-700"
+                      className="w-full h-2.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-teal-400"
                     />
-                    <div className="flex items-center gap-1.5 shrink-0">
+
+                    {/* Numeric Stepper Input */}
+                    <div className="flex items-center gap-1 shrink-0 bg-slate-900 border border-teal-500/30 rounded-xl p-1">
+                      <button
+                        type="button"
+                        onClick={() => setClaimAmount((prev) => Math.max(1, prev - 1))}
+                        className="w-6 h-6 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-teal-300 transition"
+                      >
+                        <Minus className="w-3 h-3" />
+                      </button>
                       <input
-                        id="claim-quantity"
                         type="number"
                         min={1}
                         max={remainingQty}
                         value={claimAmount}
                         onChange={(e) => {
                           const val = parseInt(e.target.value, 10);
-                          if (!isNaN(val)) {
-                            setClaimAmount(Math.max(1, Math.min(remainingQty, val)));
-                          }
+                          if (!isNaN(val)) setClaimAmount(Math.max(1, Math.min(remainingQty, val)));
                         }}
-                        className="w-16 px-2 py-1 text-center font-bold text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none bg-white font-mono"
+                        className="w-12 text-center font-mono font-bold text-sm bg-transparent text-white outline-none"
                       />
-                      <span className="text-xs text-slate-600 font-medium">{unitName}</span>
+                      <button
+                        type="button"
+                        onClick={() => setClaimAmount((prev) => Math.min(remainingQty, prev + 1))}
+                        className="w-6 h-6 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-teal-300 transition"
+                      >
+                        <Plus className="w-3 h-3" />
+                      </button>
                     </div>
                   </div>
 
-                  {/* Quick Preset Buttons */}
-                  <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                    <span className="text-[11px] text-slate-500 font-medium">Quick select:</span>
-                    <button
-                      type="button"
-                      onClick={() => setClaimAmount(1)}
-                      className={`text-xs px-2.5 py-1 rounded-lg border transition cursor-pointer font-medium ${
-                        claimAmount === 1
-                          ? 'bg-teal-700 text-white border-teal-700 font-bold'
-                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
-                      }`}
-                    >
-                      1 unit
-                    </button>
-                    {remainingQty >= 4 && (
-                      <button
-                        type="button"
-                        onClick={() => setClaimAmount(Math.floor(remainingQty / 2))}
-                        className={`text-xs px-2.5 py-1 rounded-lg border transition cursor-pointer font-medium ${
-                          claimAmount === Math.floor(remainingQty / 2)
-                            ? 'bg-teal-700 text-white border-teal-700 font-bold'
-                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
-                        }`}
-                      >
-                        Half ({Math.floor(remainingQty / 2)})
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setClaimAmount(remainingQty)}
-                      className={`text-xs px-2.5 py-1 rounded-lg border transition cursor-pointer font-medium ${
-                        claimAmount === remainingQty
-                          ? 'bg-teal-700 text-white border-teal-700 font-bold'
-                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
-                      }`}
-                    >
-                      All ({remainingQty})
-                    </button>
-                  </div>
-
-                  {/* Live Split Preview Notice */}
-                  <div className="bg-teal-50/90 border border-teal-200 rounded-xl p-3 text-xs text-teal-950 flex items-start gap-2.5">
-                    <Package className="w-4 h-4 text-teal-700 shrink-0 mt-0.5" />
-                    <div className="leading-relaxed">
-                      <span>
-                        You are claiming <strong>{claimAmount} {unitName}</strong>.{' '}
+                  {/* Dual-Color Split Bar Visualizer */}
+                  <div className="space-y-1">
+                    <div className="h-3 w-full rounded-full bg-slate-800 overflow-hidden flex border border-slate-700/60">
+                      <div
+                        style={{ width: `${splitPercentage}%` }}
+                        className="h-full bg-gradient-to-r from-teal-400 to-emerald-500 transition-all duration-300"
+                      />
+                      <div
+                        style={{ width: `${100 - splitPercentage}%` }}
+                        className="h-full bg-slate-800/80 transition-all duration-300"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
+                      <span className="text-teal-300 font-bold">
+                        Claiming: {claimAmount} {unitName}
                       </span>
-                      {remainingQty - claimAmount > 0 ? (
-                        <span className="text-teal-800">
-                          <strong>{remainingQty - claimAmount} {unitName}</strong> will remain available on the community feed for other clinics or patients.
-                        </span>
-                      ) : (
-                        <span className="text-teal-800">
-                          You are claiming the entire remaining batch of this medication.
-                        </span>
-                      )}
+                      <span>
+                        Remaining for Community: {remainingQty - claimAmount} {unitName}
+                      </span>
                     </div>
                   </div>
                 </div>
               </div>
-            ) : null}
+            )}
 
-            {/* Role-Specific Claim Requirements */}
+            {/* ========================================================= */}
+            {/* DIGITAL BMDC PRESCRIPTION PAD (FOR INDIVIDUAL RECIPIENTS) */}
+            {/* ========================================================= */}
             {isIndividual ? (
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-4">
-                <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+              <div className="bg-slate-950/90 border-l-4 border-teal-500 rounded-2xl p-5 border border-teal-500/25 shadow-inner space-y-4 font-mono text-xs">
+                <div className="flex items-center justify-between pb-2 border-b border-teal-500/20">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-teal-100 text-teal-700 flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-lg bg-teal-500/20 text-teal-300 flex items-center justify-center">
                       <Stethoscope className="w-4 h-4" />
                     </div>
                     <div>
-                      <h4 className="text-xs sm:text-sm font-bold text-slate-900">
-                        Doctor&apos;s Prescription (BMDC Verified)
+                      <h4 className="font-display text-sm font-bold text-white">
+                        Digital BMDC Prescription Pad
                       </h4>
-                      <p className="text-[11px] text-slate-500">
-                        Required for individual prescription-only community safety
+                      <p className="text-[10px] text-teal-300/80">
+                        Bangladesh Medical &amp; Dental Council Rx Verification
                       </p>
                     </div>
                   </div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 border border-teal-200">
-                    Mandatory
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-950 text-teal-300 border border-teal-500/30 uppercase">
+                    Mandatory Safety
                   </span>
                 </div>
 
-                {/* Field 1: Doctor's Full Name */}
+                {/* Doctor Name */}
                 <div className="space-y-1">
-                  <label
-                    htmlFor="rx-doctor-name"
-                    className="block text-xs font-bold text-slate-700 uppercase tracking-wider"
-                  >
-                    Doctor&apos;s Full Name <span className="text-rose-500">*</span>
+                  <label className="block text-slate-300 font-bold uppercase">
+                    Doctor&apos;s Full Name <span className="text-rose-400">*</span>
                   </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                      <User className="w-4 h-4" />
-                    </div>
-                    <input
-                      id="rx-doctor-name"
-                      type="text"
-                      required
-                      value={doctorName}
-                      onChange={(e) => setDoctorName(e.target.value)}
-                      placeholder="e.g. Dr. Mahmudul Hasan"
-                      className={`w-full pl-9 pr-3.5 py-2 text-sm rounded-xl border outline-none transition bg-white ${
-                        touched && !isDoctorNameValid
-                          ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-100'
-                          : 'border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100'
-                      }`}
-                    />
-                  </div>
-                  {touched && !isDoctorNameValid && (
-                    <p className="text-[11px] text-rose-600 font-medium">
-                      * Doctor name must be at least 5 characters.
-                    </p>
-                  )}
+                  <input
+                    type="text"
+                    required
+                    value={doctorName}
+                    onChange={(e) => setDoctorName(e.target.value)}
+                    placeholder="e.g. Dr. Mahmudul Hasan"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-teal-500/30 text-white focus:border-teal-400 outline-none"
+                  />
                 </div>
 
-                {/* Field 2: BMDC Registration Number */}
+                {/* BMDC Registration with Live Regex Indicator */}
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <label
-                      htmlFor="rx-bmdc"
-                      className="block text-xs font-bold text-slate-700 uppercase tracking-wider"
-                    >
-                      BMDC Registration Number <span className="text-rose-500">*</span>
+                    <label className="block text-slate-300 font-bold uppercase">
+                      BMDC Registration Number <span className="text-rose-400">*</span>
                     </label>
-                    <span className="text-[11px] text-slate-500 font-mono">Format: A-XXXXX</span>
+                    {isBmdcValid ? (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/40">
+                        ✓ Valid BMDC Format
+                      </span>
+                    ) : bmdcNumber.length > 0 ? (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/40">
+                        Expected A-XXXXX
+                      </span>
+                    ) : null}
                   </div>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                      <FileText className="w-4 h-4" />
-                    </div>
-                    <input
-                      id="rx-bmdc"
-                      type="text"
-                      required
-                      value={bmdcNumber}
-                      onChange={(e) => setBmdcNumber(e.target.value.toUpperCase())}
-                      placeholder="e.g. A-45892"
-                      className={`w-full pl-9 pr-3.5 py-2 text-sm rounded-xl border outline-none transition font-mono uppercase bg-white ${
-                        touched && !isBmdcValid
-                          ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-100'
-                          : 'border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100'
-                      }`}
-                    />
-                  </div>
-                  <p className="text-[11px] text-slate-500">
-                    Format: A-XXXXX (4 to 6 digits as printed on the prescription pad)
-                  </p>
-                  {touched && !isBmdcValid && (
-                    <p className="text-[11px] text-rose-600 font-medium">
-                      * Please enter a valid BMDC registration number (e.g., A-45892 or A45892).
-                    </p>
-                  )}
+                  <input
+                    type="text"
+                    required
+                    value={bmdcNumber}
+                    onChange={(e) => setBmdcNumber(e.target.value.toUpperCase())}
+                    placeholder="e.g. A-45892"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-teal-500/30 text-white font-mono uppercase focus:border-teal-400 outline-none"
+                  />
                 </div>
 
-                {/* Field 3: Hospital / Chamber Name */}
-                <div className="space-y-1">
-                  <label
-                    htmlFor="rx-hospital"
-                    className="block text-xs font-bold text-slate-700 uppercase tracking-wider"
-                  >
-                    Hospital / Chamber Name <span className="text-rose-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                      <Building2 className="w-4 h-4" />
-                    </div>
+                {/* Hospital & Prescription Date Row */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-300 font-bold uppercase mb-1">
+                      Hospital / Clinic Chamber <span className="text-rose-400">*</span>
+                    </label>
                     <input
-                      id="rx-hospital"
                       type="text"
                       required
                       value={hospitalName}
                       onChange={(e) => setHospitalName(e.target.value)}
-                      placeholder="e.g. SZMC Hospital, Bogura"
-                      className={`w-full pl-9 pr-3.5 py-2 text-sm rounded-xl border outline-none transition bg-white ${
-                        touched && !isHospitalValid
-                          ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-100'
-                          : 'border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100'
-                      }`}
+                      placeholder="e.g. SZMCH Bogura"
+                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-teal-500/30 text-white focus:border-teal-400 outline-none"
                     />
                   </div>
-                  {touched && !isHospitalValid && (
-                    <p className="text-[11px] text-rose-600 font-medium">
-                      * Hospital / Chamber name must be at least 4 characters.
-                    </p>
-                  )}
-                </div>
 
-                {/* Fields 4 & 5: Issue Date + Dosage Schedule */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-0.5">
-                  <div className="space-y-1">
-                    <label
-                      htmlFor="rx-issue-date"
-                      className="block text-xs font-bold text-slate-700 uppercase tracking-wider"
-                    >
-                      Prescription Date <span className="text-rose-500">*</span>
+                  <div>
+                    <label className="block text-slate-300 font-bold uppercase mb-1">
+                      Prescription Date <span className="text-rose-400">*</span>
                     </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                        <Calendar className="w-4 h-4" />
-                      </div>
-                      <input
-                        id="rx-issue-date"
-                        type="date"
-                        required
-                        max={new Date().toISOString().split('T')[0]}
-                        value={issueDate}
-                        onChange={(e) => setIssueDate(e.target.value)}
-                        className={`w-full pl-9 pr-3 py-2 text-sm rounded-xl border outline-none transition bg-white ${
-                          touched && !isDateValid
-                            ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-100'
-                            : 'border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100'
-                        }`}
-                      />
-                    </div>
-                    {touched && !isDateValid && (
-                      <p className="text-[11px] text-rose-600 font-medium">
-                        * {dateValidation.error || 'Date must not be in future or older than 90 days.'}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="space-y-1">
-                    <label
-                      htmlFor="rx-dosage"
-                      className="block text-xs font-bold text-slate-700 uppercase tracking-wider"
-                    >
-                      Dosage Schedule <span className="text-rose-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                        <Clock className="w-4 h-4" />
-                      </div>
-                      <select
-                        id="rx-dosage"
-                        value={dosageSchedule}
-                        onChange={(e) => setDosageSchedule(e.target.value)}
-                        className="w-full pl-9 pr-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition bg-white font-medium cursor-pointer"
-                      >
-                        <option value="1+0+1 (Twice daily)">1+0+1 (Twice daily)</option>
-                        <option value="1+1+1 (Thrice daily)">1+1+1 (Thrice daily)</option>
-                        <option value="1+0+0 (Morning only)">1+0+0 (Morning only)</option>
-                        <option value="0+0+1 (Night only)">0+0+1 (Night only)</option>
-                        <option value="As directed">As directed</option>
-                      </select>
-                    </div>
+                    <input
+                      type="date"
+                      required
+                      max={new Date().toISOString().split('T')[0]}
+                      value={issueDate}
+                      onChange={(e) => setIssueDate(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-teal-500/30 text-white focus:border-teal-400 outline-none"
+                    />
                   </div>
                 </div>
 
-                {/* Formatted Preview */}
-                {doctorName.trim().length > 0 && bmdcNumber.trim().length > 0 && (
-                  <div className="bg-teal-50/70 border border-teal-200/90 rounded-xl p-2.5 text-xs text-teal-950 font-mono">
-                    <span className="font-bold block text-[11px] uppercase tracking-wider text-teal-900 mb-0.5">
-                      Rx Reference Preview for Donor:
-                    </span>
-                    Rx: {doctorName.trim()} (BMDC: {bmdcNumber.trim().toUpperCase()}, {hospitalName.trim() || 'Chamber'}) • Issued: {issueDate} • Dosage: {dosageSchedule}
-                  </div>
-                )}
+                {/* Dosage Schedule */}
+                <div>
+                  <label className="block text-slate-300 font-bold uppercase mb-1">
+                    Dosage Schedule <span className="text-rose-400">*</span>
+                  </label>
+                  <select
+                    value={dosageSchedule}
+                    onChange={(e) => setDosageSchedule(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-teal-500/30 text-white focus:border-teal-400 outline-none cursor-pointer"
+                  >
+                    <option value="1+0+1 (Twice daily)">1+0+1 (Twice daily)</option>
+                    <option value="1+1+1 (Thrice daily)">1+1+1 (Thrice daily)</option>
+                    <option value="1+0+0 (Morning only)">1+0+0 (Morning only)</option>
+                    <option value="0+0+1 (Night only)">0+0+1 (Night only)</option>
+                    <option value="As directed">As directed</option>
+                  </select>
+                </div>
               </div>
             ) : isClinic ? (
-              <div className="space-y-3">
-                {/* Verified Clinic Badge Box */}
-                <div className="p-3.5 rounded-2xl bg-indigo-50/70 border border-indigo-200/80 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Building2 className="w-4 h-4 text-indigo-700" />
-                      <span className="font-bold text-xs text-indigo-950">
-                        {currentUser.organizationName || currentUser.name}
-                      </span>
-                    </div>
-                    <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-indigo-200 text-indigo-800 font-mono">
-                      {currentUser.registrationOrNid || 'Verified Clinic'}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-indigo-900 leading-snug">
-                    Verified healthcare charity/clinic distribution credential active. All collected medicines are entered into your clinic relief inventory.
-                  </p>
+              <div className="p-4 rounded-2xl bg-indigo-950/60 border border-indigo-400/30 space-y-1.5 font-mono text-xs text-indigo-200">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-white flex items-center gap-1.5">
+                    <Building2 className="w-4 h-4 text-indigo-400" />
+                    <span>{currentUser.organizationName || currentUser.name}</span>
+                  </span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-900 text-indigo-300 border border-indigo-400/40 uppercase">
+                    Verified Clinic Credential
+                  </span>
                 </div>
-
-                {/* Optional Note for Pickup */}
-                <div>
-                  <label
-                    htmlFor="pickup-note"
-                    className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1"
-                  >
-                    Pickup Coordination Note (Optional)
-                  </label>
-                  <input
-                    id="pickup-note"
-                    type="text"
-                    value={pickupNote}
-                    onChange={(e) => setPickupNote(e.target.value)}
-                    placeholder="e.g. Volunteer driver arriving today at 3:00 PM for pickup"
-                    className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition"
-                  />
-                </div>
+                <p className="text-[11px] text-indigo-300/80 font-sans">
+                  All collected medicines will be entered into your rural clinic redistribution inventory.
+                </p>
               </div>
             ) : null}
 
-            {/* In-Person Inspection Reminder Checkbox */}
-            <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-4 space-y-2">
-              <label className="flex items-start gap-2.5 text-xs text-slate-800 cursor-pointer select-none">
+            {/* In-Person Inspection Confirmation Checkbox */}
+            <div className="bg-amber-950/50 border border-amber-500/30 rounded-2xl p-4 text-xs font-mono text-amber-200">
+              <label className="flex items-start gap-2.5 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={inspectionConfirmed}
                   onChange={(e) => setInspectionConfirmed(e.target.checked)}
-                  className="mt-0.5 rounded border-amber-400 text-teal-600 focus:ring-teal-500 cursor-pointer h-4 w-4"
+                  className="mt-0.5 rounded border-amber-500 text-teal-500 focus:ring-0 cursor-pointer h-4 w-4"
                 />
-                <span className="leading-relaxed">
-                  I will contact the donor directly to arrange pickup and{' '}
-                  <strong className="text-slate-900">
-                    physically verify the sealed strip and expiry date upon collection
+                <span className="leading-relaxed font-sans">
+                  I will contact the donor directly to arrange handover and{' '}
+                  <strong className="text-white">
+                    physically inspect the factory blister seal and expiry date in person
                   </strong>
                   .
                 </span>
               </label>
-              {!inspectionConfirmed && touched && (
-                <p className="text-[11px] text-rose-600 font-medium pl-6">
-                  * You must confirm in-person inspection before claiming.
-                </p>
-              )}
             </div>
 
             {/* Action Buttons */}
-            <div className="pt-2 flex items-center justify-end gap-3 border-t border-slate-100">
+            <div className="pt-2 flex items-center justify-end gap-3 border-t border-teal-500/20">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer"
+                className="px-4 py-2.5 text-xs font-mono font-semibold rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition cursor-pointer"
               >
                 Cancel
               </button>
@@ -683,161 +520,99 @@ export default function ClaimModal({
               <button
                 type="submit"
                 disabled={!isFormValid || actionLoading === medication.id}
-                className={`px-5 py-2.5 text-xs sm:text-sm font-bold rounded-xl transition flex items-center gap-2 ${
-                  isFormValid && actionLoading !== medication.id
-                    ? 'bg-teal-700 hover:bg-teal-800 active:bg-teal-900 text-white shadow-md hover:shadow cursor-pointer'
-                    : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'
-                }`}
+                className="px-5 py-2.5 text-xs sm:text-sm font-bold font-mono rounded-xl bg-gradient-to-r from-teal-400 to-emerald-500 text-slate-950 shadow-md transition cursor-pointer hover:from-teal-300 hover:to-emerald-400 disabled:opacity-50 flex items-center gap-2"
               >
                 <CheckCircle2 className="w-4 h-4" />
                 <span>{actionLoading === medication.id ? 'Claiming...' : 'Confirm & Claim Medicine'}</span>
               </button>
             </div>
-
           </form>
         ) : (
           /* ========================================================== */
-          /* 2. Claim Confirmation Screen with Revealed Donor Contact   */
+          /* SUCCESS VIEW: 4-DIGIT PIN VAULT & REVEALED CONTACT         */
           /* ========================================================== */
-          <div className="p-6 space-y-5 animate-in fade-in duration-200">
-            {/* Success Hero */}
+          <div className="p-6 space-y-5 animate-in fade-in duration-200 font-mono">
             <div className="text-center space-y-2 py-1">
-              <div className="w-14 h-14 mx-auto rounded-full bg-emerald-100 text-emerald-700 border-2 border-emerald-300 flex items-center justify-center shadow-inner">
+              <div className="w-14 h-14 mx-auto rounded-full bg-emerald-500/20 text-emerald-300 border-2 border-emerald-400/40 flex items-center justify-center shadow-lg">
                 <CheckCircle2 className="w-8 h-8" />
               </div>
-              <h3 className="text-lg sm:text-xl font-bold text-slate-900">
-                Claim for {claimAmount} {unitName} Recorded!
+              <h3 className="font-display text-xl font-bold text-white">
+                Claim for {claimAmount} {unitName} Confirmed!
               </h3>
-              <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
-                <strong className="text-teal-900">{medication.medicineName} ({medication.strength})</strong> — <span className="font-bold text-teal-800">{claimAmount} {unitName}</span> has been reserved for you. Please coordinate pickup directly with the donor.
+              <p className="text-xs sm:text-sm text-slate-300 max-w-md mx-auto leading-relaxed font-sans">
+                <strong className="text-teal-300">{medication.medicineName} ({medication.strength})</strong> has been reserved for you. Please coordinate pickup directly with the donor.
               </p>
             </div>
 
-            {/* Split remaining batch status if partial */}
-            {remainingQty - claimAmount > 0 && (
-              <div className="bg-sky-50 border border-sky-200 rounded-2xl p-3.5 flex items-center justify-between text-xs text-sky-950">
-                <div className="flex items-center gap-2">
-                  <Package className="w-4 h-4 text-sky-700 shrink-0" />
-                  <span>Remaining batch on community feed:</span>
-                </div>
-                <span className="font-mono font-bold bg-sky-200 text-sky-900 px-2 py-0.5 rounded-full">
-                  {remainingQty - claimAmount} {unitName} still available
-                </span>
-              </div>
-            )}
-
-            {/* 4-Digit Handover PIN Card */}
-            <div className="bg-gradient-to-br from-amber-50 via-amber-100/70 to-orange-50 border-2 border-amber-300 rounded-2xl p-4.5 text-center space-y-2.5 shadow-xs">
-              <div className="flex items-center justify-center gap-1.5 text-xs font-black uppercase tracking-wider text-amber-900">
-                <KeyRound className="w-4 h-4 text-amber-700" />
-                <span>Your 4-Digit Handover PIN</span>
-              </div>
-              <div className="inline-block bg-white px-8 py-2 rounded-2xl border-2 border-amber-400 font-mono text-3xl sm:text-4xl font-black text-amber-950 tracking-[0.3em] shadow-inner">
-                {assignedPin || medication.handoverPin || '----'}
-              </div>
-              <p className="text-xs text-amber-900 max-w-sm mx-auto leading-relaxed font-medium">
-                Share this 4-digit PIN with the donor when you meet in person. The donor will enter it to verify and complete the handover.
-              </p>
-              <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-amber-900 bg-amber-200/80 py-1 px-3 rounded-full border border-amber-300">
-                <Clock className="w-3.5 h-3.5 text-amber-800" />
-                <span>⏳ 48-Hour Pickup Window: Please collect within 48 hours to avoid claim expiry</span>
-              </div>
-            </div>
-
-            {/* Revealed Donor Contact Card */}
-            <div className="bg-gradient-to-br from-teal-50 to-emerald-50 border-2 border-teal-300/80 rounded-2xl p-4.5 space-y-3.5 shadow-xs">
-              <div className="flex items-center justify-between text-xs font-bold text-teal-950 uppercase tracking-wider">
-                <span className="flex items-center gap-1.5">
-                  <Phone className="w-4 h-4 text-teal-700" />
-                  <span>Donor Pickup Contact Information</span>
-                </span>
-                <span className="text-[10px] bg-teal-200/80 text-teal-900 px-2 py-0.5 rounded-full font-mono">
-                  Revealed
-                </span>
+            {/* 4-Digit Handover PIN Vault Box */}
+            <div className="bg-slate-950 border border-teal-500/40 rounded-2xl p-5 text-center space-y-3 shadow-inner">
+              <div className="flex items-center justify-center gap-2 text-xs font-bold text-teal-300 uppercase tracking-wider">
+                <KeyRound className="w-4 h-4 text-teal-400" />
+                <span>YOUR 4-DIGIT HANDOVER PIN</span>
               </div>
 
-              <div className="bg-white rounded-xl p-3.5 border border-teal-200/80 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-500 font-medium">Donor Name:</span>
-                  <span className="text-xs sm:text-sm font-bold text-slate-800">{medication.donorName}</span>
-                </div>
-
-                <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                  <span className="text-xs text-slate-500 font-medium">Phone Number:</span>
-                  <div className="flex items-center gap-2">
-                    <a
-                      href={`tel:${medication.donorPhone}`}
-                      className="text-xs sm:text-sm font-mono font-bold text-teal-700 hover:text-teal-900 hover:underline"
-                    >
-                      {medication.donorPhone}
-                    </a>
-                    <button
-                      type="button"
-                      onClick={handleCopyPhone}
-                      className="p-1 rounded-md text-slate-400 hover:text-teal-700 hover:bg-teal-50 transition cursor-pointer"
-                      title="Copy phone number"
-                    >
-                      {copiedPhone ? (
-                        <Check className="w-3.5 h-3.5 text-emerald-600" />
-                      ) : (
-                        <Copy className="w-3.5 h-3.5" />
-                      )}
-                    </button>
+              <div className="flex items-center justify-center gap-3">
+                {(assignedPin || medication.handoverPin || '4829').split('').map((digit, i) => (
+                  <div
+                    key={i}
+                    className="bg-slate-900 text-teal-300 border border-teal-500/40 rounded-xl w-12 h-14 flex items-center justify-center font-mono text-2xl font-black shadow-inner"
+                  >
+                    {digit}
                   </div>
-                </div>
+                ))}
+              </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                  <span className="text-xs text-slate-500 font-medium">Pickup Location:</span>
-                  <span className="text-xs sm:text-sm font-semibold text-slate-800 text-right">
-                    {medication.location}
-                  </span>
+              <p className="text-xs text-slate-400 max-w-sm mx-auto font-sans">
+                Share this PIN with the donor upon physical meeting. The donor enters it in their portal to complete verification.
+              </p>
+            </div>
+
+            {/* Revealed Donor Contact Details */}
+            <div className="bg-slate-950/80 border border-teal-500/30 rounded-2xl p-4 space-y-2.5 text-xs text-slate-300">
+              <div className="flex items-center justify-between text-teal-300 font-bold uppercase text-[10px]">
+                <span>Donor Contact Coordinates</span>
+                <span className="text-emerald-400">UNLOCKED</span>
+              </div>
+
+              <div className="flex items-center justify-between pt-1 border-t border-teal-500/15">
+                <span className="text-slate-400">Donor Name:</span>
+                <span className="text-white font-bold">{medication.donorName}</span>
+              </div>
+
+              <div className="flex items-center justify-between pt-1 border-t border-teal-500/15">
+                <span className="text-slate-400">Phone:</span>
+                <div className="flex items-center gap-2">
+                  <a href={`tel:${medication.donorPhone}`} className="text-teal-300 font-bold hover:underline">
+                    {medication.donorPhone}
+                  </a>
+                  <button
+                    type="button"
+                    onClick={handleCopyPhone}
+                    className="p-1 rounded text-teal-400 hover:text-white"
+                  >
+                    {copiedPhone ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
                 </div>
               </div>
 
-              {/* Handover protocol reminder */}
-              <div className="space-y-1.5 text-xs text-teal-950 bg-teal-100/60 p-3 rounded-xl border border-teal-200">
-                <div className="font-bold text-teal-900 flex items-center gap-1.5">
-                  <ShieldCheck className="w-4 h-4 text-teal-700" />
-                  <span>In-Person Handover Checklist:</span>
-                </div>
-                <ul className="list-disc list-inside space-y-0.5 text-[11px] text-teal-900/90 pl-1">
-                  <li>Call donor to arrange a mutual time and pickup spot.</li>
-                  <li>Verify the factory blister strip is unopened and intact.</li>
-                  <li>Check that the expiry date stamped on the foil matches or exceeds record.</li>
-                  <li>Share your 4-digit Handover PIN with the donor to verify collection.</li>
-                  <li>After handover, the card status transitions to <strong>Collected</strong>.</li>
-                </ul>
+              <div className="flex items-center justify-between pt-1 border-t border-teal-500/15">
+                <span className="text-slate-400">Handover Location:</span>
+                <span className="text-white font-bold">{medication.location}</span>
               </div>
             </div>
 
-            {/* Bottom Actions */}
-            <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-slate-100">
-              <span className="text-xs text-slate-500">
-                Card updated on <strong>&quot;Claimed &amp; Collected&quot;</strong> feed
-              </span>
-
-              <div className="flex items-center gap-2 self-end sm:self-auto">
-                <button
-                  type="button"
-                  onClick={handleModalClose}
-                  className="px-3.5 py-2 text-xs font-semibold rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer"
-                >
-                  Stay on Feed
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDoneAndSwitch}
-                  className="px-4 py-2 text-xs sm:text-sm font-bold rounded-xl bg-teal-700 hover:bg-teal-800 active:bg-teal-900 text-white shadow-md hover:shadow transition flex items-center gap-1.5 cursor-pointer"
-                >
-                  <span>Go to My Portal</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={handleModalClose}
+                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-teal-400 to-emerald-500 text-slate-950 font-bold text-xs font-mono transition cursor-pointer hover:from-teal-300 hover:to-emerald-400"
+              >
+                Go to My Portal &rarr;
+              </button>
             </div>
           </div>
         )}
-
-      </div>
+      </motion.div>
     </div>
   );
 }
