@@ -9,25 +9,62 @@ import {
   useTransform,
 } from 'framer-motion';
 
+export type GlowColor = 'teal' | 'amber' | 'rose' | 'cyan';
+
 interface TiltSpotlightCardProps {
   children: React.ReactNode;
   className?: string;
+  glowColor?: GlowColor;
   spotlightColor?: string;
   maxTilt?: number;
   onClick?: () => void;
   style?: React.CSSProperties;
 }
 
+const GLOW_CONFIG: Record<
+  GlowColor,
+  { spotlight: string; borderHover: string; shadowHover: string; topRim: string }
+> = {
+  rose: {
+    spotlight: 'rgba(244, 63, 94, 0.18)',
+    borderHover: 'group-hover:border-rose-500/40',
+    shadowHover: 'hover:shadow-[0_25px_50px_-12px_rgba(244,63,94,0.22)]',
+    topRim: 'via-rose-400/40',
+  },
+  amber: {
+    spotlight: 'rgba(245, 158, 11, 0.18)',
+    borderHover: 'group-hover:border-amber-500/40',
+    shadowHover: 'hover:shadow-[0_25px_50px_-12px_rgba(245,158,11,0.22)]',
+    topRim: 'via-amber-400/40',
+  },
+  teal: {
+    spotlight: 'rgba(20, 184, 166, 0.18)',
+    borderHover: 'group-hover:border-teal-400/40',
+    shadowHover: 'hover:shadow-[0_25px_50px_-12px_rgba(20,184,166,0.22)]',
+    topRim: 'via-teal-400/40',
+  },
+  cyan: {
+    spotlight: 'rgba(6, 182, 212, 0.18)',
+    borderHover: 'group-hover:border-cyan-400/40',
+    shadowHover: 'hover:shadow-[0_25px_50px_-12px_rgba(6,182,212,0.22)]',
+    topRim: 'via-cyan-400/40',
+  },
+};
+
 export default function TiltSpotlightCard({
   children,
   className = '',
-  spotlightColor = 'rgba(20, 184, 166, 0.16)',
+  glowColor = 'teal',
+  spotlightColor,
   maxTilt = 6,
   onClick,
   style,
 }: TiltSpotlightCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
+
+  const activeGlow = GLOW_CONFIG[glowColor] || GLOW_CONFIG.teal;
+  const resolvedSpotlight = spotlightColor || activeGlow.spotlight;
 
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
@@ -46,7 +83,7 @@ export default function TiltSpotlightCard({
     springConfig
   );
 
-  const spotlightBg = useMotionTemplate`radial-gradient(450px circle at ${mouseX}px ${mouseY}px, ${spotlightColor}, transparent 80%)`;
+  const spotlightBg = useMotionTemplate`radial-gradient(450px circle at ${mouseX}px ${mouseY}px, ${resolvedSpotlight}, transparent 80%)`;
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!cardRef.current) return;
@@ -57,8 +94,8 @@ export default function TiltSpotlightCard({
     mouseX.set(x);
     mouseY.set(y);
 
-    const nx = Math.max(-1, Math.min(1, ((x / rect.width) - 0.5) * 2));
-    const ny = Math.max(-1, Math.min(1, ((y / rect.height) - 0.5) * 2));
+    const nx = Math.max(-1, Math.min(1, (x / rect.width - 0.5) * 2));
+    const ny = Math.max(-1, Math.min(1, (y / rect.height - 0.5) * 2));
     normX.set(nx);
     normY.set(ny);
   };
@@ -74,10 +111,7 @@ export default function TiltSpotlightCard({
   };
 
   return (
-    <div
-      style={{ perspective: 1200 }}
-      className="relative isolate"
-    >
+    <div style={{ perspective: 1200 }} className="relative isolate h-full">
       <motion.div
         ref={cardRef}
         onMouseMove={handleMouseMove}
@@ -91,12 +125,14 @@ export default function TiltSpotlightCard({
           willChange: 'transform',
           ...style,
         }}
-        className={`group relative rounded-2xl border border-white/10 bg-slate-900/80 backdrop-blur-xl shadow-[0_20px_45px_-12px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.06)] transition-[border-color,box-shadow] duration-300 hover:shadow-[0_25px_50px_-12px_rgba(20,184,166,0.18)] ${
+        className={`group relative h-full rounded-2xl border border-white/10 bg-slate-900/80 backdrop-blur-xl shadow-[0_20px_45px_-12px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.06)] transition-[border-color,box-shadow] duration-300 ${activeGlow.borderHover} ${activeGlow.shadowHover} ${
           onClick ? 'cursor-pointer' : ''
         } ${className}`}
       >
-        {/* Dynamic Specular 1px Top Edge Highlight */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/25 to-transparent rounded-t-2xl z-20" />
+        {/* Dynamic Specular 1px Top Edge Highlight with Urgency Tint */}
+        <div
+          className={`pointer-events-none absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent ${activeGlow.topRim} to-transparent rounded-t-2xl z-20`}
+        />
 
         {/* Dynamic Cursor Spotlight Overlay */}
         <motion.div
@@ -111,7 +147,7 @@ export default function TiltSpotlightCard({
         <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-b from-white/[0.04] to-transparent opacity-60 z-0" />
 
         {/* Card Content with 3D Depth Layer */}
-        <div className="relative z-10 w-full h-full preserve-3d">
+        <div className="relative z-10 w-full h-full preserve-3d flex flex-col justify-between">
           {children}
         </div>
       </motion.div>
