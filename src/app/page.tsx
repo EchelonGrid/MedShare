@@ -13,7 +13,10 @@ import UserPortal from '@/components/UserPortal';
 import RequestsBoard from '@/components/RequestsBoard';
 import RequestMedicineModal from '@/components/RequestMedicineModal';
 import ToastContainer from '@/components/Toast';
+import TiltSpotlightCard from '@/components/ui/TiltSpotlightCard';
+import SpatialRescueRadar from '@/components/hero/SpatialRescueRadar';
 import { Medication, MedicineRequest } from '@/types/medshare';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Pill,
   Clock,
@@ -27,6 +30,9 @@ import {
   Info,
   LayoutDashboard,
   HeartHandshake,
+  ArrowRight,
+  Radio,
+  Layers,
 } from 'lucide-react';
 
 export default function HomePage() {
@@ -82,6 +88,21 @@ export default function HomePage() {
       ).length
     : 0;
   const collectedCount = medications.filter((m) => m.status === 'collected').length;
+
+  const portalBadgeCount = currentUser
+    ? currentUser.role === 'admin'
+      ? pendingVerifications.length
+      : medications.filter(
+          (m) =>
+            (m.claimedById === currentUser.id && m.status === 'claimed') ||
+            (m.claims || []).some((c) => c.claimerId === currentUser.id && (c.status === 'claimed' || (c.status as string) === 'pending_pickup')) ||
+            (m.activeClaims || []).some((c) => c.collectorId === currentUser.id && c.status === 'pending_pickup') ||
+            ((m.donorId === currentUser.id || (m.donorName && m.donorName.toLowerCase() === currentUser.name.toLowerCase())) &&
+              (m.status === 'claimed' ||
+                (m.claims || []).some((c) => c.status === 'claimed' || (c.status as string) === 'pending_pickup') ||
+                (m.activeClaims || []).some((c) => c.status === 'pending_pickup')))
+        ).length
+    : 0;
 
   const handleDonateClick = () => {
     if (!currentUser) {
@@ -162,291 +183,535 @@ export default function HomePage() {
     openDonateWithRequest(req);
   };
 
+  const scrollToContent = () => {
+    setActiveMainTab('feed');
+    const el = document.getElementById('main-feed-section');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-between">
+    <div className="min-h-screen bg-slate-950 flex flex-col justify-between selection:bg-teal-500 selection:text-white">
       {/* Floating Global Toast Notifications */}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
       <div className="flex-1">
-        {/* Hero Banner */}
-        <section className="bg-gradient-to-b from-teal-700 via-teal-800 to-slate-900 text-white pt-10 pb-16 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-7xl mx-auto">
-            <div className="max-w-3xl space-y-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/20 border border-teal-400/30 text-teal-200 text-xs font-medium">
-                <Sparkles className="w-3.5 h-3.5 text-teal-300" />
-                <span>Verified Community Medication Redistribution Platform</span>
+        
+        {/* ========================================================= */}
+        {/* HERO SECTION: 3D SPATIAL BIOTECH STAGE & RESCUE RADAR    */}
+        {/* ========================================================= */}
+        <section className="relative overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 pt-8 pb-16 sm:pb-20 px-4 sm:px-6 lg:px-8 border-b border-teal-500/15">
+          {/* Ambient Lighting Meshes */}
+          <div className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 w-[1000px] h-[550px] bg-gradient-to-b from-teal-500/15 via-emerald-500/10 to-transparent blur-[120px] rounded-full" />
+          <div className="pointer-events-none absolute top-1/4 -right-20 w-[450px] h-[450px] bg-teal-500/10 blur-[100px] rounded-full" />
+          <div className="pointer-events-none absolute bottom-0 left-0 w-full h-full bg-spatial-grid-dark opacity-60" />
+
+          <div className="relative z-10 max-w-7xl mx-auto">
+            {/* 2-Column Spatial Hero Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+              
+              {/* Left Column: High-Impact Editorial Copy & CTAs */}
+              <div className="lg:col-span-7 space-y-6">
+                
+                {/* Protocol Pill */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-950/80 border border-teal-500/35 text-teal-300 text-xs font-mono font-medium shadow-[0_0_15px_rgba(20,184,166,0.15)]"
+                >
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-400"></span>
+                  </span>
+                  <span>MEDSHARE SPATIAL PROTOCOL V2.4</span>
+                  <span className="text-teal-500/60 font-bold">•</span>
+                  <span className="text-teal-200">BANGLADESH RURAL ALLOCATION</span>
+                </motion.div>
+
+                {/* Main Spatial Editorial Heading */}
+                <motion.div
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.1 }}
+                  className="space-y-3"
+                >
+                  <h1 className="font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.1]">
+                    Bridge the Gap Between{' '}
+                    <span className="bg-gradient-to-r from-teal-200 via-teal-400 to-emerald-300 bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(45,212,191,0.25)]">
+                      Surplus Medicine
+                    </span>{' '}
+                    &amp; Rural Healthcare
+                  </h1>
+                  <p className="text-base sm:text-lg text-slate-300/90 leading-relaxed font-sans max-w-2xl">
+                    Every day, sealed and unexpired prescription drugs go to waste while rural clinics
+                    face life-threatening shortages. MedShare synchronizes donors with verified frontline
+                    recipients using a time-critical First-Expire, First-Out (FEFO) rescue engine.
+                  </p>
+                </motion.div>
+
+                {/* 3D Live Trust Pills */}
+                <motion.div
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.2 }}
+                  className="flex flex-wrap items-center gap-2.5 pt-1"
+                >
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/90 border border-teal-500/30 text-xs text-teal-200 font-medium shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+                    <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>Verified NGO Outreach</span>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/90 border border-teal-500/30 text-xs text-teal-200 font-medium shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+                    <Building2 className="w-4 h-4 text-cyan-400 shrink-0" />
+                    <span>Rural Clinic Support</span>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/90 border border-teal-500/30 text-xs text-teal-200 font-medium shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+                    <Clock className="w-4 h-4 text-amber-400 shrink-0" />
+                    <span>Expiry-Aware Allocation (FEFO)</span>
+                  </div>
+                </motion.div>
+
+                {/* Primary 3D Tactile CTAs */}
+                <motion.div
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.3 }}
+                  className="flex flex-wrap items-center gap-4 pt-2"
+                >
+                  <motion.button
+                    type="button"
+                    whileHover={{ scale: 1.03, y: -2 }}
+                    whileTap={{ scale: 0.97, y: 1 }}
+                    onClick={handleDonateClick}
+                    className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-teal-400 via-teal-500 to-emerald-500 text-slate-950 font-bold text-sm shadow-[0_10px_25px_rgba(20,184,166,0.35),inset_0_1px_0_rgba(255,255,255,0.6)] border border-teal-200/50 transition cursor-pointer"
+                  >
+                    <PlusCircle className="w-4 h-4 text-slate-950" />
+                    <span>Donate Surplus Medicine</span>
+                  </motion.button>
+
+                  <motion.button
+                    type="button"
+                    whileHover={{ scale: 1.03, y: -2 }}
+                    whileTap={{ scale: 0.97, y: 1 }}
+                    onClick={scrollToContent}
+                    className="inline-flex items-center gap-2 px-5 py-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 text-teal-200 hover:text-white font-semibold text-sm border border-teal-500/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] transition cursor-pointer group"
+                  >
+                    <span>Explore Rescue Feed</span>
+                    <ArrowRight className="w-4 h-4 text-teal-400 group-hover:translate-x-1 transition-transform" />
+                  </motion.button>
+                </motion.div>
+
               </div>
-              <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-white leading-tight">
-                Bridge the Gap Between Surplus Medicine &amp; Rural Healthcare
-              </h1>
-              <p className="text-base sm:text-lg text-teal-100/90 leading-relaxed">
-                Every day, unopened and unexpired medications go to waste while rural clinics
-                and lower-income patients struggle with medication shortages. MedShare provides
-                a verified, time-critical redistribution channel before expiration dates hit.
-              </p>
-              <div className="pt-2 flex flex-wrap items-center gap-3 text-xs sm:text-sm text-teal-200/90">
-                <span className="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-lg border border-white/10">
-                  <ShieldCheck className="w-4 h-4 text-emerald-300" /> Verified NGO Outreach
-                </span>
-                <span className="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-lg border border-white/10">
-                  <Building2 className="w-4 h-4 text-sky-300" /> Rural Clinic Support
-                </span>
-                <span className="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-lg border border-white/10">
-                  <Clock className="w-4 h-4 text-amber-300" /> Expiry-Aware Allocation (FEFO)
-                </span>
+
+              {/* Right Column: Interactive 3D Holographic Med-Rescue Core */}
+              <div className="lg:col-span-5 flex justify-center lg:justify-end">
+                <SpatialRescueRadar />
               </div>
+
             </div>
 
-            {/* 4 Live Stat Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 mt-10">
-              {/* Card 1: Available Medicines */}
-              <div className="bg-slate-800/80 backdrop-blur border border-teal-500/30 rounded-2xl p-5 sm:p-6 shadow-xl relative overflow-hidden group hover:border-teal-400/60 transition">
+            {/* ========================================================= */}
+            {/* 4 HERO STAT BOXES: 3D TELEMETRY BENTO MODULES             */}
+            {/* ========================================================= */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 mt-12 sm:mt-16">
+              
+              {/* Stat 1: Available Medicines */}
+              <TiltSpotlightCard
+                spotlightColor="rgba(20, 184, 166, 0.22)"
+                className="p-5 sm:p-6"
+              >
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-teal-200">Available Medicines</span>
-                  <div className="w-10 h-10 rounded-xl bg-teal-500/20 flex items-center justify-center text-teal-300">
-                    <Pill className="w-5 h-5" />
+                  <span className="text-xs font-mono font-medium text-teal-300 uppercase tracking-wider">
+                    Available Medicines
+                  </span>
+                  <div className="w-9 h-9 rounded-xl bg-teal-500/15 border border-teal-400/30 flex items-center justify-center text-teal-300 shadow-[0_0_12px_rgba(20,184,166,0.25)]">
+                    <Pill className="w-4 h-4" />
                   </div>
                 </div>
-                <div className="mt-4 flex items-baseline gap-2">
-                  <span className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">{availableCount}</span>
-                  <span className="text-xs text-slate-400">in inventory</span>
+
+                <div className="mt-4 flex items-baseline gap-2 transform transition-transform duration-300 group-hover:translate-z-6">
+                  <span className="font-mono text-3xl sm:text-4xl font-bold text-white tracking-tight drop-shadow-[0_2px_10px_rgba(255,255,255,0.15)]">
+                    {availableCount}
+                  </span>
+                  <span className="text-xs font-mono text-slate-400">in inventory</span>
                 </div>
-                <p className="text-xs text-slate-300 mt-2">
+
+                <p className="text-xs text-slate-300 mt-2 leading-relaxed">
                   Unopened, valid medications ready for clinic or patient claiming.
                 </p>
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-teal-500 to-emerald-400" />
-              </div>
 
-              {/* Card 2: Expiring Soon */}
-              <div className="bg-slate-800/80 backdrop-blur border border-amber-500/30 rounded-2xl p-5 sm:p-6 shadow-xl relative overflow-hidden group hover:border-amber-400/60 transition">
+                {/* Mini Segmented Indicator */}
+                <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-[10px] font-mono">
+                  <span className="text-emerald-400 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                    LIVE TELEMETRY
+                  </span>
+                  <span className="text-slate-400">FEFO ACTIVE</span>
+                </div>
+              </TiltSpotlightCard>
+
+              {/* Stat 2: Expiring Soon (≤ 60d) */}
+              <TiltSpotlightCard
+                spotlightColor="rgba(245, 158, 11, 0.22)"
+                className="p-5 sm:p-6"
+              >
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-amber-200">Expiring Soon (≤ 60d)</span>
-                  <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-300">
-                    <AlertTriangle className="w-5 h-5" />
+                  <span className="text-xs font-mono font-medium text-amber-300 uppercase tracking-wider">
+                    Expiring Soon (≤ 60d)
+                  </span>
+                  <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-400/30 flex items-center justify-center text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.25)]">
+                    <AlertTriangle className="w-4 h-4" />
                   </div>
                 </div>
-                <div className="mt-4 flex items-baseline gap-2">
-                  <span className="text-3xl sm:text-4xl font-extrabold text-amber-300 tracking-tight">{expiringSoonCount}</span>
-                  <span className="text-xs text-slate-400">priority items</span>
+
+                <div className="mt-4 flex items-baseline gap-2 transform transition-transform duration-300 group-hover:translate-z-6">
+                  <span className="font-mono text-3xl sm:text-4xl font-bold text-amber-300 tracking-tight drop-shadow-[0_2px_10px_rgba(245,158,11,0.25)]">
+                    {expiringSoonCount}
+                  </span>
+                  <span className="text-xs font-mono text-slate-400">priority items</span>
                 </div>
-                <p className="text-xs text-slate-300 mt-2">
+
+                <p className="text-xs text-slate-300 mt-2 leading-relaxed">
                   Nearing expiry window requiring immediate allocation to prevent waste.
                 </p>
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 to-orange-400" />
-              </div>
 
-              {/* Card 3: Urgent Requests Board */}
-              <div
+                {/* Mini Alert Radar Indicator */}
+                <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-[10px] font-mono">
+                  <span className="text-amber-400 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                    URGENT WINDOW
+                  </span>
+                  <span className="text-amber-300/80 font-semibold">&le; 60 DAYS</span>
+                </div>
+              </TiltSpotlightCard>
+
+              {/* Stat 3: Urgent Requests Board */}
+              <TiltSpotlightCard
+                spotlightColor="rgba(244, 63, 94, 0.22)"
+                className="p-5 sm:p-6 cursor-pointer"
                 onClick={() => setActiveMainTab('requests')}
-                className="bg-slate-800/80 backdrop-blur border border-rose-500/30 rounded-2xl p-5 sm:p-6 shadow-xl relative overflow-hidden group hover:border-rose-400/60 transition cursor-pointer"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-rose-200">Urgent Requests</span>
-                  <div className="w-10 h-10 rounded-xl bg-rose-500/20 flex items-center justify-center text-rose-300">
-                    <HeartHandshake className="w-5 h-5" />
+                  <span className="text-xs font-mono font-medium text-rose-300 uppercase tracking-wider">
+                    Urgent Requests
+                  </span>
+                  <div className="w-9 h-9 rounded-xl bg-rose-500/15 border border-rose-400/30 flex items-center justify-center text-rose-300 shadow-[0_0_12px_rgba(244,63,94,0.25)]">
+                    <HeartHandshake className="w-4 h-4" />
                   </div>
                 </div>
-                <div className="mt-4 flex items-baseline gap-2">
-                  <span className="text-3xl sm:text-4xl font-extrabold text-rose-300 tracking-tight">{openRequestsCount}</span>
-                  <span className="text-xs text-slate-400">open shortages</span>
+
+                <div className="mt-4 flex items-baseline gap-2 transform transition-transform duration-300 group-hover:translate-z-6">
+                  <span className="font-mono text-3xl sm:text-4xl font-bold text-rose-300 tracking-tight drop-shadow-[0_2px_10px_rgba(244,63,94,0.25)]">
+                    {openRequestsCount}
+                  </span>
+                  <span className="text-xs font-mono text-slate-400">open shortages</span>
                 </div>
-                <p className="text-xs text-slate-300 mt-2">
+
+                <p className="text-xs text-slate-300 mt-2 leading-relaxed">
                   Shortages posted by rural clinics and patients waiting for donors.
                 </p>
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-500 to-amber-400" />
-              </div>
 
-              {/* Card 4: Medicines Collected */}
-              <div className="bg-slate-800/80 backdrop-blur border border-sky-500/30 rounded-2xl p-5 sm:p-6 shadow-xl relative overflow-hidden group hover:border-sky-400/60 transition">
+                {/* Clickable indicator */}
+                <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-[10px] font-mono">
+                  <span className="text-rose-400 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-ping" />
+                    VIEW SHORTAGES &rarr;
+                  </span>
+                  <span className="text-rose-300/80 font-bold">CLICK TO HELP</span>
+                </div>
+              </TiltSpotlightCard>
+
+              {/* Stat 4: Medicines Collected */}
+              <TiltSpotlightCard
+                spotlightColor="rgba(6, 182, 212, 0.22)"
+                className="p-5 sm:p-6"
+              >
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-sky-200">Medicines Collected</span>
-                  <div className="w-10 h-10 rounded-xl bg-sky-500/20 flex items-center justify-center text-sky-300">
-                    <CheckCircle2 className="w-5 h-5" />
+                  <span className="text-xs font-mono font-medium text-cyan-300 uppercase tracking-wider">
+                    Medicines Collected
+                  </span>
+                  <div className="w-9 h-9 rounded-xl bg-cyan-500/15 border border-cyan-400/30 flex items-center justify-center text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.25)]">
+                    <CheckCircle2 className="w-4 h-4" />
                   </div>
                 </div>
-                <div className="mt-4 flex items-baseline gap-2">
-                  <span className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">{collectedCount}</span>
-                  <span className="text-xs text-slate-400">redistributed batches</span>
+
+                <div className="mt-4 flex items-baseline gap-2 transform transition-transform duration-300 group-hover:translate-z-6">
+                  <span className="font-mono text-3xl sm:text-4xl font-bold text-white tracking-tight drop-shadow-[0_2px_10px_rgba(6,182,212,0.25)]">
+                    {collectedCount}
+                  </span>
+                  <span className="text-xs font-mono text-slate-400">redistributed</span>
                 </div>
-                <p className="text-xs text-slate-300 mt-2">
+
+                <p className="text-xs text-slate-300 mt-2 leading-relaxed">
                   Successfully handed over to clinics, charities, or patients.
                 </p>
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-sky-500 to-blue-400" />
-              </div>
+
+                {/* Redistribution stamp */}
+                <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-[10px] font-mono">
+                  <span className="text-cyan-400 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3 h-3 text-cyan-400" />
+                    VERIFIED HANDOVER
+                  </span>
+                  <span className="text-slate-400">100% AUDITED</span>
+                </div>
+              </TiltSpotlightCard>
+
             </div>
+
           </div>
         </section>
 
-        {/* Main Content Area */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-          
-          {/* Step Preview Toast / Banner */}
-          {notification && (
-            <div className="bg-teal-50 border border-teal-200 text-teal-900 rounded-2xl p-4 shadow-sm flex items-start justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
-              <div className="flex items-start gap-2.5">
-                <Info className="w-5 h-5 text-teal-600 shrink-0 mt-0.5" />
-                <div className="text-xs sm:text-sm font-medium leading-relaxed">
-                  {notification}
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setNotification(null)}
-                className="p-1 rounded-lg hover:bg-teal-100 text-teal-600 hover:text-teal-900 transition cursor-pointer shrink-0"
-                title="Dismiss"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          )}
+        {/* ========================================================= */}
+        {/* MAIN CANVAS: COHESIVE MULTI-LAYERED SPATIAL SURFACE       */}
+        {/* ========================================================= */}
+        <section
+          id="main-feed-section"
+          className="relative min-h-[700px] bg-slate-900/60 border-t border-teal-500/20 py-10 px-4 sm:px-6 lg:px-8 space-y-8"
+        >
+          {/* Subtle Ambient Radial Lighting Meshes for Smooth Gradient Canvas */}
+          <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-full h-[600px] bg-spatial-grid opacity-70" />
+          <div className="pointer-events-none absolute top-12 left-1/4 w-[500px] h-[300px] bg-teal-500/5 blur-[100px] rounded-full" />
+          <div className="pointer-events-none absolute top-40 right-1/4 w-[400px] h-[300px] bg-emerald-500/5 blur-[100px] rounded-full" />
 
-          {/* Dedicated View Navigation: Live Medicine Feed vs Urgent Requests vs Collector & Donor Portal */}
-          <div className="flex items-center justify-between border-b border-slate-200 gap-4">
-            <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto">
-              <button
-                type="button"
-                onClick={() => setActiveMainTab('feed')}
-                className={`pb-3.5 px-3 text-xs sm:text-sm font-bold flex items-center gap-2 border-b-2 transition cursor-pointer shrink-0 ${
-                  activeMainTab === 'feed'
-                    ? 'border-teal-600 text-teal-900'
-                    : 'border-transparent text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                <Pill className="w-4 h-4" />
-                <span>Live Medicine Feed</span>
-                <span className="text-[11px] px-2 py-0.5 rounded-full font-extrabold bg-slate-100 text-slate-700">
-                  {availableCount}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveMainTab('requests')}
-                className={`pb-3.5 px-3 text-xs sm:text-sm font-bold flex items-center gap-2 border-b-2 transition cursor-pointer shrink-0 ${
-                  activeMainTab === 'requests'
-                    ? 'border-rose-600 text-rose-900'
-                    : 'border-transparent text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                <HeartHandshake className="w-4 h-4 text-rose-600" />
-                <span>Urgent Requests Board</span>
-                <span className="text-[11px] px-2 py-0.5 rounded-full font-extrabold bg-rose-100 text-rose-800">
-                  {openRequestsCount}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  if (!currentUser) {
-                    openAuthModal('login', 'Please sign in or create an account to access the Collector & Donor Portal.');
-                    return;
-                  }
-                  setActiveMainTab('portal');
-                }}
-                className={`pb-3.5 px-3 text-xs sm:text-sm font-bold flex items-center gap-2 border-b-2 transition cursor-pointer shrink-0 ${
-                  activeMainTab === 'portal'
-                    ? 'border-teal-600 text-teal-900'
-                    : 'border-transparent text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                <LayoutDashboard className="w-4 h-4" />
-                <span>{currentUser?.role === 'admin' ? 'Admin Moderator Desk' : 'Collector & Donor Portal'}</span>
-                {currentUser && (
-                  <span className="text-[11px] px-2 py-0.5 rounded-full font-extrabold bg-teal-100 text-teal-800">
-                    {currentUser.role === 'admin'
-                      ? pendingVerifications.length
-                      : medications.filter(
-                          (m) =>
-                            (m.claimedById === currentUser.id && m.status === 'claimed') ||
-                            (m.claims || []).some((c) => c.claimerId === currentUser.id && (c.status === 'claimed' || (c.status as string) === 'pending_pickup')) ||
-                            (m.activeClaims || []).some((c) => c.collectorId === currentUser.id && c.status === 'pending_pickup') ||
-                            ((m.donorId === currentUser.id || (m.donorName && m.donorName.toLowerCase() === currentUser.name.toLowerCase())) &&
-                              (m.status === 'claimed' ||
-                                (m.claims || []).some((c) => c.status === 'claimed' || (c.status as string) === 'pending_pickup') ||
-                                (m.activeClaims || []).some((c) => c.status === 'pending_pickup')))
-                        ).length}
-                  </span>
-                )}
-              </button>
-            </div>
-
-            {activeMainTab === 'feed' && (
-              <div className="hidden sm:block shrink-0 pb-2">
-                <button
-                  type="button"
-                  onClick={handleDonateClick}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs shadow-sm transition cursor-pointer"
+          <div className="relative z-10 max-w-7xl mx-auto space-y-6">
+            
+            {/* Dynamic Notification Banner */}
+            <AnimatePresence>
+              {notification && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="bg-teal-950/90 border border-teal-400/40 text-teal-200 rounded-2xl p-4 shadow-[0_10px_30px_rgba(0,0,0,0.5)] flex items-start justify-between gap-3 backdrop-blur-xl"
                 >
-                  <PlusCircle className="w-4 h-4 text-teal-200" />
-                  <span>Donate Medicine</span>
-                </button>
-              </div>
-            )}
-
-            {activeMainTab === 'requests' && (
-              <div className="hidden sm:block shrink-0 pb-2">
-                <button
-                  type="button"
-                  onClick={handlePostRequestClick}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs shadow-sm transition cursor-pointer"
-                >
-                  <PlusCircle className="w-4 h-4 text-teal-200" />
-                  <span>Post Urgent Request</span>
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* VIEW 1: LIVE MEDICINE RESCUE FEED */}
-          {activeMainTab === 'feed' && (
-            <div className="space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
-                    Live Medication Rescue Feed
-                  </h2>
-                  <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                    Browse available unexpired medicines sorted first-to-expire (FEFO). Filter by urgency or nearby location.
-                  </p>
-                </div>
-
-                <div className="sm:hidden">
+                  <div className="flex items-start gap-2.5">
+                    <Info className="w-5 h-5 text-teal-400 shrink-0 mt-0.5" />
+                    <div className="text-xs sm:text-sm font-medium leading-relaxed font-sans">
+                      {notification}
+                    </div>
+                  </div>
                   <button
                     type="button"
-                    onClick={handleDonateClick}
-                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs shadow-sm transition cursor-pointer"
+                    onClick={() => setNotification(null)}
+                    className="p-1 rounded-lg hover:bg-teal-900/60 text-teal-400 hover:text-white transition cursor-pointer shrink-0"
+                    title="Dismiss"
                   >
-                    <PlusCircle className="w-4 h-4 text-teal-200" />
-                    <span>Donate Medicine</span>
+                    <X className="w-4 h-4" />
                   </button>
-                </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* ========================================================= */}
+            {/* SPRING-ANIMATED SPATIAL NAVIGATION DOCK                    */}
+            {/* ========================================================= */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-950/85 backdrop-blur-2xl border border-teal-500/25 p-2 rounded-2xl shadow-[0_16px_40px_rgba(0,0,0,0.4)]">
+              
+              {/* Segmented Dock Tabs with Physical Spring Indicator */}
+              <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto p-1">
+                
+                {/* TAB 1: Live Medicine Feed */}
+                <button
+                  type="button"
+                  onClick={() => setActiveMainTab('feed')}
+                  className={`relative px-4 py-2 text-xs sm:text-sm font-bold flex items-center gap-2 rounded-xl transition duration-200 cursor-pointer shrink-0 ${
+                    activeMainTab === 'feed'
+                      ? 'text-slate-950'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
+                  }`}
+                >
+                  {activeMainTab === 'feed' && (
+                    <motion.div
+                      layoutId="activeMainTab"
+                      className="absolute inset-0 rounded-xl bg-gradient-to-r from-teal-400 via-teal-500 to-emerald-400 shadow-[0_0_20px_rgba(20,184,166,0.4),inset_0_1px_0_rgba(255,255,255,0.6)]"
+                      transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                    />
+                  )}
+                  <span className="relative z-10 flex items-center gap-2">
+                    <Pill className="w-4 h-4" />
+                    <span>Live Medicine Feed</span>
+                    <span
+                      className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
+                        activeMainTab === 'feed'
+                          ? 'bg-slate-950/20 text-slate-950 font-black'
+                          : 'bg-slate-800 text-teal-300'
+                      }`}
+                    >
+                      {availableCount}
+                    </span>
+                  </span>
+                </button>
+
+                {/* TAB 2: Urgent Requests Board */}
+                <button
+                  type="button"
+                  onClick={() => setActiveMainTab('requests')}
+                  className={`relative px-4 py-2 text-xs sm:text-sm font-bold flex items-center gap-2 rounded-xl transition duration-200 cursor-pointer shrink-0 ${
+                    activeMainTab === 'requests'
+                      ? 'text-white'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
+                  }`}
+                >
+                  {activeMainTab === 'requests' && (
+                    <motion.div
+                      layoutId="activeMainTab"
+                      className="absolute inset-0 rounded-xl bg-gradient-to-r from-rose-500 to-amber-600 shadow-[0_0_20px_rgba(244,63,94,0.4),inset_0_1px_0_rgba(255,255,255,0.4)]"
+                      transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                    />
+                  )}
+                  <span className="relative z-10 flex items-center gap-2">
+                    <HeartHandshake className="w-4 h-4" />
+                    <span>Urgent Requests Board</span>
+                    <span
+                      className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
+                        activeMainTab === 'requests'
+                          ? 'bg-black/25 text-white font-black'
+                          : 'bg-rose-950/60 text-rose-300 border border-rose-500/30'
+                      }`}
+                    >
+                      {openRequestsCount}
+                    </span>
+                  </span>
+                </button>
+
+                {/* TAB 3: Collector & Donor Portal */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!currentUser) {
+                      openAuthModal('login', 'Please sign in or create an account to access the Collector & Donor Portal.');
+                      return;
+                    }
+                    setActiveMainTab('portal');
+                  }}
+                  className={`relative px-4 py-2 text-xs sm:text-sm font-bold flex items-center gap-2 rounded-xl transition duration-200 cursor-pointer shrink-0 ${
+                    activeMainTab === 'portal'
+                      ? 'text-slate-950'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
+                  }`}
+                >
+                  {activeMainTab === 'portal' && (
+                    <motion.div
+                      layoutId="activeMainTab"
+                      className="absolute inset-0 rounded-xl bg-gradient-to-r from-teal-400 to-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.4),inset_0_1px_0_rgba(255,255,255,0.6)]"
+                      transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                    />
+                  )}
+                  <span className="relative z-10 flex items-center gap-2">
+                    <LayoutDashboard className="w-4 h-4" />
+                    <span>{currentUser?.role === 'admin' ? 'Admin Moderator Desk' : 'Collector & Donor Portal'}</span>
+                    {currentUser && (
+                      <span
+                        className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
+                          activeMainTab === 'portal'
+                            ? 'bg-slate-950/20 text-slate-950 font-black'
+                            : 'bg-teal-950 text-teal-300 border border-teal-500/30'
+                        }`}
+                      >
+                        {portalBadgeCount}
+                      </span>
+                    )}
+                  </span>
+                </button>
               </div>
 
-              {/* Live Filterable Feed */}
-              <MedicationFeed
-                onClaimClick={handleClaimClick}
-                activeTab={activeFeedTab}
-                onTabChange={setActiveFeedTab}
-              />
+              {/* Contextual Action Button */}
+              <div className="hidden sm:flex items-center gap-3 pr-2 shrink-0">
+                {activeMainTab === 'feed' && (
+                  <motion.button
+                    type="button"
+                    whileHover={{ scale: 1.03, y: -1 }}
+                    whileTap={{ scale: 0.97, y: 1 }}
+                    onClick={handleDonateClick}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 text-slate-950 font-bold text-xs shadow-[0_4px_16px_rgba(20,184,166,0.3),inset_0_1px_0_rgba(255,255,255,0.4)] transition cursor-pointer"
+                  >
+                    <PlusCircle className="w-4 h-4 text-slate-950" />
+                    <span>Donate Medicine</span>
+                  </motion.button>
+                )}
+
+                {activeMainTab === 'requests' && (
+                  <motion.button
+                    type="button"
+                    whileHover={{ scale: 1.03, y: -1 }}
+                    whileTap={{ scale: 0.97, y: 1 }}
+                    onClick={handlePostRequestClick}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-amber-500 text-white font-bold text-xs shadow-[0_4px_16px_rgba(244,63,94,0.3),inset_0_1px_0_rgba(255,255,255,0.3)] transition cursor-pointer"
+                  >
+                    <PlusCircle className="w-4 h-4 text-white" />
+                    <span>Post Urgent Request</span>
+                  </motion.button>
+                )}
+              </div>
             </div>
-          )}
 
-          {/* VIEW 2: URGENT MEDICINE REQUESTS BOARD */}
-          {activeMainTab === 'requests' && (
-            <RequestsBoard
-              onPostRequestClick={handlePostRequestClick}
-              onFulfillClick={handleFulfillClick}
-            />
-          )}
+            {/* ========================================================= */}
+            {/* VIEW 1: LIVE MEDICINE RESCUE FEED                         */}
+            {/* ========================================================= */}
+            {activeMainTab === 'feed' && (
+              <div className="space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <h2 className="font-display text-xl sm:text-2xl font-extrabold text-white tracking-tight">
+                      Live Medication Rescue Feed
+                    </h2>
+                    <p className="text-xs sm:text-sm text-slate-400 mt-1">
+                      Browse available unexpired medicines sorted first-to-expire (FEFO). Filter by urgency or nearby location.
+                    </p>
+                  </div>
 
-          {/* VIEW 3: COLLECTOR & DONOR PORTAL */}
-          {activeMainTab === 'portal' && (
-            <UserPortal onBackToFeed={() => setActiveMainTab('feed')} />
-          )}
+                  <div className="sm:hidden">
+                    <button
+                      type="button"
+                      onClick={handleDonateClick}
+                      className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-600 text-slate-950 font-bold text-xs shadow-md transition cursor-pointer"
+                    >
+                      <PlusCircle className="w-4 h-4 text-slate-950" />
+                      <span>Donate Medicine</span>
+                    </button>
+                  </div>
+                </div>
 
+                {/* Filterable Feed Container */}
+                <div className="bg-slate-950/70 backdrop-blur-xl border border-teal-500/20 rounded-3xl p-4 sm:p-6 shadow-2xl">
+                  <MedicationFeed
+                    onClaimClick={handleClaimClick}
+                    activeTab={activeFeedTab}
+                    onTabChange={setActiveFeedTab}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* ========================================================= */}
+            {/* VIEW 2: URGENT MEDICINE REQUESTS BOARD                    */}
+            {/* ========================================================= */}
+            {activeMainTab === 'requests' && (
+              <div className="bg-slate-950/70 backdrop-blur-xl border border-rose-500/20 rounded-3xl p-4 sm:p-6 shadow-2xl">
+                <RequestsBoard
+                  onPostRequestClick={handlePostRequestClick}
+                  onFulfillClick={handleFulfillClick}
+                />
+              </div>
+            )}
+
+            {/* ========================================================= */}
+            {/* VIEW 3: COLLECTOR & DONOR PORTAL                          */}
+            {/* ========================================================= */}
+            {activeMainTab === 'portal' && (
+              <div className="bg-slate-950/70 backdrop-blur-xl border border-teal-500/20 rounded-3xl p-4 sm:p-6 shadow-2xl">
+                <UserPortal onBackToFeed={() => setActiveMainTab('feed')} />
+              </div>
+            )}
+
+          </div>
         </section>
       </div>
+
+      {/* ========================================================= */}
+      {/* MODALS & WORKFLOW OVERLAYS                                */}
+      {/* ========================================================= */}
 
       {/* Donate Medicine Modal */}
       {isDonateOpen && (
@@ -505,21 +770,21 @@ export default function HomePage() {
         />
       )}
 
-      {/* Safety Boundary Footer */}
-      <footer className="mt-16 border-t border-slate-200 bg-white">
+      {/* Safety Boundary Protocol Footer */}
+      <footer className="mt-16 border-t border-teal-500/20 bg-slate-950/90 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-700 shrink-0">
-                <ShieldCheck className="w-5 h-5 text-teal-600" />
+              <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-400/30 flex items-center justify-center text-teal-300 shrink-0 shadow-[0_0_12px_rgba(20,184,166,0.2)]">
+                <ShieldCheck className="w-5 h-5 text-teal-300" />
               </div>
-              <p className="text-xs text-slate-600 max-w-2xl leading-relaxed">
-                <strong className="text-slate-800 font-semibold">Safety Boundary:</strong>{' '}
-                MedShare only accepts sealed, unexpired medications. Collectors must verify packaging and expiration dates in person during handover.
+              <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
+                <strong className="text-white font-semibold">Safety Boundary Protocol:</strong>{' '}
+                MedShare strictly limits redistribution to sealed, unexpired medicines. Collectors and clinic representatives must inspect packaging integrity and physical batch serials upon in-person handover.
               </p>
             </div>
-            <div className="text-xs text-slate-400 font-mono shrink-0">
-              MedShare Protocol • Verified Community Rescue
+            <div className="text-xs text-teal-400/80 font-mono shrink-0">
+              MedShare Protocol • 3D Spatial Biotech Engine
             </div>
           </div>
         </div>
