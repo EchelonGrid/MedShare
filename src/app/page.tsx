@@ -319,141 +319,145 @@ export default function HomePage() {
               {/* Stat 1: Available Medicines */}
               <TiltSpotlightCard
                 spotlightColor="rgba(20, 184, 166, 0.22)"
-                className="p-5 sm:p-6 bg-white/10 backdrop-blur-xl border border-white/20 shadow-[0_20px_50px_rgba(13,148,136,0.12)]"
+                glowColor="teal"
+                className="p-5 sm:p-6 bg-white/95 dark:bg-slate-900/85 backdrop-blur-xl border border-slate-200/90 dark:border-teal-500/25 shadow-[0_12px_35px_-8px_rgba(15,23,42,0.08)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono font-medium text-teal-300 uppercase tracking-wider">
+                  <span className="text-xs font-mono font-semibold text-teal-800 dark:text-teal-300 uppercase tracking-wider">
                     Available Medicines
                   </span>
-                  <div className="w-9 h-9 rounded-xl bg-teal-500/15 border border-teal-400/30 flex items-center justify-center text-teal-300 shadow-[0_0_12px_rgba(20,184,166,0.25)]">
+                  <div className="w-9 h-9 rounded-xl bg-teal-50 dark:bg-teal-500/15 border border-teal-200 dark:border-teal-400/30 flex items-center justify-center text-teal-700 dark:text-teal-300 shadow-[0_0_12px_rgba(20,184,166,0.15)]">
                     <Pill className="w-4 h-4" />
                   </div>
                 </div>
 
                 <div className="mt-4 flex items-baseline gap-2 transform transition-transform duration-300 group-hover:translate-z-6">
-                  <span className="font-mono text-3xl sm:text-4xl font-bold text-white tracking-tight drop-shadow-[0_2px_10px_rgba(255,255,255,0.15)]">
+                  <span className="font-mono text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                     {availableCount}
                   </span>
-                  <span className="text-xs font-mono text-slate-400">in inventory</span>
+                  <span className="text-xs font-mono text-slate-500 dark:text-slate-400">in inventory</span>
                 </div>
 
-                <p className="text-xs text-slate-300 mt-2 leading-relaxed">
+                <p className="text-xs text-slate-600 dark:text-slate-400 font-medium mt-2 leading-relaxed">
                   Unopened, valid medications ready for clinic or patient claiming.
                 </p>
 
                 {/* Mini Segmented Indicator */}
-                <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-[10px] font-mono">
-                  <span className="text-emerald-400 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                <div className="mt-4 pt-3 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between text-[10px] font-mono">
+                  <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-ping" />
                     LIVE TELEMETRY
                   </span>
-                  <span className="text-slate-400">FEFO ACTIVE</span>
+                  <span className="text-slate-500 dark:text-slate-400">FEFO ACTIVE</span>
                 </div>
               </TiltSpotlightCard>
 
               {/* Stat 2: Expiring Soon (≤ 60d) */}
               <TiltSpotlightCard
                 spotlightColor="rgba(245, 158, 11, 0.22)"
-                className="p-5 sm:p-6 bg-white/10 backdrop-blur-xl border border-white/20 shadow-[0_20px_50px_rgba(13,148,136,0.12)]"
+                glowColor="amber"
+                className="p-5 sm:p-6 bg-white/95 dark:bg-slate-900/85 backdrop-blur-xl border border-slate-200/90 dark:border-amber-500/25 shadow-[0_12px_35px_-8px_rgba(15,23,42,0.08)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono font-medium text-amber-300 uppercase tracking-wider">
+                  <span className="text-xs font-mono font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider">
                     Expiring Soon (≤ 60d)
                   </span>
-                  <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-400/30 flex items-center justify-center text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.25)]">
+                  <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-500/15 border border-amber-200 dark:border-amber-400/30 flex items-center justify-center text-amber-700 dark:text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.15)]">
                     <AlertTriangle className="w-4 h-4" />
                   </div>
                 </div>
 
                 <div className="mt-4 flex items-baseline gap-2 transform transition-transform duration-300 group-hover:translate-z-6">
-                  <span className="font-mono text-3xl sm:text-4xl font-bold text-amber-300 tracking-tight drop-shadow-[0_2px_10px_rgba(245,158,11,0.25)]">
+                  <span className="font-mono text-3xl sm:text-4xl font-extrabold text-amber-600 dark:text-amber-400 tracking-tight">
                     {expiringSoonCount}
                   </span>
-                  <span className="text-xs font-mono text-slate-400">priority items</span>
+                  <span className="text-xs font-mono text-slate-500 dark:text-slate-400">priority items</span>
                 </div>
 
-                <p className="text-xs text-slate-300 mt-2 leading-relaxed">
+                <p className="text-xs text-slate-600 dark:text-slate-400 font-medium mt-2 leading-relaxed">
                   Nearing expiry window requiring immediate allocation to prevent waste.
                 </p>
 
                 {/* Mini Alert Radar Indicator */}
-                <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-[10px] font-mono">
-                  <span className="text-amber-400 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                <div className="mt-4 pt-3 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between text-[10px] font-mono">
+                  <span className="text-amber-600 dark:text-amber-400 font-semibold flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 dark:bg-amber-400 animate-pulse" />
                     URGENT WINDOW
                   </span>
-                  <span className="text-amber-300/80 font-semibold">&le; 60 DAYS</span>
+                  <span className="text-amber-700 dark:text-amber-300 font-bold">&le; 60 DAYS</span>
                 </div>
               </TiltSpotlightCard>
 
               {/* Stat 3: Urgent Requests Board */}
               <TiltSpotlightCard
                 spotlightColor="rgba(244, 63, 94, 0.22)"
-                className="p-5 sm:p-6 bg-white/10 backdrop-blur-xl border border-white/20 shadow-[0_20px_50px_rgba(13,148,136,0.12)] cursor-pointer"
+                glowColor="rose"
+                className="p-5 sm:p-6 bg-white/95 dark:bg-slate-900/85 backdrop-blur-xl border border-slate-200/90 dark:border-rose-500/25 shadow-[0_12px_35px_-8px_rgba(15,23,42,0.08)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)] cursor-pointer"
                 onClick={() => setActiveMainTab('requests')}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono font-medium text-rose-300 uppercase tracking-wider">
+                  <span className="text-xs font-mono font-semibold text-rose-800 dark:text-rose-300 uppercase tracking-wider">
                     Urgent Requests
                   </span>
-                  <div className="w-9 h-9 rounded-xl bg-rose-500/15 border border-rose-400/30 flex items-center justify-center text-rose-300 shadow-[0_0_12px_rgba(244,63,94,0.25)]">
+                  <div className="w-9 h-9 rounded-xl bg-rose-50 dark:bg-rose-500/15 border border-rose-200 dark:border-rose-400/30 flex items-center justify-center text-rose-700 dark:text-rose-300 shadow-[0_0_12px_rgba(244,63,94,0.15)]">
                     <HeartHandshake className="w-4 h-4" />
                   </div>
                 </div>
 
                 <div className="mt-4 flex items-baseline gap-2 transform transition-transform duration-300 group-hover:translate-z-6">
-                  <span className="font-mono text-3xl sm:text-4xl font-bold text-rose-300 tracking-tight drop-shadow-[0_2px_10px_rgba(244,63,94,0.25)]">
+                  <span className="font-mono text-3xl sm:text-4xl font-extrabold text-rose-600 dark:text-rose-400 tracking-tight">
                     {openRequestsCount}
                   </span>
-                  <span className="text-xs font-mono text-slate-400">open shortages</span>
+                  <span className="text-xs font-mono text-slate-500 dark:text-slate-400">open shortages</span>
                 </div>
 
-                <p className="text-xs text-slate-300 mt-2 leading-relaxed">
+                <p className="text-xs text-slate-600 dark:text-slate-400 font-medium mt-2 leading-relaxed">
                   Shortages posted by rural clinics and patients waiting for donors.
                 </p>
 
                 {/* Clickable indicator */}
-                <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-[10px] font-mono">
-                  <span className="text-rose-400 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-ping" />
+                <div className="mt-4 pt-3 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between text-[10px] font-mono">
+                  <span className="text-rose-600 dark:text-rose-400 font-semibold flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500 dark:bg-rose-400 animate-ping" />
                     VIEW SHORTAGES &rarr;
                   </span>
-                  <span className="text-rose-300/80 font-bold">CLICK TO HELP</span>
+                  <span className="text-rose-700 dark:text-rose-300 font-bold">CLICK TO HELP</span>
                 </div>
               </TiltSpotlightCard>
 
               {/* Stat 4: Medicines Collected */}
               <TiltSpotlightCard
                 spotlightColor="rgba(6, 182, 212, 0.22)"
-                className="p-5 sm:p-6 bg-white/10 backdrop-blur-xl border border-white/20 shadow-[0_20px_50px_rgba(13,148,136,0.12)]"
+                glowColor="cyan"
+                className="p-5 sm:p-6 bg-white/95 dark:bg-slate-900/85 backdrop-blur-xl border border-slate-200/90 dark:border-cyan-500/25 shadow-[0_12px_35px_-8px_rgba(15,23,42,0.08)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono font-medium text-cyan-300 uppercase tracking-wider">
+                  <span className="text-xs font-mono font-semibold text-cyan-800 dark:text-cyan-300 uppercase tracking-wider">
                     Medicines Collected
                   </span>
-                  <div className="w-9 h-9 rounded-xl bg-cyan-500/15 border border-cyan-400/30 flex items-center justify-center text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.25)]">
+                  <div className="w-9 h-9 rounded-xl bg-cyan-50 dark:bg-cyan-500/15 border border-cyan-200 dark:border-cyan-400/30 flex items-center justify-center text-cyan-700 dark:text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.15)]">
                     <CheckCircle2 className="w-4 h-4" />
                   </div>
                 </div>
 
                 <div className="mt-4 flex items-baseline gap-2 transform transition-transform duration-300 group-hover:translate-z-6">
-                  <span className="font-mono text-3xl sm:text-4xl font-bold text-white tracking-tight drop-shadow-[0_2px_10px_rgba(6,182,212,0.25)]">
+                  <span className="font-mono text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                     {collectedCount}
                   </span>
-                  <span className="text-xs font-mono text-slate-400">redistributed</span>
+                  <span className="text-xs font-mono text-slate-500 dark:text-slate-400">redistributed</span>
                 </div>
 
-                <p className="text-xs text-slate-300 mt-2 leading-relaxed">
+                <p className="text-xs text-slate-600 dark:text-slate-400 font-medium mt-2 leading-relaxed">
                   Successfully handed over to clinics, charities, or patients.
                 </p>
 
                 {/* Redistribution stamp */}
-                <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-[10px] font-mono">
-                  <span className="text-cyan-400 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3 h-3 text-cyan-400" />
+                <div className="mt-4 pt-3 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between text-[10px] font-mono">
+                  <span className="text-cyan-700 dark:text-cyan-400 font-semibold flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3 h-3 text-cyan-600 dark:text-cyan-400" />
                     VERIFIED HANDOVER
                   </span>
-                  <span className="text-slate-400">100% AUDITED</span>
+                  <span className="text-slate-500 dark:text-slate-400">100% AUDITED</span>
                 </div>
               </TiltSpotlightCard>
 
