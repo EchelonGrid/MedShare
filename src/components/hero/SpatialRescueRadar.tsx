@@ -8,13 +8,15 @@ import {
   useTransform,
 } from 'framer-motion';
 import {
-  Pill,
   ShieldCheck,
-  AlertTriangle,
   MapPin,
-  Activity,
+  Clock,
   Sparkles,
   CheckCircle2,
+  Lock,
+  ArrowRight,
+  Activity,
+  Zap,
 } from 'lucide-react';
 
 export default function SpatialRescueRadar() {
@@ -58,10 +60,14 @@ export default function SpatialRescueRadar() {
       onMouseMove={handleMouseMove}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      className="relative w-full h-[480px] sm:h-[520px] lg:h-[540px] flex items-center justify-center select-none"
+      className="relative w-full max-w-[500px] h-[530px] sm:h-[560px] flex items-center justify-center select-none"
       style={{ perspective: 1200 }}
     >
-      {/* Dynamic 3D Spatial Stage */}
+      {/* Ambient Radial Glowing Aura behind 3D Pipeline */}
+      <div className="pointer-events-none absolute w-80 sm:w-96 h-80 sm:h-96 rounded-full bg-teal-400/20 blur-3xl animate-pulse-glow z-0" />
+      <div className="pointer-events-none absolute w-64 h-64 rounded-full bg-emerald-500/15 blur-2xl z-0" />
+
+      {/* Dynamic 3D Spatial Pipeline Stage */}
       <motion.div
         style={{
           rotateX,
@@ -69,295 +75,255 @@ export default function SpatialRescueRadar() {
           transformStyle: 'preserve-3d',
           willChange: 'transform',
         }}
-        className="relative w-full max-w-[500px] lg:max-w-[540px] h-full flex items-center justify-center"
+        className="relative w-full h-full flex items-center justify-center preserve-3d"
       >
         {/* ========================================================= */}
-        {/* LAYER 0 (Z: 0px): AMBIENT LIGHT & SPATIAL RADAR RINGS    */}
+        {/* LAYER 0 (Z: 0px): AMBIENT COORDINATES & DATA BEAM PATHS   */}
         {/* ========================================================= */}
         <div
-          className="absolute inset-0 flex items-center justify-center pointer-events-none"
+          className="absolute inset-0 pointer-events-none z-0"
           style={{ transform: 'translateZ(0px)' }}
         >
-          {/* Central Radial Light Glow */}
-          <div className="absolute w-80 h-80 rounded-full bg-teal-500/20 blur-3xl animate-pulse-glow" />
-          <div className="absolute w-60 h-60 rounded-full bg-emerald-500/15 blur-2xl" />
-
-          {/* Holographic Radar Concentric Circles */}
-          <div className="absolute w-[340px] h-[340px] rounded-full border border-teal-500/20 animate-spin-slow" />
-          <div className="absolute w-[260px] h-[260px] rounded-full border border-dashed border-teal-400/25 animate-spin-reverse-slow" />
-          <div className="absolute w-[180px] h-[180px] rounded-full border border-teal-500/30" />
-
-          {/* Coordinate Crosshairs */}
-          <div className="absolute w-[360px] h-[1px] bg-gradient-to-r from-transparent via-teal-500/30 to-transparent" />
-          <div className="absolute h-[360px] w-[1px] bg-gradient-to-b from-transparent via-teal-500/30 to-transparent" />
-        </div>
-
-        {/* ========================================================= */}
-        {/* LAYER 1 (Z: 25px): 3D REALISTIC METALLIC SILVER BLISTER  */}
-        {/* STRIP WITH 3D TWO-TONE CAPSULES & SWEEPING LASER SCANNER  */}
-        {/* ========================================================= */}
-        <div
-          className="relative z-10 flex items-center justify-center pointer-events-none"
-          style={{
-            transform: 'translateZ(25px) rotateX(10deg) rotateY(-8deg)',
-            transformStyle: 'preserve-3d',
-          }}
-        >
-          {/* Metallic Silver Blister Pack Base Frame */}
-          <div
-            className="relative w-64 sm:w-72 h-[390px] rounded-3xl bg-gradient-to-br from-slate-100 via-slate-200 to-teal-100 border-2 border-white/80 shadow-[0_30px_70px_rgba(0,0,0,0.45),inset_0_2px_10px_rgba(255,255,255,0.9)] p-4 flex flex-col justify-between overflow-hidden"
-            style={{
-              backgroundImage: `
-                linear-gradient(135deg, rgba(255,255,255,0.7) 0%, transparent 40%, rgba(20,184,166,0.08) 100%),
-                repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(148, 163, 184, 0.12) 3px, rgba(148, 163, 184, 0.12) 4px)
-              `,
-            }}
-          >
-            {/* Top Crimped Foil Edge */}
-            <div className="absolute top-0 inset-x-0 h-2 bg-[repeating-linear-gradient(90deg,transparent,transparent_2px,rgba(100,116,139,0.25)_2px,rgba(100,116,139,0.25)_3px)] border-b border-slate-300/60" />
-            
-            {/* Bottom Crimped Foil Edge */}
-            <div className="absolute bottom-0 inset-x-0 h-2 bg-[repeating-linear-gradient(90deg,transparent,transparent_2px,rgba(100,116,139,0.25)_2px,rgba(100,116,139,0.25)_3px)] border-t border-slate-300/60" />
-
-            {/* Specular Rim */}
-            <div className="absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white to-transparent rounded-t-3xl" />
-
-            {/* Holographic Header Bar on Blister Pack */}
-            <div className="relative z-10 flex items-center justify-between pb-2 border-b border-slate-300/80 text-[10px] font-mono text-slate-700">
-              <span className="flex items-center gap-1.5 font-bold tracking-wider text-teal-950">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
-                <span>LOT #BD-2026-FEFO</span>
-              </span>
-              <span className="text-teal-900 font-extrabold bg-teal-600/15 border border-teal-600/30 px-1.5 py-0.5 rounded text-[9px]">
-                ALU-FOIL SEALED
-              </span>
-            </div>
-
-            {/* 8 Blister Cavities Grid (2 columns x 4 rows) */}
-            <div className="grid grid-cols-2 gap-2 sm:gap-2.5 my-1.5 relative z-10">
-              {[0, 1, 2, 3, 4, 5, 6, 7].map((idx) => (
-                <div
-                  key={idx}
-                  className="relative h-13 sm:h-14 rounded-2xl bg-white/60 shadow-inner border border-slate-300/80 p-2 flex items-center justify-center overflow-hidden"
-                  style={{ transformStyle: 'preserve-3d' }}
-                >
-                  {/* Glossy Blister Dome Curved Specular Reflection */}
-                  <div className="pointer-events-none absolute inset-x-2 top-0.5 h-2 rounded-full bg-gradient-to-b from-white/95 to-transparent opacity-85" />
-                  <div className="pointer-events-none absolute inset-0 bg-radial-at-t from-white/40 via-transparent to-slate-900/5" />
-
-                  {/* 3D Two-Tone Pharmaceutical Capsule */}
-                  <div
-                    style={{
-                      transform: 'translateZ(25px) rotate(-14deg)',
-                      transformStyle: 'preserve-3d',
-                    }}
-                    className="relative w-11 sm:w-12 h-5.5 sm:h-6 rounded-full flex items-center shadow-[0_4px_10px_rgba(15,23,42,0.35)] border border-white/60 overflow-hidden"
-                  >
-                    {/* Left Half: Medical Emerald */}
-                    <div className="w-1/2 h-full bg-gradient-to-r from-teal-500 via-teal-600 to-emerald-700 flex items-center justify-center relative">
-                      <span className="text-[7px] font-mono font-bold text-white/90 drop-shadow-[0_1px_1px_rgba(0,0,0,0.4)]">
-                        {idx % 2 === 0 ? 'RX' : '500'}
-                      </span>
-                    </div>
-
-                    {/* Center Joint Seam */}
-                    <div className="w-[1px] h-full bg-slate-300/60 z-10 shrink-0" />
-
-                    {/* Right Half: Pearl White */}
-                    <div className="w-1/2 h-full bg-gradient-to-r from-white via-slate-100 to-slate-200 flex items-center justify-center relative">
-                      <span className="text-[7px] font-mono font-extrabold text-slate-700">
-                        {idx % 2 === 0 ? 'MED' : 'FEFO'}
-                      </span>
-                    </div>
-
-                    {/* Cylindrical Specular Highlight across top of capsule */}
-                    <div className="pointer-events-none absolute top-0.5 left-2 right-2 h-1 rounded-full bg-white/80 blur-[0.4px]" />
-
-                    {/* Bottom ambient shadow */}
-                    <div className="pointer-events-none absolute bottom-0 inset-x-0 h-1 bg-black/15" />
-                  </div>
-
-                  {/* Micro cavity index */}
-                  <div className="pointer-events-none absolute -bottom-0.5 -right-0.5 text-[8px] font-mono text-slate-400 font-bold px-1 opacity-60">
-                    0{idx + 1}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Sweeping Emerald Laser FEFO Scanner */}
-            <motion.div
-              animate={{
-                top: ['8%', '92%', '8%'],
-                opacity: [0.6, 1, 0.6],
-              }}
-              transition={{
-                duration: 4.5,
-                repeat: Infinity,
-                ease: 'easeInOut',
-              }}
-              className="absolute left-1 right-1 h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_20px_#10b981,0_0_8px_#34d399] pointer-events-none z-30"
-            >
-              {/* Micro scan flare in the center */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-1.5 bg-emerald-200 blur-[1px] rounded-full" />
-            </motion.div>
-
-            {/* Footer Telemetry Stamp */}
-            <div className="relative z-10 pt-2 border-t border-slate-300/80 flex items-center justify-between text-[9px] font-mono text-slate-700">
-              <span className="font-bold text-slate-800">AZITHROMYCIN • 500MG</span>
-              <span className="text-emerald-700 font-extrabold flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                100% STERILE
-              </span>
-            </div>
+          {/* Subtle Concentric Rings */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-[360px] h-[360px] rounded-full border border-teal-500/15 animate-spin-slow" />
+            <div className="w-[260px] h-[260px] rounded-full border border-dashed border-teal-400/20 animate-spin-reverse-slow" />
           </div>
+
+          {/* SVG Animated Connector Beams Between Cards */}
+          <svg className="w-full h-full overflow-visible">
+            <defs>
+              <linearGradient id="pipelineBeam1" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#14b8a6" stopOpacity="0.8" />
+                <stop offset="50%" stopColor="#f59e0b" stopOpacity="0.9" />
+                <stop offset="100%" stopColor="#10b981" stopOpacity="0.8" />
+              </linearGradient>
+              <linearGradient id="pipelineBeam2" x1="100%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.8" />
+                <stop offset="50%" stopColor="#10b981" stopOpacity="0.95" />
+                <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.8" />
+              </linearGradient>
+            </defs>
+
+            {/* Beam 1 -> 2: From Card 1 (Dhaka) to Card 2 (Bogura) */}
+            <path
+              d="M 170 145 C 200 170, 260 175, 300 195"
+              fill="none"
+              stroke="url(#pipelineBeam1)"
+              strokeWidth="2.5"
+              strokeDasharray="6 4"
+              className="animate-pulse"
+            />
+
+            {/* Beam 2 -> 3: From Card 2 (Bogura) down to Card 3 (Pabna) */}
+            <path
+              d="M 310 330 C 270 355, 230 365, 190 390"
+              fill="none"
+              stroke="url(#pipelineBeam2)"
+              strokeWidth="2.5"
+              strokeDasharray="6 4"
+              className="animate-pulse"
+            />
+          </svg>
         </div>
 
         {/* ========================================================= */}
-        {/* LAYER 2: SVG 3D CONNECTION BEAMS                           */}
+        {/* CARD 1 (Top-Left / Back Layer — translateZ(20px))         */}
+        {/* 01 // SURPLUS BATCH VERIFIED                              */}
         {/* ========================================================= */}
-        <svg
-          viewBox="0 0 500 540"
-          className="absolute inset-0 w-full h-full pointer-events-none z-15 overflow-visible"
-          style={{ transform: 'translateZ(45px)' }}
-        >
-          <defs>
-            <linearGradient id="beamGradientTeal" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#14b8a6" stopOpacity="0.85" />
-              <stop offset="50%" stopColor="#10b981" stopOpacity="0.6" />
-              <stop offset="100%" stopColor="#2dd4bf" stopOpacity="0.1" />
-            </linearGradient>
-            <linearGradient id="beamGradientAmber" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.85" />
-              <stop offset="100%" stopColor="#14b8a6" stopOpacity="0.1" />
-            </linearGradient>
-            <linearGradient id="beamGradientSky" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#0ea5e9" stopOpacity="0.85" />
-              <stop offset="100%" stopColor="#10b981" stopOpacity="0.1" />
-            </linearGradient>
-          </defs>
-
-          {/* Beam from Dhaka Hub (Top Left) to Blister Strip */}
-          <path
-            d="M 120 50 Q 155 100 185 140"
-            fill="none"
-            stroke="url(#beamGradientTeal)"
-            strokeWidth="1.5"
-            strokeDasharray="4 4"
-            className="animate-pulse"
-          />
-
-          {/* Beam from Bogura SZMCH (Top Right) to Blister Strip */}
-          <path
-            d="M 380 55 Q 345 105 315 145"
-            fill="none"
-            stroke="url(#beamGradientAmber)"
-            strokeWidth="1.5"
-            strokeDasharray="4 4"
-            className="animate-pulse"
-          />
-
-          {/* Beam from Pabna Sadar (Bottom Left) to Blister Strip */}
-          <path
-            d="M 130 480 Q 165 435 195 390"
-            fill="none"
-            stroke="url(#beamGradientSky)"
-            strokeWidth="1.5"
-            strokeDasharray="4 4"
-            className="animate-pulse"
-          />
-        </svg>
-
-        {/* ========================================================= */}
-        {/* LAYER 3 (Z: 70px - 90px): 3D FLOATING BANGLADESH TELEMETRY NODES */}
-        {/* Positioned on outer perimeter so they NEVER overlap the  */}
-        {/* blister pack or capsules                                 */}
-        {/* ========================================================= */}
-
-        {/* NODE 1: Dhaka Hub (Top Left Perimeter) */}
         <motion.div
-          whileHover={{ scale: 1.05, zIndex: 50 }}
+          animate={{ y: [0, -5, 0] }}
+          transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
           style={{
-            transform: 'translateZ(75px)',
+            transform: 'translateZ(20px)',
             transformStyle: 'preserve-3d',
           }}
-          className="absolute top-2 left-0 sm:-left-4 lg:-left-8 z-30 transition-all duration-200"
+          className="absolute top-2 sm:top-4 left-2 sm:left-4 z-10 w-[88%] sm:w-[320px] pointer-events-auto"
         >
-          <div className="bg-slate-950/90 backdrop-blur-xl border border-emerald-500/40 rounded-xl px-3 py-2 shadow-[0_15px_30px_rgba(0,0,0,0.5),0_0_15px_rgba(16,185,129,0.2)] flex items-center gap-2.5">
-            <span className="relative flex h-2.5 w-2.5 shrink-0">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400"></span>
-            </span>
-            <div className="text-left font-mono">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-bold text-white">Dhaka Central Hub</span>
-                <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold border border-emerald-400/30">
-                  SEALED
+          <div className="relative rounded-2xl bg-slate-900/90 backdrop-blur-xl border border-teal-400/35 p-4 shadow-[0_20px_45px_rgba(0,0,0,0.5),0_0_20px_rgba(20,184,166,0.15)] text-white space-y-2.5 transition-transform duration-300 hover:scale-[1.02]">
+            {/* Top specular highlight rim */}
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-teal-300/60 to-transparent rounded-t-2xl" />
+
+            {/* Header / Pipeline Step */}
+            <div className="flex items-center justify-between text-[10px] font-mono">
+              <span className="font-extrabold text-teal-300 tracking-wider flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-teal-400" />
+                <span>01 // SURPLUS BATCH VERIFIED</span>
+              </span>
+              <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                <span>ACTIVE RESCUE</span>
+              </span>
+            </div>
+
+            {/* Drug Info */}
+            <div className="space-y-0.5">
+              <div className="flex items-baseline justify-between">
+                <h4 className="font-display font-extrabold text-base text-white tracking-tight">
+                  Napa Extend 665mg
+                </h4>
+                <span className="text-[10px] font-mono font-bold text-teal-300 px-2 py-0.5 rounded bg-teal-950/80 border border-teal-500/30">
+                  BATCH #BD-904
                 </span>
               </div>
-              <p className="text-[10px] text-teal-200/80">
-                Azithromycin 500mg • 140 Packs
+              <p className="text-xs text-teal-200/80 font-medium">
+                Paracetamol • 30 Sealed Tablets
               </p>
+            </div>
+
+            {/* Location & Safety Badge */}
+            <div className="pt-2 border-t border-teal-500/20 flex flex-wrap items-center justify-between gap-1.5 text-[11px] font-mono">
+              <div className="flex items-center gap-1.5 text-slate-300">
+                <MapPin className="w-3.5 h-3.5 text-teal-400 shrink-0" />
+                <span className="truncate">Dhaka Central Hub</span>
+              </div>
+              <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-md bg-emerald-950/80 text-emerald-300 border border-emerald-500/40">
+                <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                <span>✓ 3-Point Seal Check Passed</span>
+              </span>
             </div>
           </div>
         </motion.div>
 
-        {/* NODE 2: Bogura SZMCH (Top Right Perimeter) */}
+        {/* FLOATING BEAM 1 -> 2 BADGE INDICATOR */}
+        <div
+          style={{ transform: 'translateZ(35px)' }}
+          className="absolute top-[162px] left-[155px] sm:left-[175px] z-15 pointer-events-none"
+        >
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/40 text-[10px] font-mono font-bold shadow-[0_0_15px_rgba(245,158,11,0.35)] backdrop-blur-md animate-pulse">
+            <Zap className="w-3 h-3 text-amber-400" />
+            <span>⚡ FEFO Priority Match • 18d Left</span>
+          </div>
+        </div>
+
+        {/* ========================================================= */}
+        {/* CARD 2 (Center / Middle Layer — translateZ(50px))         */}
+        {/* 02 // AUTOMATED FEFO & REGISTRY ENGINE                    */}
+        {/* ========================================================= */}
         <motion.div
-          whileHover={{ scale: 1.05, zIndex: 50 }}
+          animate={{ y: [0, -7, 0] }}
+          transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
+          style={{
+            transform: 'translateZ(50px)',
+            transformStyle: 'preserve-3d',
+          }}
+          className="absolute top-[195px] right-2 sm:right-4 z-20 w-[90%] sm:w-[330px] pointer-events-auto"
+        >
+          <div className="relative rounded-2xl bg-gradient-to-br from-teal-950/95 via-slate-900/95 to-slate-950/95 backdrop-blur-2xl border border-amber-400/45 p-4 shadow-[0_25px_50px_rgba(0,0,0,0.55),0_0_25px_rgba(245,158,11,0.18)] text-white space-y-2.5 transition-transform duration-300 hover:scale-[1.02]">
+            {/* Top specular highlight rim */}
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-amber-300/60 to-transparent rounded-t-2xl" />
+
+            {/* Header / Pipeline Step */}
+            <div className="flex items-center justify-between text-[10px] font-mono">
+              <span className="font-extrabold text-amber-300 tracking-wider flex items-center gap-1.5">
+                <Activity className="w-3 h-3 text-amber-400" />
+                <span>02 // AUTOMATED FEFO &amp; REGISTRY</span>
+              </span>
+              <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/35 shadow-[0_0_8px_rgba(16,185,129,0.25)]">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <span>● AUTO-VERIFIED IN 0.4s</span>
+              </span>
+            </div>
+
+            {/* Telemetry rows in JetBrains Mono */}
+            <div className="space-y-1.5 text-xs font-mono bg-slate-950/80 p-2.5 rounded-xl border border-teal-500/20">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400 text-[11px]">MATCHED RECIPIENT:</span>
+                <span className="text-white font-bold text-[11px] truncate">Bogura SZMCH Clinic</span>
+              </div>
+              <div className="flex items-center justify-between pt-1 border-t border-teal-500/10">
+                <span className="text-slate-400 text-[11px]">CREDENTIAL:</span>
+                <span className="text-teal-300 font-bold text-[11px]">DGHS-1105 &amp; BMDC Rx #A-45892</span>
+              </div>
+            </div>
+
+            {/* Urgency Meter */}
+            <div className="pt-1 flex items-center justify-between text-[10px] font-mono text-amber-200/90">
+              <span className="flex items-center gap-1">
+                <Clock className="w-3 h-3 text-amber-400" />
+                <span>Critical Shortage Dispatched</span>
+              </span>
+              <span className="font-extrabold text-amber-300">FEFO SCORE: 98.4%</span>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* FLOATING BEAM 2 -> 3 BADGE INDICATOR */}
+        <div
+          style={{ transform: 'translateZ(65px)' }}
+          className="absolute bottom-[165px] left-[130px] sm:left-[150px] z-25 pointer-events-none"
+        >
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 text-[10px] font-mono font-bold shadow-[0_0_15px_rgba(16,185,129,0.3)] backdrop-blur-md animate-pulse">
+            <Lock className="w-3 h-3 text-emerald-400" />
+            <span>🔐 Cryptographic 48h Escrow Handover</span>
+          </div>
+        </div>
+
+        {/* ========================================================= */}
+        {/* CARD 3 (Bottom-Right / Foreground Layer — translateZ(85px)) */}
+        {/* 03 // CRYPTOGRAPHIC PIN HANDOVER                          */}
+        {/* ========================================================= */}
+        <motion.div
+          animate={{ y: [0, -6, 0] }}
+          transition={{ duration: 3.8, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
           style={{
             transform: 'translateZ(85px)',
             transformStyle: 'preserve-3d',
           }}
-          className="absolute top-4 right-0 sm:-right-4 lg:-right-8 z-30 transition-all duration-200"
+          className="absolute bottom-2 sm:bottom-4 left-3 sm:left-6 z-30 w-[92%] sm:w-[340px] pointer-events-auto"
         >
-          <div className="bg-slate-950/90 backdrop-blur-xl border border-amber-500/40 rounded-xl px-3 py-2 shadow-[0_15px_30px_rgba(0,0,0,0.5),0_0_15px_rgba(245,158,11,0.2)] flex items-center gap-2.5">
-            <span className="relative flex h-2.5 w-2.5 shrink-0">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-400"></span>
-            </span>
-            <div className="text-left font-mono">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-bold text-white">Bogura SZMCH</span>
-                <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-semibold border border-amber-400/30">
-                  18d LEFT
-                </span>
-              </div>
-              <p className="text-[10px] text-amber-200/80">
-                Urgent FEFO Match • Azithromycin 500mg
+          <div className="relative rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border-2 border-emerald-400/60 p-4 shadow-[0_30px_60px_rgba(16,185,129,0.28)] text-slate-900 dark:text-white space-y-2.5 transition-transform duration-300 hover:scale-[1.02]">
+            {/* Top specular highlight rim */}
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-400/70 to-transparent rounded-t-2xl" />
+
+            {/* Header / Pipeline Step */}
+            <div className="flex items-center justify-between text-[10px] font-mono">
+              <span className="font-extrabold text-emerald-600 dark:text-emerald-400 tracking-wider flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                <span>03 // CRYPTOGRAPHIC PIN HANDOVER</span>
+              </span>
+              <span className="inline-flex items-center gap-1 text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-400/40 shadow-[0_0_10px_rgba(16,185,129,0.25)]">
+                <span>✓ 30 TABLETS RESCUED</span>
+              </span>
+            </div>
+
+            {/* Location & Status */}
+            <div>
+              <h4 className="font-display font-extrabold text-sm text-slate-900 dark:text-white">
+                Pabna Sadar Clinic • Handover Complete
+              </h4>
+              <p className="text-[11px] text-slate-600 dark:text-slate-400 font-sans mt-0.5">
+                Patient received sealed medication via verified volunteer courier.
               </p>
+            </div>
+
+            {/* 4 Mini Laser-Etched Monospace PIN Boxes */}
+            <div className="bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-teal-500/20 flex items-center justify-between">
+              <span className="text-[10px] font-mono font-bold text-slate-600 dark:text-slate-400 uppercase">
+                HANDOVER PIN:
+              </span>
+              <div className="flex items-center gap-1.5 font-mono">
+                {['7', '3', '9', '2'].map((digit, i) => (
+                  <span
+                    key={i}
+                    className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-slate-900 border border-emerald-400/50 text-emerald-700 dark:text-emerald-300 font-mono font-extrabold text-xs flex items-center justify-center shadow-xs"
+                  >
+                    {digit}
+                  </span>
+                ))}
+              </div>
+              <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                ✓ VERIFIED
+              </span>
+            </div>
+
+            {/* Audit Stamp */}
+            <div className="flex items-center justify-between text-[10px] font-mono text-teal-700 dark:text-teal-300/90 pt-1 border-t border-slate-200 dark:border-teal-500/15">
+              <span>100% AUDITED</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold">SAFE PATIENT INGESTION</span>
             </div>
           </div>
         </motion.div>
-
-        {/* NODE 3: Pabna Sadar Clinic (Bottom Left Perimeter) */}
-        <motion.div
-          whileHover={{ scale: 1.05, zIndex: 50 }}
-          style={{
-            transform: 'translateZ(75px)',
-            transformStyle: 'preserve-3d',
-          }}
-          className="absolute bottom-2 left-2 sm:-left-2 lg:-left-6 z-30 transition-all duration-200"
-        >
-          <div className="bg-slate-950/90 backdrop-blur-xl border border-cyan-500/40 rounded-xl px-3 py-2 shadow-[0_15px_30px_rgba(0,0,0,0.5),0_0_15px_rgba(6,182,212,0.2)] flex items-center gap-2.5">
-            <span className="relative flex h-2.5 w-2.5 shrink-0">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-400"></span>
-            </span>
-            <div className="text-left font-mono">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-bold text-white">Pabna Sadar Clinic</span>
-                <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-semibold border border-cyan-400/30">
-                  BMDC Rx
-                </span>
-              </div>
-              <p className="text-[10px] text-cyan-200/80">
-                Verified Handover Ready • NGO Outreach
-              </p>
-            </div>
-          </div>
-        </motion.div>
-
       </motion.div>
     </div>
   );
