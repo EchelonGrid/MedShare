@@ -11,10 +11,8 @@ import {
   ShieldCheck,
   MapPin,
   Clock,
-  Sparkles,
   CheckCircle2,
   Lock,
-  ArrowRight,
   Activity,
   Zap,
 } from 'lucide-react';
@@ -29,8 +27,8 @@ export default function SpatialRescueRadar() {
   const normY = useMotionValue(0);
 
   const springConfig = { damping: 25, stiffness: 200, mass: 0.6 };
-  const rotateX = useSpring(useTransform(normY, [-1, 1], [12, -12]), springConfig);
-  const rotateY = useSpring(useTransform(normX, [-1, 1], [-12, 12]), springConfig);
+  const rotateX = useSpring(useTransform(normY, [-1, 1], [10, -10]), springConfig);
+  const rotateY = useSpring(useTransform(normX, [-1, 1], [-10, 10]), springConfig);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!containerRef.current) return;
@@ -60,7 +58,7 @@ export default function SpatialRescueRadar() {
       onMouseMove={handleMouseMove}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      className="relative w-full max-w-[500px] h-[530px] sm:h-[560px] flex items-center justify-center select-none"
+      className="relative w-full max-w-[460px] sm:max-w-[490px] flex items-center justify-center select-none py-2"
       style={{ perspective: 1200 }}
     >
       {/* Ambient Radial Glowing Aura behind 3D Pipeline */}
@@ -75,72 +73,35 @@ export default function SpatialRescueRadar() {
           transformStyle: 'preserve-3d',
           willChange: 'transform',
         }}
-        className="relative w-full h-full flex items-center justify-center preserve-3d"
+        className="relative w-full flex flex-col space-y-3 sm:space-y-3.5 preserve-3d"
       >
         {/* ========================================================= */}
-        {/* LAYER 0 (Z: 0px): AMBIENT COORDINATES & DATA BEAM PATHS   */}
+        {/* LAYER 0 (Z: 0px): AMBIENT COORDINATES & CONCENTRIC RINGS  */}
         {/* ========================================================= */}
         <div
-          className="absolute inset-0 pointer-events-none z-0"
+          className="absolute inset-0 pointer-events-none z-0 overflow-hidden"
           style={{ transform: 'translateZ(0px)' }}
         >
-          {/* Subtle Concentric Rings */}
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-[360px] h-[360px] rounded-full border border-teal-500/15 animate-spin-slow" />
-            <div className="w-[260px] h-[260px] rounded-full border border-dashed border-teal-400/20 animate-spin-reverse-slow" />
+            <div className="w-[380px] h-[380px] rounded-full border border-teal-500/15 animate-spin-slow" />
+            <div className="w-[280px] h-[280px] rounded-full border border-dashed border-teal-400/20 animate-spin-reverse-slow" />
           </div>
-
-          {/* SVG Animated Connector Beams Between Cards */}
-          <svg className="w-full h-full overflow-visible">
-            <defs>
-              <linearGradient id="pipelineBeam1" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#14b8a6" stopOpacity="0.8" />
-                <stop offset="50%" stopColor="#f59e0b" stopOpacity="0.9" />
-                <stop offset="100%" stopColor="#10b981" stopOpacity="0.8" />
-              </linearGradient>
-              <linearGradient id="pipelineBeam2" x1="100%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.8" />
-                <stop offset="50%" stopColor="#10b981" stopOpacity="0.95" />
-                <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.8" />
-              </linearGradient>
-            </defs>
-
-            {/* Beam 1 -> 2: From Card 1 (Dhaka) to Card 2 (Bogura) */}
-            <path
-              d="M 170 145 C 200 170, 260 175, 300 195"
-              fill="none"
-              stroke="url(#pipelineBeam1)"
-              strokeWidth="2.5"
-              strokeDasharray="6 4"
-              className="animate-pulse"
-            />
-
-            {/* Beam 2 -> 3: From Card 2 (Bogura) down to Card 3 (Pabna) */}
-            <path
-              d="M 310 330 C 270 355, 230 365, 190 390"
-              fill="none"
-              stroke="url(#pipelineBeam2)"
-              strokeWidth="2.5"
-              strokeDasharray="6 4"
-              className="animate-pulse"
-            />
-          </svg>
         </div>
 
         {/* ========================================================= */}
-        {/* CARD 1 (Top-Left / Back Layer — translateZ(20px))         */}
+        {/* CARD 1 (Top / Back Layer — translateZ(20px))              */}
         {/* 01 // SURPLUS BATCH VERIFIED                              */}
         {/* ========================================================= */}
         <motion.div
-          animate={{ y: [0, -5, 0] }}
+          animate={{ y: [0, -4, 0] }}
           transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
           style={{
             transform: 'translateZ(20px)',
             transformStyle: 'preserve-3d',
           }}
-          className="absolute top-2 sm:top-4 left-2 sm:left-4 z-10 w-[88%] sm:w-[320px] pointer-events-auto"
+          className="mr-auto w-full max-w-sm z-10 pointer-events-auto"
         >
-          <div className="relative rounded-2xl bg-slate-900/90 backdrop-blur-xl border border-teal-400/35 p-4 shadow-[0_20px_45px_rgba(0,0,0,0.5),0_0_20px_rgba(20,184,166,0.15)] text-white space-y-2.5 transition-transform duration-300 hover:scale-[1.02]">
+          <div className="relative rounded-2xl bg-slate-900/95 backdrop-blur-xl border border-teal-400/35 p-4 shadow-[0_20px_45px_rgba(0,0,0,0.5),0_0_20px_rgba(20,184,166,0.15)] text-white space-y-2.5 transition-transform duration-300 hover:scale-[1.02]">
             {/* Top specular highlight rim */}
             <div className="pointer-events-none absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-teal-300/60 to-transparent rounded-t-2xl" />
 
@@ -185,12 +146,18 @@ export default function SpatialRescueRadar() {
           </div>
         </motion.div>
 
-        {/* FLOATING BEAM 1 -> 2 BADGE INDICATOR */}
+        {/* ========================================================= */}
+        {/* CONNECTOR ROW 1 -> 2 (Clean vertical flow between 1 & 2)  */}
+        {/* ========================================================= */}
         <div
-          style={{ transform: 'translateZ(35px)' }}
-          className="absolute top-[162px] left-[155px] sm:left-[175px] z-15 pointer-events-none"
+          style={{
+            transform: 'translateZ(35px)',
+            transformStyle: 'preserve-3d',
+          }}
+          className="flex items-center gap-3 px-5 sm:px-7 py-0.5 z-15"
         >
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/40 text-[10px] font-mono font-bold shadow-[0_0_15px_rgba(245,158,11,0.35)] backdrop-blur-md animate-pulse">
+          <div className="h-6 w-0.5 bg-gradient-to-b from-teal-400 to-amber-400 shadow-[0_0_8px_rgba(20,184,166,0.5)] rounded-full shrink-0" />
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/40 text-[10px] font-mono font-bold shadow-[0_0_15px_rgba(245,158,11,0.25)] backdrop-blur-md animate-pulse">
             <Zap className="w-3 h-3 text-amber-400" />
             <span>⚡ FEFO Priority Match • 18d Left</span>
           </div>
@@ -201,13 +168,13 @@ export default function SpatialRescueRadar() {
         {/* 02 // AUTOMATED FEFO & REGISTRY ENGINE                    */}
         {/* ========================================================= */}
         <motion.div
-          animate={{ y: [0, -7, 0] }}
+          animate={{ y: [0, -5, 0] }}
           transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
           style={{
             transform: 'translateZ(50px)',
             transformStyle: 'preserve-3d',
           }}
-          className="absolute top-[195px] right-2 sm:right-4 z-20 w-[90%] sm:w-[330px] pointer-events-auto"
+          className="ml-auto w-full max-w-sm z-20 pointer-events-auto"
         >
           <div className="relative rounded-2xl bg-gradient-to-br from-teal-950/95 via-slate-900/95 to-slate-950/95 backdrop-blur-2xl border border-amber-400/45 p-4 shadow-[0_25px_50px_rgba(0,0,0,0.55),0_0_25px_rgba(245,158,11,0.18)] text-white space-y-2.5 transition-transform duration-300 hover:scale-[1.02]">
             {/* Top specular highlight rim */}
@@ -248,31 +215,37 @@ export default function SpatialRescueRadar() {
           </div>
         </motion.div>
 
-        {/* FLOATING BEAM 2 -> 3 BADGE INDICATOR */}
+        {/* ========================================================= */}
+        {/* CONNECTOR ROW 2 -> 3 (Clean vertical flow between 2 & 3)  */}
+        {/* ========================================================= */}
         <div
-          style={{ transform: 'translateZ(65px)' }}
-          className="absolute bottom-[165px] left-[130px] sm:left-[150px] z-25 pointer-events-none"
+          style={{
+            transform: 'translateZ(65px)',
+            transformStyle: 'preserve-3d',
+          }}
+          className="flex items-center justify-end sm:justify-center gap-3 px-5 sm:px-7 py-0.5 z-25"
         >
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 text-[10px] font-mono font-bold shadow-[0_0_15px_rgba(16,185,129,0.3)] backdrop-blur-md animate-pulse">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 text-[10px] font-mono font-bold shadow-[0_0_15px_rgba(16,185,129,0.25)] backdrop-blur-md animate-pulse">
             <Lock className="w-3 h-3 text-emerald-400" />
             <span>🔐 Cryptographic 48h Escrow Handover</span>
           </div>
+          <div className="h-6 w-0.5 bg-gradient-to-b from-amber-400 to-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.5)] rounded-full shrink-0" />
         </div>
 
         {/* ========================================================= */}
-        {/* CARD 3 (Bottom-Right / Foreground Layer — translateZ(85px)) */}
+        {/* CARD 3 (Foreground Layer — translateZ(85px))              */}
         {/* 03 // CRYPTOGRAPHIC PIN HANDOVER                          */}
         {/* ========================================================= */}
         <motion.div
-          animate={{ y: [0, -6, 0] }}
+          animate={{ y: [0, -4, 0] }}
           transition={{ duration: 3.8, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
           style={{
             transform: 'translateZ(85px)',
             transformStyle: 'preserve-3d',
           }}
-          className="absolute bottom-2 sm:bottom-4 left-3 sm:left-6 z-30 w-[92%] sm:w-[340px] pointer-events-auto"
+          className="mx-auto w-full max-w-sm z-30 pointer-events-auto"
         >
-          <div className="relative rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border-2 border-emerald-400/60 p-4 shadow-[0_30px_60px_rgba(16,185,129,0.28)] text-slate-900 dark:text-white space-y-2.5 transition-transform duration-300 hover:scale-[1.02]">
+          <div className="relative rounded-2xl bg-white dark:bg-slate-900 border-2 border-emerald-400/70 p-4 shadow-[0_30px_60px_rgba(16,185,129,0.22)] text-slate-900 dark:text-white space-y-2.5 transition-transform duration-300 hover:scale-[1.02]">
             {/* Top specular highlight rim */}
             <div className="pointer-events-none absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-400/70 to-transparent rounded-t-2xl" />
 
