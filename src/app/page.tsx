@@ -78,6 +78,13 @@ export default function HomePage() {
     return () => clearTimeout(timer);
   }, [notification]);
 
+  // Logged-out safety fallback: if user logs out while on portal, auto-switch to feed
+  useEffect(() => {
+    if (!currentUser && activeMainTab === 'portal') {
+      setActiveMainTab('feed');
+    }
+  }, [currentUser, activeMainTab, setActiveMainTab]);
+
   const availableCount = medications.filter((m) => m.status === 'available').length;
   const expiringSoonCount = mounted
     ? medications.filter(
@@ -183,12 +190,26 @@ export default function HomePage() {
     openDonateWithRequest(req);
   };
 
-  const scrollToContent = () => {
-    setActiveMainTab('feed');
-    const el = document.getElementById('main-feed-section');
+  const scrollToWorkspace = () => {
+    const el = document.getElementById('rescue-workspace') || document.getElementById('main-feed-section');
     if (el) {
       el.scrollIntoView({ behavior: 'smooth' });
     }
+  };
+
+  const handleStatCardClick = (target: 'available' | 'expiring_soon' | 'requests' | 'claimed_collected') => {
+    if (target === 'requests') {
+      setActiveMainTab('requests');
+    } else {
+      setActiveMainTab('feed');
+      setActiveFeedTab(target);
+    }
+    scrollToWorkspace();
+  };
+
+  const scrollToContent = () => {
+    setActiveMainTab('feed');
+    scrollToWorkspace();
   };
 
   return (
@@ -320,7 +341,8 @@ export default function HomePage() {
               {/* Stat 1: Available Medicines */}
               <TiltSpotlightCard
                 spotlightColor="rgba(20, 184, 166, 0.22)"
-                className="p-5 sm:p-6 bg-white/95 border border-slate-200/90 shadow-[0_15px_40px_-10px_rgba(15,23,42,0.12)] dark:bg-slate-900/80 dark:border-teal-500/20"
+                onClick={() => handleStatCardClick('available')}
+                className="p-5 sm:p-6 bg-white/95 border border-slate-200/90 shadow-[0_15px_40px_-10px_rgba(15,23,42,0.12)] dark:bg-slate-900/80 dark:border-teal-500/20 cursor-pointer group/stat transition-all duration-200 hover:-translate-y-0.5"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-mono font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
@@ -348,18 +370,21 @@ export default function HomePage() {
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
                     LIVE TELEMETRY
                   </span>
-                  <span className="text-slate-500 dark:text-slate-400 font-medium">FEFO ACTIVE</span>
+                  <span className="text-teal-700 dark:text-teal-400 font-bold group-hover/stat:translate-x-0.5 transition-transform flex items-center gap-1">
+                    Filter Feed &rarr;
+                  </span>
                 </div>
               </TiltSpotlightCard>
 
               {/* Stat 2: Expiring Soon (≤ 60d) */}
               <TiltSpotlightCard
                 spotlightColor="rgba(245, 158, 11, 0.22)"
-                className="p-5 sm:p-6 bg-white/95 border border-slate-200/90 shadow-[0_15px_40px_-10px_rgba(15,23,42,0.12)] dark:bg-slate-900/80 dark:border-teal-500/20"
+                onClick={() => handleStatCardClick('expiring_soon')}
+                className="p-5 sm:p-6 bg-white/95 border border-slate-200/90 shadow-[0_15px_40px_-10px_rgba(15,23,42,0.12)] dark:bg-slate-900/80 dark:border-teal-500/20 cursor-pointer group/stat transition-all duration-200 hover:-translate-y-0.5"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-mono font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                    Expiring Soon (≤ 60d)
+                    Expiring Soon (&le; 60d)
                   </span>
                   <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:bg-amber-500/15 dark:border-amber-400/30 dark:text-amber-300 flex items-center justify-center shadow-xs">
                     <AlertTriangle className="w-4 h-4" />
@@ -383,15 +408,17 @@ export default function HomePage() {
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                     URGENT WINDOW
                   </span>
-                  <span className="text-amber-700 dark:text-amber-300/80 font-bold">&le; 60 DAYS</span>
+                  <span className="text-amber-700 dark:text-amber-400 font-bold group-hover/stat:translate-x-0.5 transition-transform flex items-center gap-1">
+                    Filter Feed &rarr;
+                  </span>
                 </div>
               </TiltSpotlightCard>
 
               {/* Stat 3: Urgent Requests Board */}
               <TiltSpotlightCard
                 spotlightColor="rgba(244, 63, 94, 0.22)"
-                className="p-5 sm:p-6 bg-white/95 border border-slate-200/90 shadow-[0_15px_40px_-10px_rgba(15,23,42,0.12)] dark:bg-slate-900/80 dark:border-teal-500/20 cursor-pointer"
-                onClick={() => setActiveMainTab('requests')}
+                onClick={() => handleStatCardClick('requests')}
+                className="p-5 sm:p-6 bg-white/95 border border-slate-200/90 shadow-[0_15px_40px_-10px_rgba(15,23,42,0.12)] dark:bg-slate-900/80 dark:border-teal-500/20 cursor-pointer group/stat transition-all duration-200 hover:-translate-y-0.5"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-mono font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
@@ -417,16 +444,19 @@ export default function HomePage() {
                 <div className="mt-4 pt-3 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between text-[10px] font-mono text-slate-500 dark:text-slate-400">
                   <span className="text-rose-600 dark:text-rose-400 font-semibold flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" />
-                    VIEW SHORTAGES &rarr;
+                    VIEW SHORTAGES
                   </span>
-                  <span className="text-rose-700 dark:text-rose-300 font-bold">CLICK TO HELP</span>
+                  <span className="text-rose-700 dark:text-rose-400 font-bold group-hover/stat:translate-x-0.5 transition-transform flex items-center gap-1">
+                    View Board &rarr;
+                  </span>
                 </div>
               </TiltSpotlightCard>
 
               {/* Stat 4: Medicines Collected */}
               <TiltSpotlightCard
                 spotlightColor="rgba(6, 182, 212, 0.22)"
-                className="p-5 sm:p-6 bg-white/95 border border-slate-200/90 shadow-[0_15px_40px_-10px_rgba(15,23,42,0.12)] dark:bg-slate-900/80 dark:border-teal-500/20"
+                onClick={() => handleStatCardClick('claimed_collected')}
+                className="p-5 sm:p-6 bg-white/95 border border-slate-200/90 shadow-[0_15px_40px_-10px_rgba(15,23,42,0.12)] dark:bg-slate-900/80 dark:border-teal-500/20 cursor-pointer group/stat transition-all duration-200 hover:-translate-y-0.5"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-mono font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
@@ -454,7 +484,9 @@ export default function HomePage() {
                     <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 dark:text-cyan-400" />
                     VERIFIED HANDOVER
                   </span>
-                  <span className="text-slate-500 dark:text-slate-400 font-medium">100% AUDITED</span>
+                  <span className="text-cyan-700 dark:text-cyan-400 font-bold group-hover/stat:translate-x-0.5 transition-transform flex items-center gap-1">
+                    Filter Feed &rarr;
+                  </span>
                 </div>
               </TiltSpotlightCard>
 
@@ -467,9 +499,11 @@ export default function HomePage() {
         {/* MAIN CANVAS: COHESIVE MULTI-LAYERED SPATIAL SURFACE       */}
         {/* ========================================================= */}
         <section
-          id="main-feed-section"
+          id="rescue-workspace"
           className="relative min-h-[700px] scroll-mt-24 bg-gradient-to-b from-teal-50/50 via-slate-50 to-white dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 border-t border-slate-200/80 dark:border-teal-500/20 py-10 px-4 sm:px-6 lg:px-8 space-y-8"
         >
+          {/* Alias anchor for main-feed-section */}
+          <span id="main-feed-section" className="absolute -top-24 pointer-events-none" />
           {/* Subtle Ambient Radial Lighting Meshes for Smooth Gradient Canvas */}
           <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-full h-[600px] bg-spatial-grid-light dark:bg-spatial-grid-dark opacity-40 dark:opacity-60" />
           <div className="pointer-events-none absolute top-12 left-1/4 w-[500px] h-[300px] bg-teal-500/5 blur-[100px] rounded-full" />
@@ -576,33 +610,27 @@ export default function HomePage() {
                   </span>
                 </button>
 
-                {/* TAB 3: Collector & Donor Portal */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!currentUser) {
-                      openAuthModal('login', 'Please sign in or create an account to access the Collector & Donor Portal.');
-                      return;
-                    }
-                    setActiveMainTab('portal');
-                  }}
-                  className={`relative px-4 py-2 text-xs sm:text-sm font-bold flex items-center gap-2 rounded-xl transition duration-200 cursor-pointer shrink-0 ${
-                    activeMainTab === 'portal'
-                      ? 'text-slate-950'
-                      : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100/60 dark:hover:bg-white/[0.04]'
-                  }`}
-                >
-                  {activeMainTab === 'portal' && (
-                    <motion.div
-                      layoutId="activeMainTab"
-                      className="absolute inset-0 rounded-xl bg-gradient-to-r from-teal-400 to-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.4),inset_0_1px_0_rgba(255,255,255,0.6)]"
-                      transition={{ type: 'spring', stiffness: 420, damping: 32 }}
-                    />
-                  )}
-                  <span className="relative z-10 flex items-center gap-2">
-                    <LayoutDashboard className="w-4 h-4" />
-                    <span>{currentUser?.role === 'admin' ? 'Admin Moderator Desk' : 'Collector & Donor Portal'}</span>
-                    {currentUser && (
+                {/* TAB 3: Collector & Donor Portal (Rendered ONLY when currentUser !== null) */}
+                {currentUser && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveMainTab('portal')}
+                    className={`relative px-4 py-2 text-xs sm:text-sm font-bold flex items-center gap-2 rounded-xl transition duration-200 cursor-pointer shrink-0 ${
+                      activeMainTab === 'portal'
+                        ? 'text-slate-950'
+                        : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100/60 dark:hover:bg-white/[0.04]'
+                    }`}
+                  >
+                    {activeMainTab === 'portal' && (
+                      <motion.div
+                        layoutId="activeMainTab"
+                        className="absolute inset-0 rounded-xl bg-gradient-to-r from-teal-400 to-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.4),inset_0_1px_0_rgba(255,255,255,0.6)]"
+                        transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                      />
+                    )}
+                    <span className="relative z-10 flex items-center gap-2">
+                      <LayoutDashboard className="w-4 h-4" />
+                      <span>{currentUser.role === 'admin' ? 'Admin Moderator Desk' : 'Collector & Donor Portal'}</span>
                       <span
                         className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
                           activeMainTab === 'portal'
@@ -612,9 +640,9 @@ export default function HomePage() {
                       >
                         {portalBadgeCount}
                       </span>
-                    )}
-                  </span>
-                </button>
+                    </span>
+                  </button>
+                )}
               </div>
 
               {/* Contextual Action Button */}
