@@ -153,7 +153,7 @@ interface MedShareContextType {
   logout: () => Promise<void>;
   loginAsDemo: (userId: string) => void;
   addMedication: (data: NewMedicationInput) => Promise<Medication>;
-  claimMedication: (medicationId: string, prescriptionRef?: string, claimedAmount?: number) => Promise<{ success: boolean; pin: string }>;
+  claimMedication: (medicationId: string, prescriptionRef?: string, claimedAmount?: number) => Promise<{ success: boolean; pin: string; error?: string }>;
   releaseClaim: (medicationId: string, claimId?: string) => Promise<void>;
   markAsCollected: (medicationId: string, enteredPinOrClaimId?: string, claimId?: string) => Promise<{ success: boolean; error?: string }>;
   addMedicineRequest: (data: NewMedicineRequestInput) => Promise<MedicineRequest>;
@@ -165,7 +165,6 @@ interface MedShareContextType {
   approveVerification: (userId: string) => Promise<void>;
   rejectVerification: (userId: string, reason?: string) => Promise<void>;
   pendingVerifications: UserProfile[];
-  resetDemoData: () => Promise<void>;
   isDonateOpen: boolean;
   openDonateModal: () => void;
   closeDonateModal: () => void;
@@ -531,7 +530,7 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
         // 1. Check local users first (for demo accounts and offline mode)
         const localUser = allUsers.find((u) => u.email.toLowerCase() === cleanEmail);
         if (localUser) {
-          if (password && localUser.password && localUser.password !== password) {
+          if (localUser.password && (!password || localUser.password !== password)) {
             setActionLoading(null);
             return { success: false, error: 'Incorrect password. Please try again.' };
           }
@@ -608,10 +607,11 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
           return { success: false, error: 'An account with this email address already exists.' };
         }
 
+        // Guard against privilege escalation: public registrations cannot register as 'admin'
+        const safeRole: UserRole = data.role === 'clinic_charity' ? 'clinic_charity' : 'individual';
+
         const initialStatus: VerificationStatus =
-          data.role === 'admin'
-            ? 'verified'
-            : data.registrationOrNid && data.registrationOrNid.trim().length > 0
+          data.registrationOrNid && data.registrationOrNid.trim().length > 0
             ? 'pending'
             : 'unverified';
 
@@ -625,7 +625,7 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
               options: {
                 data: {
                   name: data.name.trim(),
-                  role: data.role,
+                  role: safeRole,
                   phone: data.phone.trim(),
                   location: data.location.trim(),
                 },
@@ -638,7 +638,7 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
                 id: newUserId,
                 name: data.name.trim(),
                 email: cleanEmail,
-                role: data.role,
+                role: safeRole,
                 phone: data.phone.trim(),
                 location: data.location.trim(),
                 organization_name: data.organizationName?.trim() || null,
@@ -658,13 +658,13 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
           name: data.name.trim(),
           email: cleanEmail,
           password: data.password || 'password123',
-          role: data.role,
+          role: safeRole,
           phone: data.phone.trim(),
           location: data.location.trim(),
           organizationName: data.organizationName?.trim(),
           registrationOrNid: data.registrationOrNid?.trim(),
           verificationStatus: initialStatus,
-          isVerified: initialStatus === 'verified',
+          isVerified: false,
           submittedAt: initialStatus === 'pending' ? new Date().toISOString() : undefined,
         };
 
@@ -706,6 +706,12 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
   // Medication Actions
   const addMedication = useCallback(
     async (data: NewMedicationInput): Promise<Medication> => {
+      if (!currentUser) {
+        setActionLoading(null);
+        showToast('Please sign in or create an account to donate medications.', 'error', 'Sign In Required');
+        throw new Error('Authentication required to list medications');
+      }
+
       setActionLoading('donating');
 
       const tempId = `med-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -790,7 +796,46 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
       medicationId: string,
       prescriptionRef?: string,
       claimedAmount?: number
-    ): Promise<{ success: boolean; pin: string }> => {
+    ): Promise<{ success: boolean; pin: string; error?: string }> => {
+      // 1. Authentication check
+      if (!currentUser) {
+        showToast('Please sign in or create an account to claim medications.', 'error', 'Sign In Required');
+        return { success: false, pin: '', error: 'Please sign in to claim medications.' };
+      }
+
+      // 2. Verification check
+      if (!currentUser.isVerified) {
+        showToast('Account verification required before claiming medications.', 'warning', 'Verification Required');
+        return { success: false, pin: '', error: 'Account verification required before claiming medications.' };
+      }
+
+      // 3. Admin restriction
+      if (currentUser.role === 'admin') {
+        showToast('Admin accounts are designated for platform moderation and cannot claim medicines.', 'info', 'Admin Notice');
+        return { success: false, pin: '', error: 'Admin accounts cannot claim medications.' };
+      }
+
+      // 4. Validate target medication availability and ownership
+      const targetMed = medications.find((m) => m.id === medicationId);
+      if (!targetMed) {
+        showToast('Medication record not found.', 'error', 'Error');
+        return { success: false, pin: '', error: 'Medication record not found.' };
+      }
+
+      if (targetMed.donorId === currentUser.id) {
+        showToast('You are the donor of this medicine. You cannot claim your own listed donation.', 'warning', 'Donor Notice');
+        return { success: false, pin: '', error: 'You cannot claim your own listed medication.' };
+      }
+
+      const parsedCheck = parseQuantity(targetMed.quantity);
+      const totalCheck = targetMed.totalNumericQuantity ?? parsedCheck.total;
+      const currentAvailable = targetMed.remainingNumericQuantity !== undefined ? targetMed.remainingNumericQuantity : totalCheck;
+
+      if (targetMed.status === 'collected' || currentAvailable <= 0) {
+        showToast('This medication is no longer available to claim.', 'warning', 'Unavailable');
+        return { success: false, pin: '', error: 'This medication is no longer available to claim.' };
+      }
+
       setActionLoading(medicationId);
 
       const claimer = currentUser;
@@ -906,11 +951,34 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
       showToast(feedbackToastMsg, 'success', feedbackToastTitle);
       return { success: true, pin };
     },
-    [currentUser, saveMedsToLocal, showToast]
+    [currentUser, medications, saveMedsToLocal, showToast]
   );
 
   const releaseClaim = useCallback(
     async (medicationId: string, claimId?: string): Promise<void> => {
+      if (!currentUser) {
+        showToast('Please sign in to manage claims.', 'error', 'Sign In Required');
+        return;
+      }
+
+      const targetMed = medications.find((m) => m.id === medicationId);
+      if (!targetMed) {
+        showToast('Medication record not found.', 'error', 'Error');
+        return;
+      }
+
+      const isDonor = targetMed.donorId === currentUser.id ||
+        (Boolean(targetMed.donorName) && targetMed.donorName.toLowerCase() === currentUser.name.toLowerCase());
+      const isAdmin = currentUser.role === 'admin';
+      const isClaimer = (targetMed.claims || []).some((c) => (c.id === claimId || !claimId) && c.claimerId === currentUser.id) ||
+        (targetMed.activeClaims || []).some((c) => (c.claimId === claimId || !claimId) && c.collectorId === currentUser.id) ||
+        targetMed.claimedById === currentUser.id;
+
+      if (!isDonor && !isAdmin && !isClaimer) {
+        showToast('Unauthorized: You do not have permission to release this claim.', 'error', 'Access Denied');
+        return;
+      }
+
       setActionLoading(medicationId);
 
       setMedications((prev) => {
@@ -999,7 +1067,7 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
       setActionLoading(null);
       showToast('Medication batch restocked back to available feed!', 'info', 'Claim Released');
     },
-    [saveMedsToLocal, showToast]
+    [currentUser, medications, saveMedsToLocal, showToast]
   );
 
   const markAsCollected = useCallback(
@@ -1036,9 +1104,22 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
         };
       }
 
+      if (!currentUser) {
+        showToast('Please sign in to verify medication handover.', 'error', 'Sign In Required');
+        return { success: false, error: 'Authentication required' };
+      }
+
       const targetMed = medications.find((m) => m.id === medicationId);
       if (!targetMed) {
         return { success: false, error: 'Medication record not found.' };
+      }
+
+      const isDonor = targetMed.donorId === currentUser.id ||
+        (Boolean(targetMed.donorName) && targetMed.donorName.toLowerCase() === currentUser.name.toLowerCase());
+      const isAdmin = currentUser.role === 'admin';
+      if (!isDonor && !isAdmin) {
+        showToast('Unauthorized: Only the listing donor or an administrator can verify medication handover.', 'error', 'Access Denied');
+        return { success: false, error: 'Unauthorized: Only the listing donor or an administrator can verify medication handover.' };
       }
 
       let expectedPin = targetMed.handoverPin;
@@ -1136,12 +1217,21 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
       showToast('Medication marked as safely collected and handed over!', 'success', 'Handover Complete');
       return { success: true };
     },
-    [medications, saveMedsToLocal, showToast]
+    [currentUser, medications, saveMedsToLocal, showToast]
   );
 
   // Medicine Requests (Reverse Marketplace)
   const addMedicineRequest = useCallback(
     async (data: NewMedicineRequestInput): Promise<MedicineRequest> => {
+      if (!currentUser) {
+        showToast('Please sign in or create an account to broadcast medicine requests.', 'error', 'Sign In Required');
+        throw new Error('Authentication required');
+      }
+      if (!currentUser.isVerified) {
+        showToast('Account verification required before broadcasting medicine requests.', 'warning', 'Verification Required');
+        throw new Error('Verification required');
+      }
+
       setActionLoading('requesting');
       const tempId = `req-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
       const reqUser = currentUser;
@@ -1360,8 +1450,15 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // 3. Generate 6-Digit Verification OTP
-      const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+      // 3. Generate 6-Digit Verification OTP using cryptographically secure random values
+      let generatedOtp: string;
+      if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+        const array = new Uint32Array(1);
+        crypto.getRandomValues(array);
+        generatedOtp = (100000 + (array[0] % 900000)).toString();
+      } else {
+        generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+      }
       setActiveOtp({
         code: generatedOtp,
         email: currentUser.email,
@@ -1394,7 +1491,7 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
 
       return {
         success: true,
-        demoOtp: generatedOtp,
+        ...(!isSupabaseConfigured && { demoOtp: generatedOtp }),
       };
     },
     [allUsers, currentUser, currentUserId, showToast]
@@ -1443,8 +1540,8 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // 3. Demo code bypass for instant evaluation if offline
-      if (!isValidToken && cleanToken === '123456') {
+      // 3. Demo code bypass only if offline / Supabase not configured
+      if (!isSupabaseConfigured && !isValidToken && cleanToken === '123456') {
         isValidToken = true;
       }
 
@@ -1591,23 +1688,6 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
     [allUsers, currentUser?.role, saveUsersToLocal, showToast]
   );
 
-  const resetDemoData = useCallback(async () => {
-    setMedications(INITIAL_MEDICATIONS);
-    setRequests(INITIAL_REQUESTS);
-    setAllUsers(DEFAULT_USERS);
-    setCurrentUserId(null);
-
-    try {
-      localStorage.setItem(MEDS_STORAGE_KEY, JSON.stringify(INITIAL_MEDICATIONS));
-      localStorage.setItem(REQUESTS_STORAGE_KEY, JSON.stringify(INITIAL_REQUESTS));
-      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(DEFAULT_USERS));
-      localStorage.setItem(CURRENT_USER_ID_KEY, 'guest');
-    } catch (err) {
-      console.error('Error resetting demo data:', err);
-    }
-    showToast('Demo data reset to default seeds. You are in guest mode.', 'info', 'Demo Reset');
-  }, [showToast]);
-
   // Modal open/close helpers
   const openDonateModal = () => {
     setPrefillRequestForDonation(null);
@@ -1672,7 +1752,6 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
         approveVerification,
         rejectVerification,
         pendingVerifications,
-        resetDemoData,
         isDonateOpen,
         openDonateModal,
         closeDonateModal,

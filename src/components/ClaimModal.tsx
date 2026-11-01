@@ -184,7 +184,7 @@ export default function ClaimModal({
     }
 
     const res = await claimMedication(medication.id, prescriptionRef, claimAmount);
-    if (res && res.pin) {
+    if (res && res.success && res.pin) {
       setAssignedPin(res.pin);
       setIsSubmitted(true);
     }

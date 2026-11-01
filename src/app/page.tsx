@@ -201,7 +201,7 @@ export default function HomePage() {
         {/* ========================================================= */}
         {/* HERO SECTION: 3D SPATIAL BIOTECH STAGE & RESCUE RADAR    */}
         {/* ========================================================= */}
-        <section className="relative overflow-hidden bg-gradient-to-br from-teal-950 via-teal-900 to-emerald-950 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 text-white pt-8 pb-14 sm:pb-16 px-4 sm:px-6 lg:px-8 border-b border-teal-500/20 shadow-sm">
+        <section className="relative overflow-hidden bg-gradient-to-br from-teal-950 via-teal-900 to-emerald-950 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 text-white pt-28 sm:pt-32 pb-14 sm:pb-16 px-4 sm:px-6 lg:px-8 border-b border-teal-500/20 shadow-sm">
           {/* Ambient Lighting Meshes */}
           <div className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 w-[1000px] h-[550px] bg-gradient-to-b from-teal-500/15 via-emerald-500/10 to-transparent blur-[120px] rounded-full" />
           <div className="pointer-events-none absolute top-1/4 -right-20 w-[450px] h-[450px] bg-teal-500/10 blur-[100px] rounded-full" />
@@ -468,7 +468,7 @@ export default function HomePage() {
         {/* ========================================================= */}
         <section
           id="main-feed-section"
-          className="relative min-h-[700px] bg-gradient-to-b from-teal-50/50 via-slate-50 to-white dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 border-t border-slate-200/80 dark:border-teal-500/20 py-10 px-4 sm:px-6 lg:px-8 space-y-8"
+          className="relative min-h-[700px] scroll-mt-24 bg-gradient-to-b from-teal-50/50 via-slate-50 to-white dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 border-t border-slate-200/80 dark:border-teal-500/20 py-10 px-4 sm:px-6 lg:px-8 space-y-8"
         >
           {/* Subtle Ambient Radial Lighting Meshes for Smooth Gradient Canvas */}
           <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-full h-[600px] bg-spatial-grid-light dark:bg-spatial-grid-dark opacity-40 dark:opacity-60" />

@@ -4,10 +4,15 @@ import { parseQuantity } from '@/lib/seed';
 /**
  * Escapes a cell value for standard CSV compatibility (RFC 4180).
  * Handles quotes, commas, newlines, and nulls.
+ * Neutralizes CSV / formula injection (CWE-1236) by escaping formula trigger prefixes.
  */
 function escapeCSV(val: unknown): string {
   if (val === null || val === undefined) return '""';
-  const str = String(val).replace(/\r\n/g, ' ').replace(/[\r\n]/g, ' ');
+  let str = String(val).replace(/\r\n/g, ' ').replace(/[\r\n]/g, ' ');
+  // Neutralize CSV formula injection (=, +, -, @, \t, \r)
+  if (/^[=+@\-\t\r]/.test(str)) {
+    str = `'${str}`;
+  }
   // If string contains comma, quote, or semicolon, wrap in quotes and escape internal quotes
   const escaped = str.replace(/"/g, '""');
   return `"${escaped}"`;

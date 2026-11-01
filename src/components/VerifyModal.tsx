@@ -72,7 +72,7 @@ export default function VerifyModal({
 
   // OTP State
   const [otpCode, setOtpCode] = useState('');
-  const [demoOtpH俠nt, setDemoOtpHint] = useState<string | null>(null);
+  const [demoOtpHint, setDemoOtpHint] = useState<string | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
 
   // Validation Error States
@@ -693,7 +693,7 @@ export default function VerifyModal({
             </div>
 
             {/* Demo / Offline Hint if applicable */}
-            {demoOtpH俠nt && (
+            {demoOtpHint && (
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center space-y-1">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800">
                   ⚡ Supabase OTP Simulation Note:
@@ -701,7 +701,7 @@ export default function VerifyModal({
                 <p className="text-xs text-amber-900">
                   If running locally without custom SMTP inbox access, your generated code is:{' '}
                   <strong className="font-mono font-bold bg-amber-200/80 px-2 py-0.5 rounded text-amber-950">
-                    {demoOtpH俠nt}
+                    {demoOtpHint}
                   </strong>
                 </p>
               </div>

@@ -104,8 +104,15 @@ export function parseQuantity(quantityStr?: string | null): { total: number; uni
 
 /**
  * Generates a random 4-digit numeric handover PIN between "1000" and "9999".
+ * Uses cryptographically secure random values when available.
  */
 export function generateHandoverPin(): string {
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    const array = new Uint32Array(1);
+    crypto.getRandomValues(array);
+    const pin = 1000 + (array[0] % 9000);
+    return pin.toString();
+  }
   const pin = Math.floor(1000 + Math.random() * 9000);
   return pin.toString();
 }
