@@ -1512,7 +1512,7 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
 
       let isValidToken = false;
 
-      // 1. First, attempt Supabase Auth verifyOtp if configured
+      // 1. First, attempt Supabase Auth verifyOtp if configured (email OTP with automatic magiclink fallback)
       if (isSupabaseConfigured && supabase && currentUser.email) {
         try {
           const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
@@ -1522,8 +1522,21 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
           });
           if (!verifyError && verifyData?.user) {
             isValidToken = true;
-          } else if (verifyError) {
-            console.warn('Supabase verifyOtp notice:', verifyError.message);
+          } else {
+            if (verifyError) {
+              console.warn('Supabase verifyOtp (email) notice, retrying with magiclink fallback:', verifyError.message);
+            }
+            // Automatic retry once with type: 'magiclink'
+            const { data: retryData, error: retryError } = await supabase.auth.verifyOtp({
+              email: currentUser.email,
+              token: cleanToken,
+              type: 'magiclink',
+            });
+            if (!retryError && retryData?.user) {
+              isValidToken = true;
+            } else if (retryError) {
+              console.warn('Supabase verifyOtp (magiclink fallback) notice:', retryError.message);
+            }
           }
         } catch (e) {
           console.warn('Supabase verifyOtp exception:', e);

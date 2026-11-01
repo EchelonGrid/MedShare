@@ -218,11 +218,11 @@ export function validateBangladeshNID({
 
   // Reject repeating fake patterns like 1111111111 or sequential fake patterns
   if (/^(\d)\1+$/.test(cleanNid)) {
-    return { valid: false, error: 'Invalid National ID: repeating digits are not permitted.' };
+    return { valid: false, error: 'Verification failed: The provided NID number does not match official registry records.' };
   }
 
   if (cleanNid === '1234567890' || cleanNid === '0123456789') {
-    return { valid: false, error: 'Invalid National ID: sequential test numbers are not permitted.' };
+    return { valid: false, error: 'Verification failed: The provided NID number does not match official registry records.' };
   }
 
   const parsedBirthYear = parseInt(String(birthYear).trim(), 10);
@@ -241,13 +241,13 @@ export function validateBangladeshNID({
   // 1. 10-Digit Smart NID
   if (cleanNid.length === 10) {
     if (cleanNid.startsWith('0')) {
-      return { valid: false, error: '10-digit Smart NID cannot begin with 0.' };
+      return { valid: false, error: 'Verification failed: The provided NID number does not match official registry records.' };
     }
 
     // Entropy check: must have at least 4 unique digits
     const uniqueDigits = new Set(cleanNid.split('')).size;
     if (uniqueDigits < 4) {
-      return { valid: false, error: '10-digit Smart NID fails entropy validation.' };
+      return { valid: false, error: 'Verification failed: The provided NID number does not match official registry records.' };
     }
 
     return {
@@ -281,9 +281,7 @@ export function validateBangladeshNID({
     if (nidBirthYear !== parsedBirthYear) {
       return {
         valid: false,
-        error: isClassic13
-          ? `Birth year (${parsedBirthYear}) mismatch with 13-digit NID.`
-          : `Digits 1–4 (${nidBirthYear}) do not match the specified birth year (${parsedBirthYear}).`,
+        error: 'Verification failed: The provided NID number does not match official registry records.',
       };
     }
 
@@ -291,7 +289,7 @@ export function validateBangladeshNID({
     if (nidDistrictCode !== expectedGeoCode) {
       return {
         valid: false,
-        error: `NID District code (${nidDistrictCode}) does not match selected district ${districtName} (Official BBS Code: ${expectedGeoCode}).`,
+        error: 'Verification failed: The provided NID number does not match official registry records.',
       };
     }
 
@@ -301,7 +299,7 @@ export function validateBangladeshNID({
     if (!validRmoCodes.includes(rmoCode)) {
       return {
         valid: false,
-        error: `Digit 7 (${rmoCode}) is not a recognized Bangladesh RMO geographic code.`,
+        error: 'Verification failed: The provided NID number does not match official registry records.',
       };
     }
 
@@ -310,7 +308,7 @@ export function validateBangladeshNID({
     if (isNaN(upazilaNum) || upazilaNum < 1 || upazilaNum > 99) {
       return {
         valid: false,
-        error: `Digits 8–9 (${upazilaCode}) must represent a valid 2-digit Upazila administrative code (01–99).`,
+        error: 'Verification failed: The provided NID number does not match official registry records.',
       };
     }
 
@@ -329,7 +327,7 @@ export function validateBangladeshNID({
 
   return {
     valid: false,
-    error: `National ID must be strictly 10 digits (Smart NID), 13 digits (Classic), or 17 digits (Standard). Received ${cleanNid.length} digits.`,
+    error: 'Verification failed: The provided NID number does not match official registry records.',
   };
 }
 
@@ -399,6 +397,6 @@ export function validateFacilityCredential({
 
   return {
     valid: false,
-    error: 'Unrecognized registration format. Must be an official 8-digit DGHS Facility Code (e.g. 10016472), DGHS license (e.g. DGHS-1105), or NGOAB Number (e.g. 241 or NGO-002).',
+    error: 'Verification failed: The provided organization credential does not match official DGHS or NGOAB registry records.',
   };
 }

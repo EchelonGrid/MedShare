@@ -4,8 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { useMedShare } from '@/context/MedShareContext';
 import {
   BD_DISTRICT_NAMES,
-  OFFICIAL_BD_DISTRICT_GEOCODES,
-  VERIFIED_BD_FACILITIES,
   validateBangladeshNID,
   validateFacilityCredential,
 } from '@/lib/bd-registries';
@@ -25,8 +23,6 @@ import {
   ArrowLeft,
   RotateCcw,
   Loader2,
-  Info,
-  Sparkles,
 } from 'lucide-react';
 
 interface VerifyModalProps {
@@ -77,7 +73,6 @@ export default function VerifyModal({
 
   // Validation Error States
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [anatomyInfo, setAnatomyInfo] = useState<string | null>(null);
 
   // Sync state whenever the modal opens or currentUser updates
   useEffect(() => {
@@ -90,7 +85,6 @@ export default function VerifyModal({
       setStep(1);
       setOtpCode('');
       setValidationError(null);
-      setAnatomyInfo(null);
       setConfirmed(false);
     }
   }, [isOpen, currentUser]);
@@ -122,31 +116,10 @@ export default function VerifyModal({
   const displayNotice = notice || verifyNotice;
   const isClinic = currentUser.role === 'clinic_charity';
 
-  // Helper for quick filling authentic facilities
-  const handleSelectFacilityExample = (facility: typeof VERIFIED_BD_FACILITIES[number]) => {
-    setOrgName(facility.name);
-    setDistrictName(facility.district);
-    setRegOrNid(facility.regNumber);
-    setLocation(facility.address);
-    setValidationError(null);
-  };
-
-  // Helper for quick filling authentic individual NID anatomy
-  const handleQuickFillIndividualExample = (dist: string, year: string, rmo: string, upazila: string) => {
-    setDistrictName(dist);
-    setBirthYear(year);
-    const geo = OFFICIAL_BD_DISTRICT_GEOCODES[dist] || '10';
-    // Generate valid 17-digit format: YYYY + GEO + RMO + UPAZILA + 7 digits
-    const valid17 = `${year}${geo}${rmo}${upazila}8941253`;
-    setRegOrNid(valid17);
-    setValidationError(null);
-  };
-
   // STEP 1: Validate Registry Credentials & Trigger Supabase OTP
   const handleStep1Submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setValidationError(null);
-    setAnatomyInfo(null);
 
     if (!confirmed) {
       setValidationError('Please check the confirmation box verifying that the details are authentic.');
@@ -179,9 +152,6 @@ export default function VerifyModal({
       if (res.normalizedRegNumber) {
         normalizedCred = res.normalizedRegNumber;
       }
-      if (res.matchedOfficialRecord) {
-        setAnatomyInfo(`✓ Matched official Bangladesh ${res.matchedOfficialRecord.type} Registry: ${res.matchedOfficialRecord.name}`);
-      }
     } else {
       const res = validateBangladeshNID({
         nid: regOrNid,
@@ -190,18 +160,11 @@ export default function VerifyModal({
       });
 
       if (!res.valid) {
-        setValidationError(res.error || 'Failed National ID anatomy validation.');
+        setValidationError(res.error || 'Failed National ID verification.');
         return;
       }
       if (res.normalizedNid) {
         normalizedCred = res.normalizedNid;
-      }
-      if (res.type === 'smart_10') {
-        setAnatomyInfo(`✓ Validated 10-Digit Smart NID format.`);
-      } else if (res.type === 'classic_13') {
-        setAnatomyInfo(`✓ Standardized 13-digit NID with birth year ${birthYear}. BBS District Code: ${res.details?.districtGeoCode}.`);
-      } else {
-        setAnatomyInfo(`✓ Validated 17-Digit Standard NID: Birth Year ${res.details?.birthYear}, BBS District ${districtName} (${res.details?.districtGeoCode}), RMO ${res.details?.rmoCode}.`);
       }
     }
 
@@ -310,7 +273,7 @@ export default function VerifyModal({
               <p className="text-xs text-teal-100/90 mt-0.5">
                 {isClinic
                   ? 'Official DGHS & NGOAB Government Registry Validation'
-                  : 'Official BBS District GEO Code & NID Anatomy Verification'}
+                  : 'National Identity & Healthcare Credential Verification'}
               </p>
             </div>
           </div>
@@ -341,78 +304,11 @@ export default function VerifyModal({
           </div>
         )}
 
-        {/* Anatomy Match Success Banner */}
-        {anatomyInfo && (
-          <div className="bg-emerald-50 border-b border-emerald-200 px-6 py-2.5 flex items-center gap-2 text-xs text-emerald-800 animate-in fade-in">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span className="font-medium">{anatomyInfo}</span>
-          </div>
-        )}
-
         {/* ======================================================== */}
         {/* STEP 1: REGISTRY CREDENTIALS FORM                        */}
         {/* ======================================================== */}
         {step === 1 && (
           <form onSubmit={handleStep1Submit} className="p-6 space-y-4">
-            
-            {/* Quick Demo Pre-fill helper chips for evaluators */}
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-2">
-              <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-teal-600" />
-                <span>Quick-Fill Real Bangladesh Registries for Testing:</span>
-              </span>
-
-              {isClinic ? (
-                <div className="flex flex-wrap gap-1.5">
-                  {VERIFIED_BD_FACILITIES.slice(0, 4).map((fac) => (
-                    <button
-                      key={fac.regNumber}
-                      type="button"
-                      onClick={() => handleSelectFacilityExample(fac)}
-                      className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-white hover:bg-teal-50 border border-slate-300 hover:border-teal-400 text-slate-800 transition cursor-pointer"
-                    >
-                      {fac.name.split(' (')[0]} ({fac.type}: {fac.regNumber})
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex flex-wrap gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => handleQuickFillIndividualExample('Bogura', '1998', '1', '01')}
-                    className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-white hover:bg-teal-50 border border-slate-300 hover:border-teal-400 text-slate-800 transition cursor-pointer"
-                  >
-                    17-Digit: Bogura (Code: 10, Born 1998)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleQuickFillIndividualExample('Pabna', '1995', '1', '02')}
-                    className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-white hover:bg-teal-50 border border-slate-300 hover:border-teal-400 text-slate-800 transition cursor-pointer"
-                  >
-                    17-Digit: Pabna (Code: 76, Born 1995)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleQuickFillIndividualExample('Dhaka', '1992', '5', '01')}
-                    className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-white hover:bg-teal-50 border border-slate-300 hover:border-teal-400 text-slate-800 transition cursor-pointer"
-                  >
-                    17-Digit: Dhaka (Code: 26, Born 1992)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setBirthYear('1994');
-                      setDistrictName('Dhaka');
-                      setRegOrNid('5982143098');
-                      setValidationError(null);
-                    }}
-                    className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-white hover:bg-teal-50 border border-slate-300 hover:border-teal-400 text-slate-800 transition cursor-pointer"
-                  >
-                    10-Digit Smart NID
-                  </button>
-                </div>
-              )}
-            </div>
 
             {/* Individual vs Clinic Fields */}
             {isClinic ? (
@@ -450,7 +346,7 @@ export default function VerifyModal({
                     >
                       {BD_DISTRICT_NAMES.map((d) => (
                         <option key={d} value={d}>
-                          {d} (BBS Code: {OFFICIAL_BD_DISTRICT_GEOCODES[d]})
+                          {d}
                         </option>
                       ))}
                     </select>
@@ -514,9 +410,6 @@ export default function VerifyModal({
                       placeholder="e.g. 1998"
                       className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition"
                     />
-                    <p className="text-[10px] text-slate-500 mt-1">
-                      Matches digits 1–4 of your 17-digit NID.
-                    </p>
                   </div>
 
                   <div>
@@ -530,13 +423,10 @@ export default function VerifyModal({
                     >
                       {BD_DISTRICT_NAMES.map((d) => (
                         <option key={d} value={d}>
-                          {d} (BBS Code: {OFFICIAL_BD_DISTRICT_GEOCODES[d]})
+                          {d}
                         </option>
                       ))}
                     </select>
-                    <p className="text-[10px] text-slate-500 mt-1">
-                      Matches digits 5–6 (BBS GEO Code).
-                    </p>
                   </div>
                 </div>
 
@@ -557,12 +447,6 @@ export default function VerifyModal({
                       placeholder="10-digit Smart, 13-digit Classic, or 17-digit NID"
                       className="w-full pl-9 pr-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none font-mono transition"
                     />
-                  </div>
-                  <div className="mt-1.5 flex items-start gap-1.5 text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-200">
-                    <Info className="w-3.5 h-3.5 text-teal-700 shrink-0 mt-0.5" />
-                    <span>
-                      <strong>Anatomy Check:</strong> For 17-digit NIDs (or 13-digit prepended with birth year), digits 5–6 must strictly match your district&apos;s BBS Zila Code ({districtName}: <strong>{OFFICIAL_BD_DISTRICT_GEOCODES[districtName]}</strong>).
-                    </span>
                   </div>
                 </div>
               </>

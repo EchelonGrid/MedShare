@@ -8,8 +8,6 @@ import { useIsMounted } from '@/lib/useIsMounted';
 import { validateNidOrBirthReg, validateClinicRegistration } from '@/components/VerifyModal';
 import {
   BD_DISTRICT_NAMES,
-  OFFICIAL_BD_DISTRICT_GEOCODES,
-  VERIFIED_BD_FACILITIES,
   validateBangladeshNID,
   validateFacilityCredential,
 } from '@/lib/bd-registries';
@@ -37,7 +35,6 @@ import {
   PackageCheck,
   FileText,
   AlertCircle,
-  Sparkles,
   Zap,
   CheckSquare,
   XSquare,
@@ -144,7 +141,6 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
   const [inlineDemoOtp, setInlineDemoOtp] = useState<string | null>(null);
   const [inlineResendCooldown, setInlineResendCooldown] = useState(0);
   const [inlineError, setInlineError] = useState<string | null>(null);
-  const [inlineAnatomyMatch, setInlineAnatomyMatch] = useState<string | null>(null);
 
   // Sync state whenever currentUser changes so prefilled fields are recognized immediately
   useEffect(() => {
@@ -157,7 +153,6 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
       setInlineStep(1);
       setInlineOtpCode('');
       setInlineError(null);
-      setInlineAnatomyMatch(null);
       setInlineConfirmed(false);
       setInlineTouched(false);
     }
@@ -189,7 +184,6 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
     e.preventDefault();
     setInlineTouched(true);
     setInlineError(null);
-    setInlineAnatomyMatch(null);
 
     if (!inlineConfirmed) {
       setInlineError('Please check the confirmation box verifying that the details are authentic.');
@@ -222,9 +216,6 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
       if (res.normalizedRegNumber) {
         normalizedCred = res.normalizedRegNumber;
       }
-      if (res.matchedOfficialRecord) {
-        setInlineAnatomyMatch(`✓ Matched official Bangladesh ${res.matchedOfficialRecord.type} Registry: ${res.matchedOfficialRecord.name}`);
-      }
     } else {
       const res = validateBangladeshNID({
         nid: inlineRegId,
@@ -233,18 +224,11 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
       });
 
       if (!res.valid) {
-        setInlineError(res.error || 'Failed National ID anatomy validation.');
+        setInlineError(res.error || 'Failed National ID verification.');
         return;
       }
       if (res.normalizedNid) {
         normalizedCred = res.normalizedNid;
-      }
-      if (res.type === 'smart_10') {
-        setInlineAnatomyMatch(`✓ Validated 10-Digit Smart NID format.`);
-      } else if (res.type === 'classic_13') {
-        setInlineAnatomyMatch(`✓ Standardized 13-digit NID with birth year ${inlineBirthYear}. BBS District Code: ${res.details?.districtGeoCode}.`);
-      } else {
-        setInlineAnatomyMatch(`✓ Validated 17-Digit Standard NID: Birth Year ${res.details?.birthYear}, BBS District ${inlineDistrictName} (${res.details?.districtGeoCode}), RMO ${res.details?.rmoCode}.`);
       }
     }
 
@@ -908,14 +892,14 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                       </h3>
                       <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/40">
                         {inlineStep === 1
-                          ? 'STEP 01 // BD NID ANATOMY & DGHS REGISTRY CHECK'
+                          ? 'STEP 01 // IDENTITY & REGISTRY CREDENTIALS'
                           : 'STEP 02 // LIVE CRYPTOGRAPHIC EMAIL OTP'}
                       </span>
                     </div>
                     <p className="text-xs sm:text-sm text-slate-300/90 leading-relaxed max-w-2xl font-sans">
                       {isClinic
                         ? 'Validate your clinic against official Bangladesh DGHS & NGOAB databases, followed by live cryptographic email OTP verification.'
-                        : 'Verify your Bangladeshi National ID (BBS District GEO Code & Birth Year anatomy), followed by live cryptographic email OTP verification.'}
+                        : 'Verify your Bangladeshi National ID, followed by live cryptographic email OTP verification.'}
                     </p>
                   </div>
                 </div>
@@ -929,97 +913,58 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                 </div>
               )}
 
-              {/* Anatomy Match Success Alert */}
-              {inlineAnatomyMatch && (
-                <div className="bg-emerald-950/80 border border-emerald-500/40 rounded-xl p-3 flex items-center gap-2 text-xs text-emerald-200 font-mono animate-in fade-in">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span className="font-medium">{inlineAnatomyMatch}</span>
-                </div>
-              )}
-
-              {/* STEP 1: REGISTRY & ANATOMY FORM */}
+              {/* STEP 1: REGISTRY & CREDENTIALS FORM */}
               {inlineStep === 1 && (
                 <form onSubmit={handleInlineStep1Submit} className="bg-slate-900/90 rounded-2xl p-5 border border-teal-500/25 space-y-4 font-mono text-xs">
-                  {/* Quick-Fill Chips for evaluators */}
-                  <div className="bg-slate-950 p-3.5 rounded-xl border border-teal-500/20 space-y-2">
-                    <span className="text-[11px] font-bold text-teal-300 uppercase tracking-wider flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-teal-400" />
-                      <span>Quick-Fill Authentic Bangladesh Facility Credentials:</span>
-                    </span>
-
-                    {isClinic ? (
-                      <div className="flex flex-wrap gap-1.5">
-                        {VERIFIED_BD_FACILITIES.slice(0, 4).map((fac) => (
-                          <button
-                            key={fac.regNumber}
-                            type="button"
-                            onClick={() => {
-                              setInlineOrgName(fac.name);
-                              setInlineDistrictName(fac.district);
-                              setInlineRegId(fac.regNumber);
-                              setInlineLocation(fac.address);
-                              setInlineError(null);
-                            }}
-                            className="px-2.5 py-1 text-[11px] rounded-lg bg-slate-900 hover:bg-teal-950 border border-teal-500/30 text-teal-200 transition cursor-pointer"
-                          >
-                            {fac.name.split(' (')[0]} ({fac.type}: {fac.regNumber})
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="flex flex-wrap gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setInlineDistrictName('Bogura');
-                            setInlineBirthYear('1998');
-                            setInlineRegId('19981012345678901');
-                            setInlineLocation('Bogura Sadar');
-                            setInlineError(null);
-                          }}
-                          className="px-2.5 py-1 text-[11px] rounded-lg bg-slate-900 hover:bg-teal-950 border border-teal-500/30 text-teal-200 transition cursor-pointer"
-                        >
-                          Bogura [GEO-10] • 17-Digit Standard NID
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setInlineDistrictName('Pabna');
-                            setInlineBirthYear('1995');
-                            setInlineRegId('7612345678');
-                            setInlineLocation('Pabna Town');
-                            setInlineError(null);
-                          }}
-                          className="px-2.5 py-1 text-[11px] rounded-lg bg-slate-900 hover:bg-teal-950 border border-teal-500/30 text-teal-200 transition cursor-pointer"
-                        >
-                          Pabna [GEO-76] • 10-Digit Smart NID
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
                   {/* Form Fields Grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                    {/* District Selector with BBS GEO Code Display */}
+                    {/* District Selector */}
                     <div>
                       <label className="block text-slate-300 font-bold uppercase mb-1">
-                        Bangladesh District (BBS GEO Code) <span className="text-rose-400">*</span>
+                        Bangladesh District <span className="text-rose-400">*</span>
                       </label>
                       <select
                         value={inlineDistrictName}
                         onChange={(e) => setInlineDistrictName(e.target.value)}
                         className="w-full px-3 py-2 rounded-xl bg-slate-950 text-white border border-teal-500/30 focus:border-teal-400 outline-none cursor-pointer"
                       >
-                        {BD_DISTRICT_NAMES.map((dist) => {
-                          const geo = OFFICIAL_BD_DISTRICT_GEOCODES[dist] || '--';
-                          return (
-                            <option key={dist} value={dist}>
-                              {dist.toUpperCase()} [GEO-{geo}]
-                            </option>
-                          );
-                        })}
+                        {BD_DISTRICT_NAMES.map((dist) => (
+                          <option key={dist} value={dist}>
+                            {dist}
+                          </option>
+                        ))}
                       </select>
                     </div>
+
+                    {!isClinic ? (
+                      <div>
+                        <label className="block text-slate-300 font-bold uppercase mb-1">
+                          Birth Year <span className="text-rose-400">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          min={1930}
+                          max={2008}
+                          value={inlineBirthYear}
+                          onChange={(e) => setInlineBirthYear(e.target.value)}
+                          placeholder="e.g. 1998"
+                          className="w-full px-3 py-2 rounded-xl bg-slate-950 text-white border border-teal-500/30 focus:border-teal-400 outline-none"
+                        />
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="block text-slate-300 font-bold uppercase mb-1">
+                          Organization / Clinic Name <span className="text-rose-400">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={inlineOrgName}
+                          onChange={(e) => setInlineOrgName(e.target.value)}
+                          placeholder="e.g. Bogura Rural Health Clinic"
+                          className="w-full px-3 py-2 rounded-xl bg-slate-950 text-white border border-teal-500/30 focus:border-teal-400 outline-none"
+                        />
+                      </div>
+                    )}
 
                     {/* Registration / NID Number */}
                     <div>
@@ -1050,7 +995,7 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                     </div>
 
                     {/* Location */}
-                    <div>
+                    <div className="sm:col-span-2">
                       <label className="block text-slate-300 font-bold uppercase mb-1">
                         Area / Facility Location <span className="text-rose-400">*</span>
                       </label>
