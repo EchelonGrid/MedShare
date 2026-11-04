@@ -119,7 +119,7 @@ export function mapDbMedicationToApp(db: DbMedication, localFallback?: Medicatio
     db.handover_pin ||
     (richMeta?.handoverPin as string | undefined) ||
     localFallback?.handoverPin ||
-    (db.status === 'claimed' ? '4829' : undefined);
+    undefined;
 
   const claimExpiresAt =
     db.claim_expires_at ||

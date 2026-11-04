@@ -356,10 +356,10 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
               remainingNumericQuantity: remaining,
               claims: (m.claims || []).map((c) => ({
                 ...c,
-                handoverPin: c.handoverPin || '4829',
+                handoverPin: c.handoverPin,
                 claimExpiresAt: c.claimExpiresAt || new Date(Date.now() + 44 * 60 * 60 * 1000).toISOString(),
               })),
-              handoverPin: m.handoverPin || (m.status === 'claimed' ? '4829' : undefined),
+              handoverPin: m.handoverPin,
               claimExpiresAt: m.claimExpiresAt || (m.status === 'claimed' ? new Date(Date.now() + 44 * 60 * 60 * 1000).toISOString() : undefined),
             };
           });
@@ -847,6 +847,8 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
       let feedbackToastMsg = `Medicine claimed! Your 4-Digit Handover PIN is ${pin}. Pick up within 48 hours.`;
       let feedbackToastTitle = 'Claim Successful';
       let isFullClaimDetermined = true;
+      let latestUpdatedClaims: BatchClaim[] = [];
+      let latestRemainingQty = 0;
 
       setMedications((prev) => {
         const updated = prev.map((med) => {
@@ -864,6 +866,7 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
             const newRemaining = Math.max(0, currentRemaining - amountToClaim);
             const isFullClaim = newRemaining <= 0;
             isFullClaimDetermined = isFullClaim;
+            latestRemainingQty = newRemaining;
 
             const newClaimRecord: ClaimRecord = {
               claimId,
@@ -897,6 +900,7 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
 
             const updatedClaims = [...(med.claims || []), newBatchClaim];
             const updatedActiveClaims = [...(med.activeClaims || []), newClaimRecord];
+            latestUpdatedClaims = updatedClaims;
 
             if (newRemaining > 0) {
               feedbackToastMsg = `Partially claimed ${amountToClaim} ${unit}! PIN: ${pin}. ${newRemaining} ${unit} remain available on feed.`;
@@ -939,6 +943,18 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
                 claimed_by_role: claimer?.role || 'individual',
                 prescription_ref: prescriptionRef || null,
                 claimed_at: claimedAt,
+                remaining_numeric_quantity: 0,
+                claims: latestUpdatedClaims,
+                handover_pin: pin,
+                claim_expires_at: claimExpiresAt,
+              })
+              .eq('id', medicationId);
+          } else {
+            await supabase
+              .from('medications')
+              .update({
+                remaining_numeric_quantity: latestRemainingQty,
+                claims: latestUpdatedClaims,
               })
               .eq('id', medicationId);
           }
@@ -1149,6 +1165,9 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
 
       setActionLoading(medicationId);
       const collectedAt = new Date().toISOString();
+      let isNowFullyCollectedDetermined = false;
+      let finalClaims: BatchClaim[] = [];
+      let finalRemainingQty = 0;
 
       setMedications((prev) => {
         const updated = prev.map((med) => {
@@ -1185,6 +1204,10 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
               (allClaimsCollected && (med.remainingNumericQuantity ?? 0) <= 0) ||
               med.status === 'claimed';
 
+            isNowFullyCollectedDetermined = isNowFullyCollected;
+            finalClaims = updatedClaims;
+            finalRemainingQty = med.remainingNumericQuantity ?? 0;
+
             return {
               ...med,
               status: isNowFullyCollected ? ('collected' as const) : med.status,
@@ -1201,13 +1224,25 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
 
       if (isSupabaseConfigured && supabase) {
         try {
-          await supabase
-            .from('medications')
-            .update({
-              status: 'collected',
-              collected_at: collectedAt,
-            })
-            .eq('id', medicationId);
+          if (isNowFullyCollectedDetermined) {
+            await supabase
+              .from('medications')
+              .update({
+                status: 'collected',
+                collected_at: collectedAt,
+                remaining_numeric_quantity: 0,
+                claims: finalClaims,
+              })
+              .eq('id', medicationId);
+          } else {
+            await supabase
+              .from('medications')
+              .update({
+                remaining_numeric_quantity: finalRemainingQty,
+                claims: finalClaims,
+              })
+              .eq('id', medicationId);
+          }
         } catch (err) {
           console.warn('Supabase collected update error; maintained local state:', err);
         }
@@ -1466,6 +1501,7 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
       });
 
       // 4. If Supabase Auth is configured, call signInWithOtp to send real email via configured SMTP
+      let otpFallbackRequired = !isSupabaseConfigured;
       if (isSupabaseConfigured && supabase && currentUser.email) {
         try {
           const { error: otpError } = await supabase.auth.signInWithOtp({
@@ -1476,9 +1512,11 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
           });
           if (otpError) {
             console.warn('Supabase signInWithOtp message (falling back to generated OTP code):', otpError.message);
+            otpFallbackRequired = true;
           }
         } catch (e) {
           console.warn('Supabase signInWithOtp exception:', e);
+          otpFallbackRequired = true;
         }
       }
 
@@ -1491,7 +1529,7 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
 
       return {
         success: true,
-        ...(!isSupabaseConfigured && { demoOtp: generatedOtp }),
+        ...(otpFallbackRequired && { demoOtp: generatedOtp }),
       };
     },
     [allUsers, currentUser, currentUserId, showToast]

@@ -284,14 +284,14 @@ export default function AuthModal({
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <button
                   type="button"
-                  onClick={() => handleDemoLogin('user-indiv-1')}
+                  onClick={() => handleDemoLogin('user-donor-1')}
                   className="p-2.5 rounded-xl border border-teal-500/30 bg-slate-950 hover:bg-teal-950/70 text-left transition cursor-pointer"
                 >
                   <div className="flex items-center gap-1.5 font-bold text-teal-300">
                     <User className="w-3.5 h-3.5" />
                     <span>Member</span>
                   </div>
-                  <p className="text-[10px] text-slate-400 mt-0.5 truncate">Dr. Ayesha (Bogura)</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5 truncate">Dr. Farhana Rahman</p>
                 </button>
 
                 <button
