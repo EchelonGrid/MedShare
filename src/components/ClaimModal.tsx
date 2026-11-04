@@ -143,7 +143,13 @@ export default function ClaimModal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, handleModalClose]);
 
-  if (!isOpen || !medication || !currentUser || medication.donorId === currentUser.id) return null;
+  if (!isOpen || !medication || !currentUser) return null;
+
+  const isDonorOfThis =
+    currentUser.id === medication.donorId ||
+    Boolean(medication.donorName && medication.donorName.toLowerCase() === currentUser.name.toLowerCase());
+
+  if (isDonorOfThis) return null;
 
   const isIndividual = currentUser.role === 'individual';
   const isClinic = currentUser.role === 'clinic_charity';
@@ -552,7 +558,7 @@ export default function ClaimModal({
               </div>
 
               <div className="flex items-center justify-center gap-3">
-                {(assignedPin || medication.handoverPin || '4829').split('').map((digit, i) => (
+                {(assignedPin || medication.handoverPin || '0000').padStart(4, '0').slice(0, 4).split('').map((digit, i) => (
                   <div
                     key={i}
                     className="bg-slate-900 text-teal-300 border border-teal-500/40 rounded-xl w-12 h-14 flex items-center justify-center font-mono text-2xl font-black shadow-inner"

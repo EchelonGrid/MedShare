@@ -56,8 +56,29 @@ export default function MedicationCard({
   const daysRemaining = mounted ? getDaysUntilExpiry(medication.expiryDate) : null;
   const urgency = daysRemaining !== null ? getUrgencyLevel(daysRemaining) : 'normal';
 
-  const isDonorOfThis = currentUser ? currentUser.id === medication.donorId : false;
-  const isClaimerOfThis = currentUser ? currentUser.id === medication.claimedById : false;
+  const isDonorOfThis = currentUser
+    ? currentUser.id === medication.donorId ||
+      Boolean(medication.donorName && medication.donorName.toLowerCase() === currentUser.name.toLowerCase())
+    : false;
+
+  const myClaimRecord = currentUser
+    ? (medication.claims || []).find(
+        (c) =>
+          c.claimerId === currentUser.id &&
+          (c.status === 'claimed' || (c.status as string) === 'pending_pickup')
+      ) ||
+      (medication.activeClaims || []).find(
+        (c) => c.collectorId === currentUser.id && c.status === 'pending_pickup'
+      )
+    : null;
+
+  const isClaimerOfThis = Boolean(currentUser && (currentUser.id === medication.claimedById || myClaimRecord));
+  const myClaimPin = myClaimRecord?.handoverPin || (currentUser?.id === medication.claimedById ? medication.handoverPin : undefined);
+  const myReservedUnits = myClaimRecord
+    ? 'claimedQuantity' in myClaimRecord
+      ? myClaimRecord.claimedQuantity
+      : myClaimRecord.quantityClaimed
+    : 0;
   const canViewPickupContact = isDonorOfThis || isClaimerOfThis;
 
   const parsedQty = parseQuantity(medication.quantity);
@@ -412,6 +433,31 @@ export default function MedicationCard({
                 <Check className="w-3.5 h-3.5 text-teal-400" />
                 <span>Your Listed Medicine Donation</span>
               </div>
+            ) : myClaimRecord ? (
+              <div className="space-y-2">
+                <div className="bg-sky-950/80 border border-sky-500/30 rounded-xl p-2.5 text-center space-y-1">
+                  <div className="text-xs font-bold text-sky-200 flex items-center justify-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-sky-400" />
+                    <span>You Reserved {myReservedUnits} {myClaimRecord.unitName || unitName}</span>
+                  </div>
+                  <p className="text-[11px] font-mono text-sky-300">
+                    Your Handover PIN:{' '}
+                    <strong className="text-amber-300 bg-amber-950/80 px-1.5 py-0.5 rounded border border-amber-500/40">
+                      {myClaimPin || '----'}
+                    </strong>
+                  </p>
+                </div>
+                {remainingQty > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => onClaimClick?.(medication)}
+                    className="w-full py-2 px-3 text-xs font-bold rounded-xl bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 border border-teal-500/40 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <span>Claim Remaining ({remainingQty} {unitName})</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
             ) : (
               <button
                 type="button"
@@ -446,7 +492,7 @@ export default function MedicationCard({
                 <p className="text-[11px] font-mono text-sky-300">
                   Provide PIN{' '}
                   <strong className="text-amber-300 bg-amber-950/80 px-1.5 py-0.5 rounded border border-amber-500/40">
-                    {medication.handoverPin || '4829'}
+                    {myClaimPin || medication.handoverPin || '----'}
                   </strong>{' '}
                   to donor upon pickup.
                 </p>
