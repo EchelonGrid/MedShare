@@ -845,89 +845,79 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
       const pin = generateHandoverPin();
       const claimId = `claim-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
+      const parsed = parseQuantity(targetMed.quantity);
+      const total = targetMed.totalNumericQuantity ?? parsed.total;
+      const unit = targetMed.unitName || parsed.unit;
+      const currentRemaining =
+        targetMed.remainingNumericQuantity !== undefined ? targetMed.remainingNumericQuantity : total;
+
+      const amountToClaim = Math.min(
+        claimedAmount && claimedAmount > 0 ? claimedAmount : currentRemaining,
+        currentRemaining
+      );
+      const newRemaining = Math.max(0, currentRemaining - amountToClaim);
+      const isFullClaim = newRemaining <= 0;
+
+      const newClaimRecord: ClaimRecord = {
+        claimId,
+        collectorId: claimer?.id || 'collector-anon',
+        collectorName: claimer?.name || 'Verified Collector',
+        collectorRole: claimer?.role || 'individual',
+        collectorPhone: claimer?.phone,
+        organizationOrRx: prescriptionRef || (claimer?.role === 'clinic_charity' ? (claimer.organizationName || claimer.registrationOrNid) : undefined),
+        quantityClaimed: amountToClaim,
+        unitName: unit,
+        handoverPin: pin,
+        claimedAt,
+        claimExpiresAt,
+        status: 'pending_pickup',
+      };
+
+      const newBatchClaim: BatchClaim = {
+        id: claimId,
+        medicationId: targetMed.id,
+        claimerId: claimer?.id || 'collector-anon',
+        claimerName: claimer?.name || 'Verified Collector',
+        claimerRole: claimer?.role || 'individual',
+        claimedQuantity: amountToClaim,
+        unitName: unit,
+        handoverPin: pin,
+        prescriptionRef: prescriptionRef || targetMed.prescriptionRef,
+        claimedAt,
+        claimExpiresAt,
+        status: 'claimed',
+      };
+
+      const updatedClaims = [...(targetMed.claims || []), newBatchClaim];
+      const updatedActiveClaims = [...(targetMed.activeClaims || []), newClaimRecord];
+
       let feedbackToastMsg = `Medicine claimed! Your 4-Digit Handover PIN is ${pin}. Pick up within 48 hours.`;
       let feedbackToastTitle = 'Claim Successful';
-      let isFullClaimDetermined = true;
-      let latestUpdatedClaims: BatchClaim[] = [];
-      let latestRemainingQty = 0;
+      if (newRemaining > 0) {
+        feedbackToastMsg = `Partially claimed ${amountToClaim} ${unit}! PIN: ${pin}. ${newRemaining} ${unit} remain available on feed.`;
+        feedbackToastTitle = 'Partial Claim Recorded';
+      }
+
+      const updatedMed: Medication = {
+        ...targetMed,
+        totalNumericQuantity: total,
+        unitName: unit,
+        remainingNumericQuantity: newRemaining,
+        status: isFullClaim ? ('claimed' as const) : ('available' as const),
+        claimedById: isFullClaim ? claimer?.id : (targetMed.claimedById || claimer?.id),
+        claimedByName: isFullClaim ? (claimer?.name || 'Verified Collector') : (targetMed.claimedByName || claimer?.name),
+        claimedByRole: isFullClaim ? (claimer?.role || 'individual') : (targetMed.claimedByRole || claimer?.role),
+        claimedQuantity: isFullClaim ? amountToClaim : targetMed.claimedQuantity,
+        claims: updatedClaims,
+        activeClaims: updatedActiveClaims,
+        handoverPin: isFullClaim ? pin : (targetMed.handoverPin || pin),
+        prescriptionRef: prescriptionRef || targetMed.prescriptionRef,
+        claimedAt: isFullClaim ? claimedAt : (targetMed.claimedAt || claimedAt),
+        claimExpiresAt: isFullClaim ? claimExpiresAt : (targetMed.claimExpiresAt || claimExpiresAt),
+      };
 
       setMedications((prev) => {
-        const updated = prev.map((med) => {
-          if (med.id === medicationId) {
-            const parsed = parseQuantity(med.quantity);
-            const total = med.totalNumericQuantity ?? parsed.total;
-            const unit = med.unitName || parsed.unit;
-            const currentRemaining =
-              med.remainingNumericQuantity !== undefined ? med.remainingNumericQuantity : total;
-
-            const amountToClaim = Math.min(
-              claimedAmount && claimedAmount > 0 ? claimedAmount : currentRemaining,
-              currentRemaining
-            );
-            const newRemaining = Math.max(0, currentRemaining - amountToClaim);
-            const isFullClaim = newRemaining <= 0;
-            isFullClaimDetermined = isFullClaim;
-            latestRemainingQty = newRemaining;
-
-            const newClaimRecord: ClaimRecord = {
-              claimId,
-              collectorId: claimer?.id || 'collector-anon',
-              collectorName: claimer?.name || 'Verified Collector',
-              collectorRole: claimer?.role || 'individual',
-              collectorPhone: claimer?.phone,
-              organizationOrRx: prescriptionRef || (claimer?.role === 'clinic_charity' ? (claimer.organizationName || claimer.registrationOrNid) : undefined),
-              quantityClaimed: amountToClaim,
-              unitName: unit,
-              handoverPin: pin,
-              claimedAt,
-              claimExpiresAt,
-              status: 'pending_pickup',
-            };
-
-            const newBatchClaim: BatchClaim = {
-              id: claimId,
-              medicationId: med.id,
-              claimerId: claimer?.id || 'collector-anon',
-              claimerName: claimer?.name || 'Verified Collector',
-              claimerRole: claimer?.role || 'individual',
-              claimedQuantity: amountToClaim,
-              unitName: unit,
-              handoverPin: pin,
-              prescriptionRef: prescriptionRef || med.prescriptionRef,
-              claimedAt,
-              claimExpiresAt,
-              status: 'claimed',
-            };
-
-            const updatedClaims = [...(med.claims || []), newBatchClaim];
-            const updatedActiveClaims = [...(med.activeClaims || []), newClaimRecord];
-            latestUpdatedClaims = updatedClaims;
-
-            if (newRemaining > 0) {
-              feedbackToastMsg = `Partially claimed ${amountToClaim} ${unit}! PIN: ${pin}. ${newRemaining} ${unit} remain available on feed.`;
-              feedbackToastTitle = 'Partial Claim Recorded';
-            }
-
-            return {
-              ...med,
-              totalNumericQuantity: total,
-              unitName: unit,
-              remainingNumericQuantity: newRemaining,
-              status: isFullClaim ? ('claimed' as const) : ('available' as const),
-              claimedById: isFullClaim ? claimer?.id : (med.claimedById || claimer?.id),
-              claimedByName: isFullClaim ? (claimer?.name || 'Verified Collector') : (med.claimedByName || claimer?.name),
-              claimedByRole: isFullClaim ? (claimer?.role || 'individual') : (med.claimedByRole || claimer?.role),
-              claimedQuantity: isFullClaim ? amountToClaim : med.claimedQuantity,
-              claims: updatedClaims,
-              activeClaims: updatedActiveClaims,
-              handoverPin: isFullClaim ? pin : (med.handoverPin || pin),
-              prescriptionRef: prescriptionRef || med.prescriptionRef,
-              claimedAt: isFullClaim ? claimedAt : (med.claimedAt || claimedAt),
-              claimExpiresAt: isFullClaim ? claimExpiresAt : (med.claimExpiresAt || claimExpiresAt),
-            };
-          }
-          return med;
-        });
+        const updated = prev.map((med) => (med.id === medicationId ? updatedMed : med));
         saveMedsToLocal(updated);
         return updated;
       });
@@ -937,7 +927,7 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
           const validClaimerUuid = isValidUuid(claimer?.id) ? claimer?.id : null;
           const isTargetUuid = isValidUuid(medicationId);
 
-          if (isFullClaimDetermined) {
+          if (isFullClaim) {
             const updatePayload = {
               status: 'claimed',
               claimed_by_id: validClaimerUuid,
@@ -946,7 +936,7 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
               prescription_ref: prescriptionRef || null,
               claimed_at: claimedAt,
               remaining_numeric_quantity: 0,
-              claims: latestUpdatedClaims,
+              claims: updatedClaims,
               handover_pin: pin,
               claim_expires_at: claimExpiresAt,
             };
@@ -954,25 +944,21 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
             const query = supabase.from('medications').update(updatePayload);
             const { error: updateErr } = isTargetUuid
               ? await query.eq('id', medicationId)
-              : targetMed
-              ? await query.eq('medicine_name', targetMed.medicineName).eq('location', targetMed.location)
-              : { error: null };
+              : await query.eq('medicine_name', targetMed.medicineName).eq('location', targetMed.location);
 
             if (updateErr) {
               console.warn('Supabase claim update error:', updateErr);
             }
           } else {
             const updatePayload = {
-              remaining_numeric_quantity: latestRemainingQty,
-              claims: latestUpdatedClaims,
+              remaining_numeric_quantity: newRemaining,
+              claims: updatedClaims,
             };
 
             const query = supabase.from('medications').update(updatePayload);
             const { error: updateErr } = isTargetUuid
               ? await query.eq('id', medicationId)
-              : targetMed
-              ? await query.eq('medicine_name', targetMed.medicineName).eq('location', targetMed.location)
-              : { error: null };
+              : await query.eq('medicine_name', targetMed.medicineName).eq('location', targetMed.location);
 
             if (updateErr) {
               console.warn('Supabase partial claim update error:', updateErr);
@@ -1017,67 +1003,65 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
 
       setActionLoading(medicationId);
 
+      const parsed = parseQuantity(targetMed.quantity);
+      const total = targetMed.totalNumericQuantity ?? parsed.total;
+      const unit = targetMed.unitName || parsed.unit;
+      const currentRemaining =
+        targetMed.remainingNumericQuantity !== undefined ? targetMed.remainingNumericQuantity : 0;
+
+      let updatedClaims = targetMed.claims || [];
+      let updatedActive = targetMed.activeClaims || [];
+      let restockAmount = 0;
+
+      if (claimId) {
+        const targetClaim = updatedClaims.find((c) => c.id === claimId);
+        const targetActive = updatedActive.find((c) => c.claimId === claimId);
+        if (targetClaim) {
+          restockAmount = targetClaim.claimedQuantity;
+        } else if (targetActive) {
+          restockAmount = targetActive.quantityClaimed;
+        }
+        updatedClaims = updatedClaims.filter((c) => c.id !== claimId);
+        updatedActive = updatedActive.filter((c) => c.claimId !== claimId);
+      } else {
+        restockAmount = targetMed.claimedQuantity || (total - currentRemaining);
+        updatedClaims = [];
+        updatedActive = [];
+      }
+
+      const newRemaining = Math.min(total, currentRemaining + restockAmount);
+      const hasPendingClaims =
+        updatedClaims.some((c) => c.status === 'claimed') ||
+        updatedActive.some((c) => c.status === 'pending_pickup');
+
+      let nextStatus: 'available' | 'claimed' | 'collected' = 'available';
+      if (newRemaining <= 0) {
+        nextStatus = hasPendingClaims ? 'claimed' : 'collected';
+      } else {
+        nextStatus = 'available';
+      }
+
+      const latestActiveClaim = updatedClaims.find((c) => c.status === 'claimed');
+
+      const updatedMed: Medication = {
+        ...targetMed,
+        totalNumericQuantity: total,
+        unitName: unit,
+        remainingNumericQuantity: newRemaining,
+        status: nextStatus,
+        claimedById: latestActiveClaim ? latestActiveClaim.claimerId : (nextStatus === 'available' ? undefined : targetMed.claimedById),
+        claimedByName: latestActiveClaim ? latestActiveClaim.claimerName : (nextStatus === 'available' ? undefined : targetMed.claimedByName),
+        claimedByRole: latestActiveClaim ? latestActiveClaim.claimerRole : (nextStatus === 'available' ? undefined : targetMed.claimedByRole),
+        claimedQuantity: latestActiveClaim ? latestActiveClaim.claimedQuantity : (nextStatus === 'available' ? undefined : targetMed.claimedQuantity),
+        claims: updatedClaims,
+        activeClaims: updatedActive,
+        handoverPin: latestActiveClaim ? latestActiveClaim.handoverPin : (nextStatus === 'available' ? undefined : targetMed.handoverPin),
+        claimExpiresAt: latestActiveClaim ? latestActiveClaim.claimExpiresAt : (nextStatus === 'available' ? undefined : targetMed.claimExpiresAt),
+        claimedAt: latestActiveClaim ? latestActiveClaim.claimedAt : (nextStatus === 'available' ? undefined : targetMed.claimedAt),
+      };
+
       setMedications((prev) => {
-        const updated = prev.map((med) => {
-          if (med.id === medicationId) {
-            const parsed = parseQuantity(med.quantity);
-            const total = med.totalNumericQuantity ?? parsed.total;
-            const unit = med.unitName || parsed.unit;
-            const currentRemaining =
-              med.remainingNumericQuantity !== undefined ? med.remainingNumericQuantity : 0;
-
-            let updatedClaims = med.claims || [];
-            let updatedActive = med.activeClaims || [];
-            let restockAmount = 0;
-
-            if (claimId) {
-              const targetClaim = updatedClaims.find((c) => c.id === claimId);
-              const targetActive = updatedActive.find((c) => c.claimId === claimId);
-              if (targetClaim) {
-                restockAmount = targetClaim.claimedQuantity;
-              } else if (targetActive) {
-                restockAmount = targetActive.quantityClaimed;
-              }
-              updatedClaims = updatedClaims.filter((c) => c.id !== claimId);
-              updatedActive = updatedActive.filter((c) => c.claimId !== claimId);
-            } else {
-              restockAmount = med.claimedQuantity || (total - currentRemaining);
-              updatedClaims = [];
-              updatedActive = [];
-            }
-
-            const newRemaining = Math.min(total, currentRemaining + restockAmount);
-            const hasPendingClaims = updatedClaims.some((c) => c.status === 'claimed') ||
-              updatedActive.some((c) => c.status === 'pending_pickup');
-
-            let nextStatus: 'available' | 'claimed' | 'collected' = 'available';
-            if (newRemaining <= 0) {
-              nextStatus = hasPendingClaims ? 'claimed' : 'collected';
-            } else {
-              nextStatus = 'available';
-            }
-
-            const latestActiveClaim = updatedClaims.find((c) => c.status === 'claimed');
-
-            return {
-              ...med,
-              totalNumericQuantity: total,
-              unitName: unit,
-              remainingNumericQuantity: newRemaining,
-              status: nextStatus,
-              claimedById: latestActiveClaim ? latestActiveClaim.claimerId : (nextStatus === 'available' ? undefined : med.claimedById),
-              claimedByName: latestActiveClaim ? latestActiveClaim.claimerName : (nextStatus === 'available' ? undefined : med.claimedByName),
-              claimedByRole: latestActiveClaim ? latestActiveClaim.claimerRole : (nextStatus === 'available' ? undefined : med.claimedByRole),
-              claimedQuantity: latestActiveClaim ? latestActiveClaim.claimedQuantity : (nextStatus === 'available' ? undefined : med.claimedQuantity),
-              claims: updatedClaims,
-              activeClaims: updatedActive,
-              handoverPin: latestActiveClaim ? latestActiveClaim.handoverPin : (nextStatus === 'available' ? undefined : med.handoverPin),
-              claimExpiresAt: latestActiveClaim ? latestActiveClaim.claimExpiresAt : (nextStatus === 'available' ? undefined : med.claimExpiresAt),
-              claimedAt: latestActiveClaim ? latestActiveClaim.claimedAt : (nextStatus === 'available' ? undefined : med.claimedAt),
-            };
-          }
-          return med;
-        });
+        const updated = prev.map((med) => (med.id === medicationId ? updatedMed : med));
         saveMedsToLocal(updated);
         return updated;
       });
@@ -1085,21 +1069,24 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
       if (isSupabaseConfigured && supabase) {
         try {
           const isTargetUuid = isValidUuid(medicationId);
+          const validClaimerUuid = latestActiveClaim && isValidUuid(latestActiveClaim.claimerId) ? latestActiveClaim.claimerId : null;
           const updatePayload = {
-            status: 'available',
-            claimed_by_id: null,
-            claimed_by_name: null,
-            claimed_by_role: null,
-            prescription_ref: null,
-            claimed_at: null,
+            status: nextStatus,
+            claimed_by_id: validClaimerUuid,
+            claimed_by_name: latestActiveClaim ? latestActiveClaim.claimerName : null,
+            claimed_by_role: latestActiveClaim ? latestActiveClaim.claimerRole : null,
+            remaining_numeric_quantity: newRemaining,
+            claims: updatedClaims,
+            handover_pin: latestActiveClaim ? latestActiveClaim.handoverPin : null,
+            claim_expires_at: latestActiveClaim ? latestActiveClaim.claimExpiresAt : null,
+            prescription_ref: latestActiveClaim ? latestActiveClaim.prescriptionRef : null,
+            claimed_at: latestActiveClaim ? latestActiveClaim.claimedAt : null,
           };
 
           const query = supabase.from('medications').update(updatePayload);
           const { error: updateErr } = isTargetUuid
             ? await query.eq('id', medicationId)
-            : targetMed
-            ? await query.eq('medicine_name', targetMed.medicineName).eq('location', targetMed.location)
-            : { error: null };
+            : await query.eq('medicine_name', targetMed.medicineName).eq('location', targetMed.location);
 
           if (updateErr) {
             console.warn('Supabase release claim error:', updateErr);
@@ -1194,59 +1181,54 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
 
       setActionLoading(medicationId);
       const collectedAt = new Date().toISOString();
-      let isNowFullyCollectedDetermined = false;
-      let finalClaims: BatchClaim[] = [];
-      let finalRemainingQty = 0;
+
+      let updatedClaims = targetMed.claims || [];
+      let updatedActive = targetMed.activeClaims || [];
+
+      if (targetClaimId) {
+        updatedClaims = updatedClaims.map((c) =>
+          c.id === targetClaimId ? { ...c, status: 'collected' as const, collectedAt } : c
+        );
+        updatedActive = updatedActive.map((c) =>
+          c.claimId === targetClaimId ? { ...c, status: 'collected' as const, collectedAt } : c
+        );
+      } else {
+        updatedClaims = updatedClaims.map((c) => ({
+          ...c,
+          status: 'collected' as const,
+          collectedAt: c.collectedAt || collectedAt,
+        }));
+        updatedActive = updatedActive.map((c) => ({
+          ...c,
+          status: 'collected' as const,
+          collectedAt: c.collectedAt || collectedAt,
+        }));
+      }
+
+      const allClaimsCollected =
+        (updatedClaims.length > 0 && updatedClaims.every((c) => c.status === 'collected')) ||
+        (updatedActive.length > 0 && updatedActive.every((c) => c.status === 'collected'));
+
+      const isNowFullyCollected =
+        (!targetClaimId && (targetMed.remainingNumericQuantity ?? 0) <= 0) ||
+        (allClaimsCollected && (targetMed.remainingNumericQuantity ?? 0) <= 0) ||
+        targetMed.status === 'claimed' ||
+        Boolean(targetClaimId && targetClaimId === targetMed.id);
+
+      const nextRemaining = isNowFullyCollected ? 0 : (targetMed.remainingNumericQuantity ?? 0);
+      const nextStatus = isNowFullyCollected ? ('collected' as const) : targetMed.status;
+
+      const updatedMed: Medication = {
+        ...targetMed,
+        status: nextStatus,
+        remainingNumericQuantity: nextRemaining,
+        claims: updatedClaims,
+        activeClaims: updatedActive,
+        collectedAt: isNowFullyCollected ? collectedAt : targetMed.collectedAt,
+      };
 
       setMedications((prev) => {
-        const updated = prev.map((med) => {
-          if (med.id === medicationId) {
-            let updatedClaims = med.claims || [];
-            let updatedActive = med.activeClaims || [];
-
-            if (targetClaimId) {
-              updatedClaims = updatedClaims.map((c) =>
-                c.id === targetClaimId ? { ...c, status: 'collected' as const, collectedAt } : c
-              );
-              updatedActive = updatedActive.map((c) =>
-                c.claimId === targetClaimId ? { ...c, status: 'collected' as const, collectedAt } : c
-              );
-            } else {
-              updatedClaims = updatedClaims.map((c) => ({
-                ...c,
-                status: 'collected' as const,
-                collectedAt: c.collectedAt || collectedAt,
-              }));
-              updatedActive = updatedActive.map((c) => ({
-                ...c,
-                status: 'collected' as const,
-                collectedAt: c.collectedAt || collectedAt,
-              }));
-            }
-
-            const allClaimsCollected =
-              (updatedClaims.length > 0 && updatedClaims.every((c) => c.status === 'collected')) ||
-              (updatedActive.length > 0 && updatedActive.every((c) => c.status === 'collected'));
-
-            const isNowFullyCollected =
-              (!targetClaimId && (med.remainingNumericQuantity ?? 0) <= 0) ||
-              (allClaimsCollected && (med.remainingNumericQuantity ?? 0) <= 0) ||
-              med.status === 'claimed';
-
-            isNowFullyCollectedDetermined = isNowFullyCollected;
-            finalClaims = updatedClaims;
-            finalRemainingQty = med.remainingNumericQuantity ?? 0;
-
-            return {
-              ...med,
-              status: isNowFullyCollected ? ('collected' as const) : med.status,
-              claims: updatedClaims,
-              activeClaims: updatedActive,
-              collectedAt: isNowFullyCollected ? collectedAt : med.collectedAt,
-            };
-          }
-          return med;
-        });
+        const updated = prev.map((med) => (med.id === medicationId ? updatedMed : med));
         saveMedsToLocal(updated);
         return updated;
       });
@@ -1254,36 +1236,32 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
       if (isSupabaseConfigured && supabase) {
         try {
           const isTargetUuid = isValidUuid(medicationId);
-          if (isNowFullyCollectedDetermined) {
+          if (isNowFullyCollected) {
             const updatePayload = {
               status: 'collected',
               collected_at: collectedAt,
               remaining_numeric_quantity: 0,
-              claims: finalClaims,
+              claims: updatedClaims,
             };
 
             const query = supabase.from('medications').update(updatePayload);
             const { error: updateErr } = isTargetUuid
               ? await query.eq('id', medicationId)
-              : targetMed
-              ? await query.eq('medicine_name', targetMed.medicineName).eq('location', targetMed.location)
-              : { error: null };
+              : await query.eq('medicine_name', targetMed.medicineName).eq('location', targetMed.location);
 
             if (updateErr) {
               console.warn('Supabase collected update error:', updateErr);
             }
           } else {
             const updatePayload = {
-              remaining_numeric_quantity: finalRemainingQty,
-              claims: finalClaims,
+              remaining_numeric_quantity: nextRemaining,
+              claims: updatedClaims,
             };
 
             const query = supabase.from('medications').update(updatePayload);
             const { error: updateErr } = isTargetUuid
               ? await query.eq('id', medicationId)
-              : targetMed
-              ? await query.eq('medicine_name', targetMed.medicineName).eq('location', targetMed.location)
-              : { error: null };
+              : await query.eq('medicine_name', targetMed.medicineName).eq('location', targetMed.location);
 
             if (updateErr) {
               console.warn('Supabase collected update error:', updateErr);

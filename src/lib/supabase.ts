@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Medication, UserProfile, VerificationStatus, MedicineCategory, BatchClaim, UserRole } from '@/types/medshare';
+import { Medication, UserProfile, VerificationStatus, MedicineCategory, BatchClaim, ClaimRecord, UserRole } from '@/types/medshare';
 import { inferCategory } from '@/lib/medicine-dictionary';
 import { parseQuantity } from '@/lib/seed';
 
@@ -179,6 +179,64 @@ export function mapDbMedicationToApp(db: DbMedication, localFallback?: Medicatio
     claimedByRole = 'clinic_charity';
   }
 
+  // Synthesize activeClaims from db.claims and single-claim fields
+  const rawActiveClaims: ClaimRecord[] =
+    (richMeta?.activeClaims as ClaimRecord[] | undefined) ||
+    localFallback?.activeClaims ||
+    [];
+
+  const activeClaims: ClaimRecord[] = [...rawActiveClaims];
+
+  if (claims.length > 0) {
+    claims.forEach((bc) => {
+      const existingIdx = activeClaims.findIndex((ac) => ac.claimId === bc.id);
+      const isCollected = bc.status === 'collected' || db.status === 'collected';
+      const record: ClaimRecord = {
+        claimId: bc.id,
+        collectorId: bc.claimerId,
+        collectorName: bc.claimerName,
+        collectorRole: bc.claimerRole,
+        collectorPhone: undefined,
+        organizationOrRx: bc.prescriptionRef,
+        quantityClaimed: bc.claimedQuantity,
+        unitName: bc.unitName || unit,
+        handoverPin: bc.handoverPin || handoverPin || '0000',
+        claimedAt: bc.claimedAt || new Date().toISOString(),
+        claimExpiresAt: bc.claimExpiresAt || claimExpiresAt || new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
+        collectedAt: isCollected ? (db.collected_at || new Date().toISOString()) : undefined,
+        status: isCollected ? ('collected' as const) : ('pending_pickup' as const),
+      };
+      if (existingIdx >= 0) {
+        activeClaims[existingIdx] = { ...activeClaims[existingIdx], ...record };
+      } else {
+        activeClaims.push(record);
+      }
+    });
+  } else if ((db.status === 'claimed' || db.status === 'collected') && handoverPin) {
+    const isCollected = db.status === 'collected';
+    const existingIdx = activeClaims.findIndex((ac) => ac.claimId === db.id);
+    const record: ClaimRecord = {
+      claimId: db.id,
+      collectorId: claimedById || 'collector-anon',
+      collectorName: claimedByName || 'Verified Collector',
+      collectorRole: claimedByRole || 'individual',
+      collectorPhone: undefined,
+      organizationOrRx: db.prescription_ref || undefined,
+      quantityClaimed: db.claimed_quantity ?? total,
+      unitName: unit,
+      handoverPin: handoverPin,
+      claimedAt: db.claimed_at || new Date().toISOString(),
+      claimExpiresAt: claimExpiresAt || new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
+      collectedAt: isCollected ? (db.collected_at || new Date().toISOString()) : undefined,
+      status: isCollected ? ('collected' as const) : ('pending_pickup' as const),
+    };
+    if (existingIdx >= 0) {
+      activeClaims[existingIdx] = { ...activeClaims[existingIdx], ...record };
+    } else {
+      activeClaims.push(record);
+    }
+  }
+
   return {
     id: db.id,
     medicineName: db.medicine_name,
@@ -190,6 +248,7 @@ export function mapDbMedicationToApp(db: DbMedication, localFallback?: Medicatio
     unitName: unit,
     remainingNumericQuantity: remaining,
     claims,
+    activeClaims,
     handoverPin,
     claimExpiresAt,
     expiryDate: db.expiry_date,

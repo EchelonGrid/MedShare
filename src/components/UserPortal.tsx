@@ -444,6 +444,51 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
     );
   }, [medications, currentUser]);
 
+  const completedHandovers = useMemo(() => {
+    if (!currentUser) return [];
+    const list: {
+      medication: Medication;
+      role: 'donor' | 'collector';
+      partnerName: string;
+      quantity: number;
+      unitName: string;
+      collectedAt?: string;
+    }[] = [];
+
+    // 1. As donor: donations marked as collected
+    myDonations.forEach((med) => {
+      if (med.status === 'collected') {
+        const parsed = parseQuantity(med.quantity);
+        const total = med.totalNumericQuantity ?? parsed.total;
+        const unit = med.unitName || parsed.unit;
+        list.push({
+          medication: med,
+          role: 'donor',
+          partnerName: med.claimedByName || 'Verified Frontline Recipient',
+          quantity: med.claimedQuantity ?? total,
+          unitName: unit,
+          collectedAt: med.collectedAt,
+        });
+      }
+    });
+
+    // 2. As collector: items claimed and collected
+    myCollectionHistory.forEach((item) => {
+      if (!list.some((l) => l.medication.id === item.medication.id && l.role === 'collector')) {
+        list.push({
+          medication: item.medication,
+          role: 'collector',
+          partnerName: item.medication.donorName,
+          quantity: item.claimedQuantity,
+          unitName: item.unitName,
+          collectedAt: item.collectedAt,
+        });
+      }
+    });
+
+    return list;
+  }, [currentUser, myDonations, myCollectionHistory]);
+
   const incomingPickupRequests = useMemo(() => {
     if (!currentUser) return [];
     const isDonorOfMed = (m: Medication) =>
@@ -1395,6 +1440,99 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                 No pending incoming pickup requests. When a collector claims your donation, their dispatch request will appear here.
               </div>
             )}
+            {/* ============================================================= */}
+            {/* COMPLETED RESCUES & IMPACT VAULT                            */}
+            {/* ============================================================= */}
+            <div className="space-y-4 pt-4 border-t border-teal-500/15">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h3 className="font-display text-lg font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                    <PackageCheck className="w-5 h-5 text-emerald-400" />
+                    <span>Completed Handover &amp; Rescue Vault</span>
+                    <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-400/30">
+                      {completedHandovers.length} Completed
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 font-sans">
+                    Permanently verified handovers completed via 4-digit physical handover validation.
+                  </p>
+                </div>
+
+                {completedHandovers.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setIsCertificateOpen(true)}
+                    className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-teal-500/15 text-teal-300 border border-teal-500/30 hover:bg-teal-500/25 text-xs font-mono font-semibold transition cursor-pointer self-start sm:self-auto"
+                  >
+                    <Award className="w-4 h-4 text-amber-400" />
+                    <span>View Impact Certificate</span>
+                  </button>
+                )}
+              </div>
+
+              {completedHandovers.length > 0 ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                  {completedHandovers.map((item, idx) => (
+                    <TiltSpotlightCard
+                      key={`${item.medication.id}-${item.role}-${idx}`}
+                      glowColor="teal"
+                      className="p-5 sm:p-6 bg-slate-900/90 border border-emerald-500/30 space-y-4 flex flex-col justify-between"
+                    >
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between gap-2 pb-2 border-b border-emerald-500/20">
+                          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-400/30 flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                            <span>HANDOVER VERIFIED &amp; COMPLETED</span>
+                          </span>
+                          <span className="text-[10px] font-mono text-slate-400 uppercase">
+                            {item.role === 'donor' ? 'You Donated' : 'You Received'}
+                          </span>
+                        </div>
+
+                        <div>
+                          <h4 className="font-display font-bold text-white text-base sm:text-lg">
+                            {item.medication.medicineName}
+                          </h4>
+                          {item.medication.genericName && (
+                            <p className="text-xs text-teal-300/80 italic mt-0.5 font-sans">
+                              ({item.medication.genericName})
+                            </p>
+                          )}
+                          <p className="text-xs font-mono text-emerald-300 mt-1">
+                            Handed Over: {item.quantity} {item.unitName}
+                          </p>
+                        </div>
+
+                        <div className="bg-slate-950/80 border border-emerald-500/20 rounded-2xl p-3 text-xs font-mono text-slate-300 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-400">
+                              {item.role === 'donor' ? 'Verified Collector:' : 'Listed Donor:'}
+                            </span>
+                            <span className="font-bold text-white">{item.partnerName}</span>
+                          </div>
+                          {item.collectedAt && (
+                            <div className="flex items-center justify-between text-[11px] pt-1 border-t border-emerald-500/10">
+                              <span className="text-slate-400">Completed Date:</span>
+                              <span className="text-emerald-300">
+                                {new Date(item.collectedAt).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric',
+                                })}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </TiltSpotlightCard>
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-white/80 dark:bg-slate-950/70 rounded-3xl border border-dashed border-slate-300 dark:border-teal-500/25 p-8 text-center text-xs font-mono text-slate-500 dark:text-slate-400">
+                  No completed handovers yet. Verified collections and completed donor handovers will appear here.
+                </div>
+              )}
+            </div>
           </div>
 
         </div>
