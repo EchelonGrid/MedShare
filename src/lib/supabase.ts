@@ -127,31 +127,57 @@ export function mapDbMedicationToApp(db: DbMedication, localFallback?: Medicatio
     localFallback?.claimExpiresAt ||
     (db.status === 'claimed' ? new Date(Date.now() + 44 * 60 * 60 * 1000).toISOString() : undefined);
 
-  // Preserve donorId: if db has null, check fallback, richMeta, or match known demo donors
-  const donorId =
-    db.donor_id ||
-    (richMeta?.donorId as string | undefined) ||
-    localFallback?.donorId ||
-    (db.donor_name === 'Dr. Farhana Rahman' ? 'user-donor-1' : undefined);
+  // Preserve donorId: if db has null, check fallback only if donorName matches, richMeta, or match known demo donors
+  let donorId = db.donor_id || (richMeta?.donorId as string | undefined);
+  if (
+    !donorId &&
+    localFallback &&
+    localFallback.donorName &&
+    db.donor_name &&
+    localFallback.donorName.trim().toLowerCase() === db.donor_name.trim().toLowerCase()
+  ) {
+    donorId = localFallback.donorId;
+  }
+  if (!donorId && db.donor_name === 'Dr. Farhana Rahman') {
+    donorId = 'user-donor-1';
+  }
 
-  const claimedById =
-    db.claimed_by_id ||
-    (richMeta?.claimedById as string | undefined) ||
-    localFallback?.claimedById ||
-    (db.status === 'collected' ? 'user-clinic-1' : undefined);
+  let claimedById = db.claimed_by_id || (richMeta?.claimedById as string | undefined);
+  if (
+    !claimedById &&
+    localFallback &&
+    localFallback.claimedByName &&
+    db.claimed_by_name &&
+    localFallback.claimedByName.trim().toLowerCase() === db.claimed_by_name.trim().toLowerCase()
+  ) {
+    claimedById = localFallback.claimedById;
+  }
+  if (!claimedById && db.status === 'collected') {
+    claimedById = 'user-clinic-1';
+  }
 
-  const claimedByName =
-    db.claimed_by_name ||
-    (richMeta?.claimedByName as string | undefined) ||
-    localFallback?.claimedByName ||
-    (db.status === 'collected' ? 'Nurse Michael Chang (Rural Hope)' : undefined);
+  let claimedByName = db.claimed_by_name || (richMeta?.claimedByName as string | undefined);
+  if (
+    !claimedByName &&
+    localFallback &&
+    localFallback.claimedByName &&
+    localFallback.status === db.status
+  ) {
+    claimedByName = localFallback.claimedByName;
+  }
+  if (!claimedByName && db.status === 'collected') {
+    claimedByName = 'Nurse Michael Chang (Rural Hope)';
+  }
 
-  const claimedByRole = (
+  let claimedByRole =
     (db.claimed_by_role as UserRole | undefined) ||
-    (richMeta?.claimedByRole as UserRole | undefined) ||
-    localFallback?.claimedByRole ||
-    (db.status === 'collected' ? 'clinic_charity' : undefined)
-  );
+    (richMeta?.claimedByRole as UserRole | undefined);
+  if (!claimedByRole && localFallback && localFallback.claimedByRole && localFallback.status === db.status) {
+    claimedByRole = localFallback.claimedByRole;
+  }
+  if (!claimedByRole && db.status === 'collected') {
+    claimedByRole = 'clinic_charity';
+  }
 
   return {
     id: db.id,
@@ -184,6 +210,11 @@ export function mapDbMedicationToApp(db: DbMedication, localFallback?: Medicatio
   };
 }
 
+export function isValidUuid(id?: string | null): boolean {
+  if (!id || typeof id !== 'string') return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id.trim());
+}
+
 export function mapAppMedicationToDb(app: Omit<Medication, 'id' | 'createdAt'> & { id?: string }): Partial<DbMedication> {
   const metaObj = {
     category: app.category,
@@ -198,10 +229,9 @@ export function mapAppMedicationToDb(app: Omit<Medication, 'id' | 'createdAt'> &
     pickupNoteText: app.pickupNote,
   };
 
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  const safeId = app.id && uuidRegex.test(app.id) ? app.id : undefined;
-  const safeDonorId = app.donorId && uuidRegex.test(app.donorId) ? app.donorId : null;
-  const safeClaimedById = app.claimedById && uuidRegex.test(app.claimedById) ? app.claimedById : null;
+  const safeId = isValidUuid(app.id) ? app.id : undefined;
+  const safeDonorId = isValidUuid(app.donorId) ? app.donorId : null;
+  const safeClaimedById = isValidUuid(app.claimedById) ? app.claimedById : null;
 
   return {
     ...(safeId && { id: safeId }),

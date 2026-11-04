@@ -27,11 +27,12 @@ import {
   Minus,
   Plus,
   Sparkles,
+  AlertCircle,
 } from 'lucide-react';
 
 export function validateBmdcNumber(value: string): boolean {
   if (!value) return false;
-  return /^[A-Z]-?\d{4,6}$/i.test(value.trim());
+  return /^[A-Z]?-?\d{4,6}$/i.test(value.trim());
 }
 
 export function validatePrescriptionDate(dateStr: string): { isValid: boolean; error?: string } {
@@ -80,6 +81,7 @@ export default function ClaimModal({
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [copiedPhone, setCopiedPhone] = useState(false);
   const [touched, setTouched] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   // Structured BMDC Doctor's Prescription Form State
   const [doctorName, setDoctorName] = useState('');
@@ -177,8 +179,40 @@ export default function ClaimModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setTouched(true);
+    setFormError(null);
 
-    if (!isFormValid) return;
+    if (!inspectionConfirmed) {
+      setFormError('Please check the in-person package inspection confirmation box below.');
+      return;
+    }
+
+    if (claimAmount <= 0 || claimAmount > remainingQty) {
+      setFormError(`Please select a valid claim quantity (1 to ${remainingQty} ${unitName}).`);
+      return;
+    }
+
+    if (isIndividual) {
+      if (!isDoctorNameValid) {
+        setFormError("Doctor's Full Name must be at least 5 characters.");
+        return;
+      }
+      if (!isBmdcValid) {
+        setFormError('Please enter a valid BMDC Registration Number (e.g. A-12345 or 44910).');
+        return;
+      }
+      if (!isHospitalValid) {
+        setFormError('Hospital / Clinic Name must be at least 4 characters.');
+        return;
+      }
+      if (!isDateValid) {
+        setFormError(dateValidation.error || 'Prescription date must be within the last 90 days.');
+        return;
+      }
+      if (!isDosageValid) {
+        setFormError('Please select a dosage schedule.');
+        return;
+      }
+    }
 
     let prescriptionRef = '';
     if (isIndividual) {
@@ -193,6 +227,8 @@ export default function ClaimModal({
     if (res && res.success && res.pin) {
       setAssignedPin(res.pin);
       setIsSubmitted(true);
+    } else if (res && !res.success && res.error) {
+      setFormError(res.error);
     }
   };
 
@@ -513,6 +549,14 @@ export default function ClaimModal({
               </label>
             </div>
 
+            {/* Form Validation Feedback Banner */}
+            {formError && (
+              <div className="p-3 rounded-xl bg-rose-950/80 border border-rose-500/50 text-xs font-mono text-rose-200 flex items-center gap-2 animate-in fade-in">
+                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                <span>{formError}</span>
+              </div>
+            )}
+
             {/* Action Buttons */}
             <div className="pt-2 flex items-center justify-end gap-3 border-t border-teal-500/20">
               <button
@@ -525,7 +569,7 @@ export default function ClaimModal({
 
               <button
                 type="submit"
-                disabled={!isFormValid || actionLoading === medication.id}
+                disabled={actionLoading === medication.id}
                 className="px-5 py-2.5 text-xs sm:text-sm font-bold font-mono rounded-xl bg-gradient-to-r from-teal-400 to-emerald-500 text-slate-950 shadow-md transition cursor-pointer hover:from-teal-300 hover:to-emerald-400 disabled:opacity-50 flex items-center gap-2"
               >
                 <CheckCircle2 className="w-4 h-4" />

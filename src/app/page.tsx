@@ -190,7 +190,14 @@ export default function HomePage() {
     }
 
     // 2. Prevent self-claiming own listed donation
-    if (medication.donorId === currentUser.id) {
+    const isDonor =
+      medication.donorId === currentUser.id ||
+      Boolean(
+        medication.donorName &&
+          currentUser.name &&
+          medication.donorName.trim().toLowerCase() === currentUser.name.trim().toLowerCase()
+      );
+    if (isDonor) {
       setNotification('You are the donor of this medicine. You cannot claim your own listed donation.');
       showToast('You cannot claim your own listed medication.', 'warning', 'Donor Notice');
       return;

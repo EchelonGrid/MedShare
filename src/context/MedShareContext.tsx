@@ -37,6 +37,7 @@ import {
   mapAppMedicationToDb,
   mapDbProfileToApp,
   DbMedication,
+  isValidUuid,
 } from '@/lib/supabase';
 import { ToastItem } from '@/components/Toast';
 
@@ -933,30 +934,49 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
 
       if (isSupabaseConfigured && supabase) {
         try {
+          const validClaimerUuid = isValidUuid(claimer?.id) ? claimer?.id : null;
+          const isTargetUuid = isValidUuid(medicationId);
+
           if (isFullClaimDetermined) {
-            await supabase
-              .from('medications')
-              .update({
-                status: 'claimed',
-                claimed_by_id: claimer?.id || null,
-                claimed_by_name: claimer?.name || 'Verified Collector',
-                claimed_by_role: claimer?.role || 'individual',
-                prescription_ref: prescriptionRef || null,
-                claimed_at: claimedAt,
-                remaining_numeric_quantity: 0,
-                claims: latestUpdatedClaims,
-                handover_pin: pin,
-                claim_expires_at: claimExpiresAt,
-              })
-              .eq('id', medicationId);
+            const updatePayload = {
+              status: 'claimed',
+              claimed_by_id: validClaimerUuid,
+              claimed_by_name: claimer?.name || 'Verified Collector',
+              claimed_by_role: claimer?.role || 'individual',
+              prescription_ref: prescriptionRef || null,
+              claimed_at: claimedAt,
+              remaining_numeric_quantity: 0,
+              claims: latestUpdatedClaims,
+              handover_pin: pin,
+              claim_expires_at: claimExpiresAt,
+            };
+
+            const query = supabase.from('medications').update(updatePayload);
+            const { error: updateErr } = isTargetUuid
+              ? await query.eq('id', medicationId)
+              : targetMed
+              ? await query.eq('medicine_name', targetMed.medicineName).eq('location', targetMed.location)
+              : { error: null };
+
+            if (updateErr) {
+              console.warn('Supabase claim update error:', updateErr);
+            }
           } else {
-            await supabase
-              .from('medications')
-              .update({
-                remaining_numeric_quantity: latestRemainingQty,
-                claims: latestUpdatedClaims,
-              })
-              .eq('id', medicationId);
+            const updatePayload = {
+              remaining_numeric_quantity: latestRemainingQty,
+              claims: latestUpdatedClaims,
+            };
+
+            const query = supabase.from('medications').update(updatePayload);
+            const { error: updateErr } = isTargetUuid
+              ? await query.eq('id', medicationId)
+              : targetMed
+              ? await query.eq('medicine_name', targetMed.medicineName).eq('location', targetMed.location)
+              : { error: null };
+
+            if (updateErr) {
+              console.warn('Supabase partial claim update error:', updateErr);
+            }
           }
         } catch (err) {
           console.warn('Supabase claim update error; maintained local state:', err);
@@ -1064,17 +1084,26 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
 
       if (isSupabaseConfigured && supabase) {
         try {
-          await supabase
-            .from('medications')
-            .update({
-              status: 'available',
-              claimed_by_id: null,
-              claimed_by_name: null,
-              claimed_by_role: null,
-              prescription_ref: null,
-              claimed_at: null,
-            })
-            .eq('id', medicationId);
+          const isTargetUuid = isValidUuid(medicationId);
+          const updatePayload = {
+            status: 'available',
+            claimed_by_id: null,
+            claimed_by_name: null,
+            claimed_by_role: null,
+            prescription_ref: null,
+            claimed_at: null,
+          };
+
+          const query = supabase.from('medications').update(updatePayload);
+          const { error: updateErr } = isTargetUuid
+            ? await query.eq('id', medicationId)
+            : targetMed
+            ? await query.eq('medicine_name', targetMed.medicineName).eq('location', targetMed.location)
+            : { error: null };
+
+          if (updateErr) {
+            console.warn('Supabase release claim error:', updateErr);
+          }
         } catch (err) {
           console.warn('Supabase release claim error; maintained local state:', err);
         }
@@ -1224,24 +1253,41 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
 
       if (isSupabaseConfigured && supabase) {
         try {
+          const isTargetUuid = isValidUuid(medicationId);
           if (isNowFullyCollectedDetermined) {
-            await supabase
-              .from('medications')
-              .update({
-                status: 'collected',
-                collected_at: collectedAt,
-                remaining_numeric_quantity: 0,
-                claims: finalClaims,
-              })
-              .eq('id', medicationId);
+            const updatePayload = {
+              status: 'collected',
+              collected_at: collectedAt,
+              remaining_numeric_quantity: 0,
+              claims: finalClaims,
+            };
+
+            const query = supabase.from('medications').update(updatePayload);
+            const { error: updateErr } = isTargetUuid
+              ? await query.eq('id', medicationId)
+              : targetMed
+              ? await query.eq('medicine_name', targetMed.medicineName).eq('location', targetMed.location)
+              : { error: null };
+
+            if (updateErr) {
+              console.warn('Supabase collected update error:', updateErr);
+            }
           } else {
-            await supabase
-              .from('medications')
-              .update({
-                remaining_numeric_quantity: finalRemainingQty,
-                claims: finalClaims,
-              })
-              .eq('id', medicationId);
+            const updatePayload = {
+              remaining_numeric_quantity: finalRemainingQty,
+              claims: finalClaims,
+            };
+
+            const query = supabase.from('medications').update(updatePayload);
+            const { error: updateErr } = isTargetUuid
+              ? await query.eq('id', medicationId)
+              : targetMed
+              ? await query.eq('medicine_name', targetMed.medicineName).eq('location', targetMed.location)
+              : { error: null };
+
+            if (updateErr) {
+              console.warn('Supabase collected update error:', updateErr);
+            }
           }
         } catch (err) {
           console.warn('Supabase collected update error; maintained local state:', err);
@@ -1408,7 +1454,7 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
       setAllUsers(updatedUsers);
       saveUsersToLocal(updatedUsers);
 
-      if (isSupabaseConfigured && supabase) {
+      if (isSupabaseConfigured && supabase && isValidUuid(currentUserId)) {
         try {
           await supabase.from('profiles').update({
             organization_name: details.organizationName?.trim() || null,
@@ -1466,12 +1512,16 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
       // 2. Strict Uniqueness Check on Supabase Profiles (if live DB connected)
       if (isSupabaseConfigured && supabase) {
         try {
-          const { data: dbDuplicates, error: dbErr } = await supabase
+          let query = supabase
             .from('profiles')
             .select('id, name, verification_status')
-            .eq('registration_or_nid', details.registrationOrNid?.trim())
-            .neq('id', currentUserId)
-            .limit(1);
+            .eq('registration_or_nid', details.registrationOrNid?.trim());
+
+          if (isValidUuid(currentUserId)) {
+            query = query.neq('id', currentUserId);
+          }
+
+          const { data: dbDuplicates, error: dbErr } = await query.limit(1);
 
           if (!dbErr && dbDuplicates && dbDuplicates.length > 0 && dbDuplicates[0].verification_status === 'verified') {
             setActionLoading(null);
@@ -1605,7 +1655,7 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
       }
 
       // 4. Update Profile in Supabase
-      if (isSupabaseConfigured && supabase) {
+      if (isSupabaseConfigured && supabase && isValidUuid(currentUserId)) {
         try {
           await supabase.from('profiles').upsert({
             id: currentUserId,
@@ -1678,7 +1728,7 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
       setAllUsers(updatedUsers);
       saveUsersToLocal(updatedUsers);
 
-      if (isSupabaseConfigured && supabase) {
+      if (isSupabaseConfigured && supabase && isValidUuid(userId)) {
         try {
           await supabase
             .from('profiles')
@@ -1719,7 +1769,7 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
       setAllUsers(updatedUsers);
       saveUsersToLocal(updatedUsers);
 
-      if (isSupabaseConfigured && supabase) {
+      if (isSupabaseConfigured && supabase && isValidUuid(userId)) {
         try {
           await supabase
             .from('profiles')
