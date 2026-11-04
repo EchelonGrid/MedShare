@@ -56,7 +56,11 @@ export default function ImpactCertificateModal({
   const donorStats = useMemo(() => {
     if (!user) return { batches: 0, totalUnits: 0, handovers: 0, items: [] };
 
-    const myDonations = medications.filter((m) => m.donorId === user.id);
+    const myDonations = medications.filter(
+      (m) =>
+        m.donorId === user.id ||
+        Boolean(m.donorName && m.donorName.toLowerCase() === user.name.toLowerCase())
+    );
     let totalUnits = 0;
     let handovers = 0;
 
@@ -67,9 +71,11 @@ export default function ImpactCertificateModal({
 
       if (m.status === 'collected') {
         handovers += 1;
-      } else if (m.claims && m.claims.length > 0) {
-        const collectedClaims = m.claims.filter((c) => c.status === 'collected');
-        handovers += collectedClaims.length;
+      } else {
+        const collectedClaims = (m.claims || []).filter((c) => c.status === 'collected');
+        const collectedActive = (m.activeClaims || []).filter((c) => c.status === 'collected');
+        const count = Math.max(collectedClaims.length, collectedActive.length);
+        handovers += count;
       }
     });
 
@@ -106,27 +112,58 @@ export default function ImpactCertificateModal({
 
     let totalUnits = 0;
 
+    const matchesCollector = (id?: string, name?: string) => {
+      if (id && id === user.id) return true;
+      if (name && user.name && name.toLowerCase() === user.name.toLowerCase()) return true;
+      return false;
+    };
+
     medications.forEach((med) => {
       const parsed = parseQuantity(med.quantity);
       const total = med.totalNumericQuantity ?? parsed.total;
       const unit = med.unitName || parsed.unit;
 
-      const userCollected = (med.claims || []).filter(
-        (c) => c.claimerId === user.id && c.status === 'collected'
-      );
+      const seenClaimIds = new Set<string>();
+      let foundMatchingClaim = false;
 
-      if (userCollected.length > 0) {
-        userCollected.forEach((c) => {
-          totalUnits += c.claimedQuantity;
-          collectedItems.push({
-            name: med.medicineName,
-            strength: med.strength,
-            quantity: `${c.claimedQuantity} ${c.unitName || unit}`,
-            expiry: med.expiryDate,
-            status: 'Distributed',
-          });
-        });
-      } else if (med.claimedById === user.id && med.status === 'collected') {
+      // 1. Check batch claims
+      (med.claims || []).forEach((c) => {
+        if (matchesCollector(c.claimerId, c.claimerName) && c.status === 'collected') {
+          if (!seenClaimIds.has(c.id)) {
+            seenClaimIds.add(c.id);
+            foundMatchingClaim = true;
+            totalUnits += c.claimedQuantity;
+            collectedItems.push({
+              name: med.medicineName,
+              strength: med.strength,
+              quantity: `${c.claimedQuantity} ${c.unitName || unit}`,
+              expiry: med.expiryDate,
+              status: 'Distributed',
+            });
+          }
+        }
+      });
+
+      // 2. Check active claims
+      (med.activeClaims || []).forEach((ac) => {
+        if (matchesCollector(ac.collectorId, ac.collectorName) && ac.status === 'collected') {
+          if (!seenClaimIds.has(ac.claimId)) {
+            seenClaimIds.add(ac.claimId);
+            foundMatchingClaim = true;
+            totalUnits += ac.quantityClaimed;
+            collectedItems.push({
+              name: med.medicineName,
+              strength: med.strength,
+              quantity: `${ac.quantityClaimed} ${ac.unitName || unit}`,
+              expiry: med.expiryDate,
+              status: 'Distributed',
+            });
+          }
+        }
+      });
+
+      // 3. Fallback to top-level claimedById
+      if (!foundMatchingClaim && matchesCollector(med.claimedById, med.claimedByName) && med.status === 'collected') {
         const claimedQty = med.claimedQuantity ?? total;
         totalUnits += claimedQty;
         collectedItems.push({

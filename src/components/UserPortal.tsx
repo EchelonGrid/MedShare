@@ -1131,7 +1131,7 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                   const med = item.medication;
                   const days = mounted ? getDaysUntilExpiry(med.expiryDate) : null;
                   const urgency = days !== null ? getUrgencyLevel(days) : 'normal';
-                  const pinDigits = (item.handoverPin || '4829').padStart(4, '0').slice(0, 4).split('');
+                  const pinDigits = (item.handoverPin || '0000').padStart(4, '0').slice(0, 4).split('');
 
                   return (
                     <TiltSpotlightCard

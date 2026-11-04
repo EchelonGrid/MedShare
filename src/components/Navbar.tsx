@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useMedShare } from '@/context/MedShareContext';
 import {
   Pill,
@@ -101,30 +101,84 @@ export default function Navbar() {
     ? ROLE_LABELS[currentUser.role] || ROLE_LABELS.individual
     : null;
 
-  // Active items badge in portal
-  const portalBadgeCount = currentUser
-    ? currentUser.role === 'admin'
-      ? pendingVerifications.length
-      : medications.filter(
-          (m) =>
-            (m.claimedById === currentUser.id && m.status === 'claimed') ||
-            (m.claims || []).some(
-              (c) =>
-                c.claimerId === currentUser.id &&
-                (c.status === 'claimed' || (c.status as string) === 'pending_pickup')
-            ) ||
-            (m.activeClaims || []).some(
-              (c) => c.collectorId === currentUser.id && c.status === 'pending_pickup'
-            ) ||
-            ((m.donorId === currentUser.id ||
-              (m.donorName && m.donorName.toLowerCase() === currentUser.name.toLowerCase())) &&
-              (m.status === 'claimed' ||
-                (m.claims || []).some(
-                  (c) => c.status === 'claimed' || (c.status as string) === 'pending_pickup'
-                ) ||
-                (m.activeClaims || []).some((c) => c.status === 'pending_pickup')))
-        ).length
-    : 0;
+  // Active actionable items badge in portal (synchronized with UserPortal)
+  const portalBadgeCount = useMemo(() => {
+    if (!currentUser) return 0;
+    if (currentUser.role === 'admin') return pendingVerifications.length;
+
+    let count = 0;
+    medications.forEach((m) => {
+      const isDonor =
+        m.donorId === currentUser.id ||
+        Boolean(m.donorName && m.donorName.toLowerCase() === currentUser.name.toLowerCase());
+
+      // If donor: count incoming pending pickup requests
+      if (isDonor) {
+        const seenClaimIds = new Set<string>();
+        (m.activeClaims || []).forEach((ac) => {
+          if (ac.status === 'pending_pickup') {
+            seenClaimIds.add(ac.claimId);
+            count += 1;
+          }
+        });
+        (m.claims || []).forEach((bc) => {
+          if (
+            (bc.status === 'claimed' || (bc.status as string) === 'pending_pickup') &&
+            !seenClaimIds.has(bc.id)
+          ) {
+            seenClaimIds.add(bc.id);
+            count += 1;
+          }
+        });
+        if (
+          m.status === 'claimed' &&
+          (!m.claims || m.claims.length === 0) &&
+          (!m.activeClaims || m.activeClaims.length === 0)
+        ) {
+          count += 1;
+        }
+      }
+
+      // If collector: count my pending pickups
+      const seenMyClaimIds = new Set<string>();
+      (m.activeClaims || []).forEach((ac) => {
+        if (
+          ac.collectorId === currentUser.id ||
+          (currentUser.name && ac.collectorName.toLowerCase() === currentUser.name.toLowerCase())
+        ) {
+          if (ac.status === 'pending_pickup') {
+            seenMyClaimIds.add(ac.claimId);
+            count += 1;
+          }
+        }
+      });
+      (m.claims || []).forEach((bc) => {
+        if (
+          bc.claimerId === currentUser.id ||
+          (currentUser.name && bc.claimerName.toLowerCase() === currentUser.name.toLowerCase())
+        ) {
+          if (
+            (bc.status === 'claimed' || (bc.status as string) === 'pending_pickup') &&
+            !seenMyClaimIds.has(bc.id)
+          ) {
+            seenMyClaimIds.add(bc.id);
+            count += 1;
+          }
+        }
+      });
+      if (
+        (m.claimedById === currentUser.id ||
+          (currentUser.name && m.claimedByName?.toLowerCase() === currentUser.name.toLowerCase())) &&
+        m.status === 'claimed' &&
+        (!m.claims || m.claims.length === 0) &&
+        (!m.activeClaims || m.activeClaims.length === 0)
+      ) {
+        count += 1;
+      }
+    });
+
+    return count;
+  }, [currentUser, pendingVerifications.length, medications]);
 
   const handleDonateClick = () => {
     if (!currentUser) {
