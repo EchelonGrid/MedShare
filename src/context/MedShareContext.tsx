@@ -52,11 +52,19 @@ const REQUESTS_STORAGE_KEY = 'medshare_prod_requests_v1';
  * Preserves user-created donations, partial claims, handover PINs, and donor ID associations.
  */
 function reconcileMedsWithCloud(cloudData: DbMedication[], localMeds: Medication[]): Medication[] {
+  // Purge any references to Tanvir Ahmed mock / legacy data from local cache
+  const cleanLocalMeds = localMeds.filter(
+    (m) =>
+      m.id !== 'med-2' &&
+      m.donorId !== 'user-tanvir-1' &&
+      m.donorName?.trim().toLowerCase() !== 'tanvir ahmed'
+  );
+
   const matchedLocalIds = new Set<string>();
 
   const reconciledCloud = cloudData.map((dbRow) => {
     // Match by exact ID or by title + location
-    const localMatch = localMeds.find(
+    const localMatch = cleanLocalMeds.find(
       (m) =>
         m.id === dbRow.id ||
         (m.medicineName.toLowerCase() === dbRow.medicine_name.toLowerCase() &&
@@ -70,8 +78,15 @@ function reconcileMedsWithCloud(cloudData: DbMedication[], localMeds: Medication
     return mapDbMedicationToApp(dbRow, localMatch);
   });
 
-  // Retain any user-donated or locally seeded medications not present in the cloud database
-  const localOnly = localMeds.filter((m) => {
+  // Retain only valid local-only medications not present in the cloud database.
+  // CRITICAL:
+  // 1. Do NOT retain items with a UUID: if an item has a Supabase UUID but is absent from cloudData,
+  //    it was deleted from the cloud database, so keeping it resurrects deleted items!
+  // 2. Do NOT retain items that were already matched to cloud rows.
+  const localOnly = cleanLocalMeds.filter((m) => {
+    if (isValidUuid(m.id)) {
+      return false;
+    }
     if (matchedLocalIds.has(m.id)) return false;
     const existsInCloud = cloudData.some(
       (c) =>
@@ -314,7 +329,12 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
       try {
         const parsed = JSON.parse(storedUsers);
         if (Array.isArray(parsed) && parsed.length > 0 && parsed[0]?.name) {
-          initialLocalUsers = parsed;
+          initialLocalUsers = parsed.filter(
+            (u: UserProfile) =>
+              u.id !== 'user-tanvir-1' &&
+              u.name?.trim().toLowerCase() !== 'tanvir ahmed'
+          );
+          saveUsersToLocal(initialLocalUsers);
         }
       } catch (e) {
         console.warn('Failed parsing stored users', e);
@@ -323,10 +343,16 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
     setAllUsers(initialLocalUsers);
 
     const storedCurrentId = localStorage.getItem(CURRENT_USER_ID_KEY);
-    if (storedCurrentId && storedCurrentId !== 'guest' && initialLocalUsers.some((u) => u.id === storedCurrentId)) {
+    if (
+      storedCurrentId &&
+      storedCurrentId !== 'guest' &&
+      storedCurrentId !== 'user-tanvir-1' &&
+      initialLocalUsers.some((u) => u.id === storedCurrentId)
+    ) {
       setCurrentUserId(storedCurrentId);
     } else {
       setCurrentUserId(null);
+      localStorage.setItem(CURRENT_USER_ID_KEY, 'guest');
     }
 
     let initialLocalMeds = INITIAL_MEDICATIONS;
@@ -341,30 +367,44 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
           Boolean(parsedMeds[0]?.expiryDate) &&
           !isNaN(getDaysUntilExpiry(parsedMeds[0].expiryDate));
         if (isValid) {
-          initialLocalMeds = parsedMeds.map((m: Medication) => {
-            const parsed = parseQuantity(m.quantity);
-            const total = m.totalNumericQuantity ?? parsed.total;
-            const unit = m.unitName || parsed.unit;
-            const remaining =
-              m.remainingNumericQuantity !== undefined
-                ? m.remainingNumericQuantity
-                : m.status === 'claimed' || m.status === 'collected'
-                ? 0
-                : total;
-            return {
-              ...m,
-              totalNumericQuantity: total,
-              unitName: unit,
-              remainingNumericQuantity: remaining,
-              claims: (m.claims || []).map((c) => ({
-                ...c,
-                handoverPin: c.handoverPin,
-                claimExpiresAt: c.claimExpiresAt || new Date(Date.now() + 44 * 60 * 60 * 1000).toISOString(),
-              })),
-              handoverPin: m.handoverPin,
-              claimExpiresAt: m.claimExpiresAt || (m.status === 'claimed' ? new Date(Date.now() + 44 * 60 * 60 * 1000).toISOString() : undefined),
-            };
-          });
+          initialLocalMeds = parsedMeds
+            .filter(
+              (m: Medication) =>
+                m.id !== 'med-2' &&
+                m.donorId !== 'user-tanvir-1' &&
+                m.donorName?.trim().toLowerCase() !== 'tanvir ahmed'
+            )
+            .map((m: Medication) => {
+              const parsed = parseQuantity(m.quantity);
+              const total = m.totalNumericQuantity ?? parsed.total;
+              const unit = m.unitName || parsed.unit;
+              const remaining =
+                m.remainingNumericQuantity !== undefined
+                  ? m.remainingNumericQuantity
+                  : m.status === 'claimed' || m.status === 'collected'
+                  ? 0
+                  : total;
+              return {
+                ...m,
+                totalNumericQuantity: total,
+                unitName: unit,
+                remainingNumericQuantity: remaining,
+                claims: (m.claims || [])
+                  .filter(
+                    (c) =>
+                      c.claimerId !== 'user-tanvir-1' &&
+                      c.claimerName?.trim().toLowerCase() !== 'tanvir ahmed'
+                  )
+                  .map((c) => ({
+                    ...c,
+                    handoverPin: c.handoverPin,
+                    claimExpiresAt: c.claimExpiresAt || new Date(Date.now() + 44 * 60 * 60 * 1000).toISOString(),
+                  })),
+                handoverPin: m.handoverPin,
+                claimExpiresAt: m.claimExpiresAt || (m.status === 'claimed' ? new Date(Date.now() + 44 * 60 * 60 * 1000).toISOString() : undefined),
+              };
+            });
+          saveMedsToLocal(initialLocalMeds);
         }
       } catch (e) {
         console.warn('Failed parsing stored meds', e);
@@ -378,7 +418,13 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
       try {
         const parsedRequests = JSON.parse(storedRequests);
         if (Array.isArray(parsedRequests) && parsedRequests.length > 0 && parsedRequests[0]?.medicineName) {
-          initialLocalRequests = parsedRequests;
+          initialLocalRequests = parsedRequests.filter(
+            (r: MedicineRequest) =>
+              r.requesterId !== 'user-tanvir-1' &&
+              r.requesterName?.trim().toLowerCase() !== 'tanvir ahmed' &&
+              r.fulfilledByName?.trim().toLowerCase() !== 'tanvir ahmed'
+          );
+          saveRequestsToLocal(initialLocalRequests);
         }
       } catch (e) {
         console.warn('Failed parsing stored requests', e);
@@ -448,11 +494,21 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
           if (!profErr && profileRows && profileRows.length > 0) {
             setAllUsers((prevUsers) => {
               const mappedAppProfiles = profileRows.map(mapDbProfileToApp);
+              const cloudIds = new Set(mappedAppProfiles.map((p) => p.id));
               const mergedMap = new Map<string, UserProfile>();
-              // Keep default/demo accounts first
-              DEFAULT_USERS.forEach((u) => mergedMap.set(u.id, u));
-              // Overlay existing local users (preserves demo passwords/sessions)
-              prevUsers.forEach((u) => mergedMap.set(u.id, u));
+              // Keep default/demo accounts first (excluding any Tanvir)
+              DEFAULT_USERS.filter(
+                (u) => u.id !== 'user-tanvir-1' && u.name?.trim().toLowerCase() !== 'tanvir ahmed'
+              ).forEach((u) => mergedMap.set(u.id, u));
+              // Overlay existing local users (preserves demo passwords/sessions),
+              // but purge Tanvir AND any UUID accounts deleted from cloud database
+              prevUsers
+                .filter((u) => {
+                  if (u.id === 'user-tanvir-1' || u.name?.trim().toLowerCase() === 'tanvir ahmed') return false;
+                  if (isValidUuid(u.id) && !cloudIds.has(u.id)) return false;
+                  return true;
+                })
+                .forEach((u) => mergedMap.set(u.id, u));
               // Overlay authoritative cloud profiles
               mappedAppProfiles.forEach((p) => {
                 const existing = mergedMap.get(p.id);
@@ -483,9 +539,18 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
               if (latestProfiles) {
                 setAllUsers((prevUsers) => {
                   const mapped = latestProfiles.map(mapDbProfileToApp);
+                  const cloudIds = new Set(mapped.map((p) => p.id));
                   const map = new Map<string, UserProfile>();
-                  DEFAULT_USERS.forEach((u) => map.set(u.id, u));
-                  prevUsers.forEach((u) => map.set(u.id, u));
+                  DEFAULT_USERS.filter(
+                    (u) => u.id !== 'user-tanvir-1' && u.name?.trim().toLowerCase() !== 'tanvir ahmed'
+                  ).forEach((u) => map.set(u.id, u));
+                  prevUsers
+                    .filter((u) => {
+                      if (u.id === 'user-tanvir-1' || u.name?.trim().toLowerCase() === 'tanvir ahmed') return false;
+                      if (isValidUuid(u.id) && !cloudIds.has(u.id)) return false;
+                      return true;
+                    })
+                    .forEach((u) => map.set(u.id, u));
                   mapped.forEach((p) => {
                     const ex = map.get(p.id);
                     map.set(p.id, { ...p, password: ex?.password || 'password123' });
