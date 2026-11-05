@@ -62,6 +62,7 @@ export default function VerifyModal({
   const [districtName, setDistrictName] = useState('Bogura');
   const [orgName, setOrgName] = useState('');
   const [regOrNid, setRegOrNid] = useState('');
+  const [normalizedRegOrNid, setNormalizedRegOrNid] = useState('');
   const [phone, setPhone] = useState('');
   const [location, setLocation] = useState('');
   const [confirmed, setConfirmed] = useState(false);
@@ -168,6 +169,8 @@ export default function VerifyModal({
       }
     }
 
+    setNormalizedRegOrNid(normalizedCred);
+
     // Call Context to check uniqueness and dispatch Supabase Auth Email OTP
     const otpRes = await requestVerificationOtp({
       name: isClinic ? (orgName.trim() || currentUser.name) : fullName.trim(),
@@ -204,7 +207,7 @@ export default function VerifyModal({
     const verifyRes = await verifyAccountOtp(otpCode, {
       name: isClinic ? (orgName.trim() || currentUser.name) : fullName.trim(),
       organizationName: isClinic ? orgName.trim() : currentUser.organizationName,
-      registrationOrNid: regOrNid.trim(),
+      registrationOrNid: normalizedRegOrNid || regOrNid.trim(),
       phone: phone.trim(),
       location: location.trim(),
       districtName,

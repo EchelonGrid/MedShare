@@ -274,6 +274,15 @@ export function isValidUuid(id?: string | null): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id.trim());
 }
 
+/**
+ * Normalizes NID or Organization Registration numbers by stripping
+ * whitespace, hyphens, and other standard formatting artifacts.
+ */
+export function normalizeRegistrationOrNid(id?: string | null): string {
+  if (!id || typeof id !== 'string') return '';
+  return id.replace(/[\s-]/g, '').trim().toUpperCase();
+}
+
 export function mapAppMedicationToDb(app: Omit<Medication, 'id' | 'createdAt'> & { id?: string }): Partial<DbMedication> {
   const metaObj = {
     category: app.category,
@@ -296,8 +305,16 @@ export function mapAppMedicationToDb(app: Omit<Medication, 'id' | 'createdAt'> &
     ...(safeId && { id: safeId }),
     medicine_name: app.medicineName,
     generic_name: app.genericName || null,
+    category: app.category || null,
     strength: app.strength,
     quantity: app.quantity,
+    total_numeric_quantity: app.totalNumericQuantity ?? null,
+    unit_name: app.unitName ?? null,
+    remaining_numeric_quantity: app.remainingNumericQuantity !== undefined ? app.remainingNumericQuantity : null,
+    claimed_quantity: app.claimedQuantity ?? null,
+    claims: app.claims || [],
+    handover_pin: app.handoverPin || null,
+    claim_expires_at: app.claimExpiresAt || null,
     expiry_date: app.expiryDate,
     location: app.location,
     donor_id: safeDonorId,

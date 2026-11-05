@@ -38,6 +38,7 @@ import {
   mapDbProfileToApp,
   DbMedication,
   isValidUuid,
+  normalizeRegistrationOrNid,
 } from '@/lib/supabase';
 import { ToastItem } from '@/components/Toast';
 
@@ -440,6 +441,67 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
         )
         .subscribe();
 
+      // Fetch all registered & verified profiles across the platform to reconcile local users
+      (async () => {
+        try {
+          const { data: profileRows, error: profErr } = await sb.from('profiles').select('*');
+          if (!profErr && profileRows && profileRows.length > 0) {
+            setAllUsers((prevUsers) => {
+              const mappedAppProfiles = profileRows.map(mapDbProfileToApp);
+              const mergedMap = new Map<string, UserProfile>();
+              // Keep default/demo accounts first
+              DEFAULT_USERS.forEach((u) => mergedMap.set(u.id, u));
+              // Overlay existing local users (preserves demo passwords/sessions)
+              prevUsers.forEach((u) => mergedMap.set(u.id, u));
+              // Overlay authoritative cloud profiles
+              mappedAppProfiles.forEach((p) => {
+                const existing = mergedMap.get(p.id);
+                mergedMap.set(p.id, {
+                  ...p,
+                  password: existing?.password || 'password123',
+                });
+              });
+              const mergedList = Array.from(mergedMap.values());
+              saveUsersToLocal(mergedList);
+              return mergedList;
+            });
+          }
+        } catch (profEx) {
+          console.warn('Supabase profiles initial fetch fallback:', profEx);
+        }
+      })();
+
+      // Supabase Real-time Subscription for profiles
+      const profilesChannel = sb
+        .channel('public:profiles')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'profiles' },
+          async () => {
+            try {
+              const { data: latestProfiles } = await sb.from('profiles').select('*');
+              if (latestProfiles) {
+                setAllUsers((prevUsers) => {
+                  const mapped = latestProfiles.map(mapDbProfileToApp);
+                  const map = new Map<string, UserProfile>();
+                  DEFAULT_USERS.forEach((u) => map.set(u.id, u));
+                  prevUsers.forEach((u) => map.set(u.id, u));
+                  mapped.forEach((p) => {
+                    const ex = map.get(p.id);
+                    map.set(p.id, { ...p, password: ex?.password || 'password123' });
+                  });
+                  const updated = Array.from(map.values());
+                  saveUsersToLocal(updated);
+                  return updated;
+                });
+              }
+            } catch (err) {
+              console.warn('Profiles realtime error:', err);
+            }
+          }
+        )
+        .subscribe();
+
       // Gracefully check for medicine_requests table in Supabase
       (async () => {
         try {
@@ -475,12 +537,13 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
 
       return () => {
         sb.removeChannel(channel);
+        sb.removeChannel(profilesChannel);
       };
     } else {
       setDbMode('local');
       setIsDbConnected(false);
     }
-  }, [saveMedsToLocal, saveRequestsToLocal]);
+  }, [saveMedsToLocal, saveRequestsToLocal, saveUsersToLocal]);
 
   // Derived current user
   const currentUser = useMemo(() => {
@@ -927,42 +990,67 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
           const validClaimerUuid = isValidUuid(claimer?.id) ? claimer?.id : null;
           const isTargetUuid = isValidUuid(medicationId);
 
-          if (isFullClaim) {
-            const updatePayload = {
-              status: 'claimed',
-              claimed_by_id: validClaimerUuid,
-              claimed_by_name: claimer?.name || 'Verified Collector',
-              claimed_by_role: claimer?.role || 'individual',
-              prescription_ref: prescriptionRef || null,
-              claimed_at: claimedAt,
-              remaining_numeric_quantity: 0,
-              claims: updatedClaims,
-              handover_pin: pin,
-              claim_expires_at: claimExpiresAt,
-            };
+          let fetchQuery = supabase.from('medications').select('*');
+          fetchQuery = isTargetUuid
+            ? fetchQuery.eq('id', medicationId)
+            : fetchQuery.eq('medicine_name', targetMed.medicineName).eq('location', targetMed.location);
+          const { data: cloudRow } = await fetchQuery.maybeSingle();
 
-            const query = supabase.from('medications').update(updatePayload);
-            const { error: updateErr } = isTargetUuid
-              ? await query.eq('id', medicationId)
-              : await query.eq('medicine_name', targetMed.medicineName).eq('location', targetMed.location);
+          let authoritativeClaims = updatedClaims;
+          let authoritativeRemaining = newRemaining;
 
-            if (updateErr) {
-              console.warn('Supabase claim update error:', updateErr);
+          if (cloudRow) {
+            const cloudTotal = cloudRow.total_numeric_quantity ?? total;
+            const cloudRemaining =
+              cloudRow.remaining_numeric_quantity !== undefined && cloudRow.remaining_numeric_quantity !== null
+                ? cloudRow.remaining_numeric_quantity
+                : cloudRow.status === 'claimed' || cloudRow.status === 'collected'
+                ? 0
+                : cloudTotal;
+
+            if (cloudRemaining < amountToClaim) {
+              setActionLoading(null);
+              showToast(
+                'This medication quantity is no longer available on the live feed.',
+                'error',
+                'Stock Insufficient'
+              );
+              return { success: false, pin: '', error: 'Stock insufficient.' };
             }
-          } else {
-            const updatePayload = {
-              remaining_numeric_quantity: newRemaining,
-              claims: updatedClaims,
-            };
 
-            const query = supabase.from('medications').update(updatePayload);
-            const { error: updateErr } = isTargetUuid
-              ? await query.eq('id', medicationId)
-              : await query.eq('medicine_name', targetMed.medicineName).eq('location', targetMed.location);
+            authoritativeRemaining = Math.max(0, cloudRemaining - amountToClaim);
+            const existingCloudClaims: BatchClaim[] = Array.isArray(cloudRow.claims) ? cloudRow.claims : [];
+            const claimsMap = new Map<string, BatchClaim>();
+            existingCloudClaims.forEach((c) => claimsMap.set(c.id, c));
+            claimsMap.set(newBatchClaim.id, newBatchClaim);
+            authoritativeClaims = Array.from(claimsMap.values());
+          }
 
-            if (updateErr) {
-              console.warn('Supabase partial claim update error:', updateErr);
-            }
+          const isAuthoritativeFull = authoritativeRemaining <= 0;
+
+          const updatePayload: Record<string, any> = {
+            remaining_numeric_quantity: authoritativeRemaining,
+            claims: authoritativeClaims,
+            handover_pin: pin,
+            claim_expires_at: claimExpiresAt,
+            status: isAuthoritativeFull ? 'claimed' : 'available',
+          };
+
+          if (isAuthoritativeFull) {
+            updatePayload.claimed_by_id = validClaimerUuid;
+            updatePayload.claimed_by_name = claimer?.name || 'Verified Collector';
+            updatePayload.claimed_by_role = claimer?.role || 'individual';
+            updatePayload.prescription_ref = prescriptionRef || null;
+            updatePayload.claimed_at = claimedAt;
+          }
+
+          const query = supabase.from('medications').update(updatePayload);
+          const { error: updateErr } = isTargetUuid
+            ? await query.eq('id', medicationId)
+            : await query.eq('medicine_name', targetMed.medicineName).eq('location', targetMed.location);
+
+          if (updateErr) {
+            console.warn('Supabase claim update error:', updateErr);
           }
         } catch (err) {
           console.warn('Supabase claim update error; maintained local state:', err);
@@ -1408,6 +1496,26 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
       if (!currentUserId) return;
       setActionLoading('verifying');
 
+      const cleanId = normalizeRegistrationOrNid(details.registrationOrNid);
+      if (cleanId) {
+        const duplicateUser = allUsers.find(
+          (u) =>
+            u.id !== currentUserId &&
+            u.isVerified &&
+            u.registrationOrNid &&
+            normalizeRegistrationOrNid(u.registrationOrNid) === cleanId
+        );
+        if (duplicateUser) {
+          setActionLoading(null);
+          showToast(
+            `This credential is already registered with another user (${duplicateUser.name}). Duplicate registration is prohibited.`,
+            'error',
+            'Duplicate Credential'
+          );
+          return;
+        }
+      }
+
       const updatedUsers = allUsers.map((user) => {
         if (user.id === currentUserId) {
           return {
@@ -1419,7 +1527,7 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
               organizationName: details.organizationName.trim(),
             }),
             ...(details.registrationOrNid !== undefined && {
-              registrationOrNid: details.registrationOrNid.trim(),
+              registrationOrNid: cleanId || details.registrationOrNid.trim(),
             }),
             verificationStatus: 'pending' as const,
             isVerified: false,
@@ -1436,7 +1544,7 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
         try {
           await supabase.from('profiles').update({
             organization_name: details.organizationName?.trim() || null,
-            registration_or_nid: details.registrationOrNid?.trim() || null,
+            registration_or_nid: cleanId || details.registrationOrNid?.trim() || null,
             verification_status: 'pending',
           }).eq('id', currentUserId);
         } catch (e) {
@@ -1470,43 +1578,50 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
       setActionLoading('verifying');
 
       // 1. Strict Uniqueness / Sybil Attack Check across local state
-      const cleanId = (details.registrationOrNid || '').trim().toUpperCase().replace(/[\s-]/g, '');
-      const duplicateUser = allUsers.find(
-        (u) =>
-          u.id !== currentUserId &&
-          u.isVerified &&
-          u.registrationOrNid &&
-          u.registrationOrNid.trim().toUpperCase().replace(/[\s-]/g, '') === cleanId
-      );
+      const cleanId = normalizeRegistrationOrNid(details.registrationOrNid);
+      if (cleanId) {
+        const duplicateUser = allUsers.find(
+          (u) =>
+            u.id !== currentUserId &&
+            u.isVerified &&
+            u.registrationOrNid &&
+            normalizeRegistrationOrNid(u.registrationOrNid) === cleanId
+        );
 
-      if (duplicateUser) {
-        setActionLoading(null);
-        return {
-          success: false,
-          error: `This ${currentUser.role === 'clinic_charity' ? 'Facility License' : 'National ID'} is already verified on another account (${duplicateUser.name}). Duplicate registration is prohibited.`,
-        };
+        if (duplicateUser) {
+          setActionLoading(null);
+          return {
+            success: false,
+            error: `This ${currentUser.role === 'clinic_charity' ? 'Facility License' : 'National ID'} is already verified on another account (${duplicateUser.name}). Duplicate registration is prohibited.`,
+          };
+        }
       }
 
       // 2. Strict Uniqueness Check on Supabase Profiles (if live DB connected)
-      if (isSupabaseConfigured && supabase) {
+      if (isSupabaseConfigured && supabase && cleanId) {
         try {
           let query = supabase
             .from('profiles')
-            .select('id, name, verification_status')
-            .eq('registration_or_nid', details.registrationOrNid?.trim());
+            .select('id, name, registration_or_nid, verification_status')
+            .eq('verification_status', 'verified');
 
           if (isValidUuid(currentUserId)) {
             query = query.neq('id', currentUserId);
           }
 
-          const { data: dbDuplicates, error: dbErr } = await query.limit(1);
+          const { data: dbVerifiedProfiles, error: dbErr } = await query;
 
-          if (!dbErr && dbDuplicates && dbDuplicates.length > 0 && dbDuplicates[0].verification_status === 'verified') {
-            setActionLoading(null);
-            return {
-              success: false,
-              error: `This credential is already registered and verified with another MedShare user (${dbDuplicates[0].name}).`,
-            };
+          if (!dbErr && dbVerifiedProfiles && dbVerifiedProfiles.length > 0) {
+            const dbDup = dbVerifiedProfiles.find(
+              (p) => normalizeRegistrationOrNid(p.registration_or_nid) === cleanId
+            );
+            if (dbDup) {
+              setActionLoading(null);
+              return {
+                success: false,
+                error: `This credential is already registered and verified with another MedShare user (${dbDup.name}). Duplicate registration is prohibited.`,
+              };
+            }
           }
         } catch (err) {
           console.warn('Supabase credential uniqueness check warning:', err);
@@ -1633,6 +1748,10 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
       }
 
       // 4. Update Profile in Supabase
+      const cleanNormalizedId = normalizeRegistrationOrNid(
+        details.registrationOrNid || currentUser.registrationOrNid
+      );
+
       if (isSupabaseConfigured && supabase && isValidUuid(currentUserId)) {
         try {
           await supabase.from('profiles').upsert({
@@ -1643,7 +1762,7 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
             phone: (details.phone || currentUser.phone).trim(),
             location: (details.location || currentUser.location).trim(),
             organization_name: details.organizationName ? details.organizationName.trim() : currentUser.organizationName || null,
-            registration_or_nid: details.registrationOrNid ? details.registrationOrNid.trim() : currentUser.registrationOrNid || null,
+            registration_or_nid: cleanNormalizedId || details.registrationOrNid?.trim() || currentUser.registrationOrNid || null,
             verification_status: 'verified',
           });
         } catch (e) {
@@ -1660,7 +1779,7 @@ export function MedShareProvider({ children }: { children: React.ReactNode }) {
             ...(details.phone && { phone: details.phone.trim() }),
             ...(details.location && { location: details.location.trim() }),
             ...(details.organizationName && { organizationName: details.organizationName.trim() }),
-            ...(details.registrationOrNid && { registrationOrNid: details.registrationOrNid.trim() }),
+            ...(cleanNormalizedId ? { registrationOrNid: cleanNormalizedId } : details.registrationOrNid && { registrationOrNid: details.registrationOrNid.trim() }),
             verificationStatus: 'verified' as const,
             isVerified: true,
             submittedAt: new Date().toISOString(),
