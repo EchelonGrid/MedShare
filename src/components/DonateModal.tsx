@@ -262,12 +262,15 @@ export default function DonateModal({
           
           {/* Medicine Name with Autocomplete */}
           <div className="relative space-y-1">
-            <label className="block text-slate-300 font-bold uppercase">
+            <label htmlFor="donate-brand-name" className="block text-slate-300 font-bold uppercase">
               Medicine Brand Name <span className="text-rose-400">*</span>
             </label>
             <div className="relative">
               <input
+                id="donate-brand-name"
+                name="brand_name"
                 type="text"
+                autoComplete="off"
                 required
                 value={medicineName}
                 onChange={(e) => handleMedicineNameChange(e.target.value)}
@@ -327,11 +330,14 @@ export default function DonateModal({
           {/* Generic Name & Category Row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label className="block text-slate-300 font-bold uppercase mb-1">
+              <label htmlFor="donate-generic-name" className="block text-slate-300 font-bold uppercase mb-1">
                 Generic Drug Name
               </label>
               <input
+                id="donate-generic-name"
+                name="generic_name"
                 type="text"
+                autoComplete="off"
                 value={genericName}
                 onChange={(e) => setGenericName(e.target.value)}
                 placeholder="e.g. Paracetamol"
@@ -340,10 +346,12 @@ export default function DonateModal({
             </div>
 
             <div>
-              <label className="block text-slate-300 font-bold uppercase mb-1">
+              <label htmlFor="donate-category" className="block text-slate-300 font-bold uppercase mb-1">
                 Therapeutic Category <span className="text-rose-400">*</span>
               </label>
               <select
+                id="donate-category"
+                name="category"
                 value={category}
                 onChange={(e) => setCategory(e.target.value as MedicineCategory)}
                 className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-teal-500/30 text-white focus:border-teal-400 outline-none cursor-pointer"
@@ -360,11 +368,14 @@ export default function DonateModal({
           {/* Strength, Quantity & Expiry Date Row */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
             <div>
-              <label className="block text-slate-300 font-bold uppercase mb-1">
+              <label htmlFor="donate-strength" className="block text-slate-300 font-bold uppercase mb-1">
                 Strength <span className="text-rose-400">*</span>
               </label>
               <input
+                id="donate-strength"
+                name="strength"
                 type="text"
+                autoComplete="off"
                 required
                 value={strength}
                 onChange={(e) => setStrength(e.target.value)}
@@ -374,11 +385,14 @@ export default function DonateModal({
             </div>
 
             <div>
-              <label className="block text-slate-300 font-bold uppercase mb-1">
+              <label htmlFor="donate-quantity" className="block text-slate-300 font-bold uppercase mb-1">
                 Quantity <span className="text-rose-400">*</span>
               </label>
               <input
+                id="donate-quantity"
+                name="quantity"
                 type="text"
+                autoComplete="off"
                 required
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
@@ -388,10 +402,12 @@ export default function DonateModal({
             </div>
 
             <div>
-              <label className="block text-slate-300 font-bold uppercase mb-1">
+              <label htmlFor="donate-expiry-date" className="block text-slate-300 font-bold uppercase mb-1">
                 Expiry Date <span className="text-rose-400">*</span>
               </label>
               <input
+                id="donate-expiry-date"
+                name="expiry_date"
                 type="date"
                 required
                 min={minDate}
@@ -405,11 +421,14 @@ export default function DonateModal({
           {/* Location & Phone Row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label className="block text-slate-300 font-bold uppercase mb-1">
+              <label htmlFor="donate-location" className="block text-slate-300 font-bold uppercase mb-1">
                 Pickup Location <span className="text-rose-400">*</span>
               </label>
               <input
+                id="donate-location"
+                name="location"
                 type="text"
+                autoComplete="address-level2"
                 required
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
@@ -419,11 +438,14 @@ export default function DonateModal({
             </div>
 
             <div>
-              <label className="block text-slate-300 font-bold uppercase mb-1">
+              <label htmlFor="donate-phone" className="block text-slate-300 font-bold uppercase mb-1">
                 Pickup Phone <span className="text-rose-400">*</span>
               </label>
               <input
+                id="donate-phone"
+                name="phone"
                 type="tel"
+                autoComplete="tel"
                 required
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}

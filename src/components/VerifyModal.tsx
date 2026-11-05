@@ -318,7 +318,7 @@ export default function VerifyModal({
               <>
                 {/* Organization Name */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  <label htmlFor="verify-org-name" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                     Organization / Clinic Name <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative">
@@ -326,7 +326,10 @@ export default function VerifyModal({
                       <Building2 className="w-4 h-4" />
                     </div>
                     <input
+                      id="verify-org-name"
+                      name="organization"
                       type="text"
+                      autoComplete="organization"
                       required
                       value={orgName}
                       onChange={(e) => setOrgName(e.target.value)}
@@ -339,10 +342,12 @@ export default function VerifyModal({
                 {/* District & License Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    <label htmlFor="verify-clinic-district" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                       Facility District <span className="text-rose-500">*</span>
                     </label>
                     <select
+                      id="verify-clinic-district"
+                      name="district"
                       value={districtName}
                       onChange={(e) => setDistrictName(e.target.value)}
                       className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none bg-white transition"
@@ -356,7 +361,7 @@ export default function VerifyModal({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    <label htmlFor="verify-dghs-code" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                       DGHS Code or NGOAB Reg <span className="text-rose-500">*</span>
                     </label>
                     <div className="relative">
@@ -364,7 +369,10 @@ export default function VerifyModal({
                         <FileText className="w-4 h-4" />
                       </div>
                       <input
+                        id="verify-dghs-code"
+                        name="dghs_code"
                         type="text"
+                        autoComplete="off"
                         required
                         value={regOrNid}
                         onChange={(e) => setRegOrNid(e.target.value)}
@@ -379,7 +387,7 @@ export default function VerifyModal({
               <>
                 {/* Full Name */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  <label htmlFor="verify-full-name" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                     Full Name (as on NID) <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative">
@@ -387,7 +395,10 @@ export default function VerifyModal({
                       <User className="w-4 h-4" />
                     </div>
                     <input
+                      id="verify-full-name"
+                      name="name"
                       type="text"
+                      autoComplete="name"
                       required
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
@@ -400,11 +411,14 @@ export default function VerifyModal({
                 {/* Birth Year & Birth District Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    <label htmlFor="verify-birth-year" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                       Birth Year <span className="text-rose-500">*</span>
                     </label>
                     <input
+                      id="verify-birth-year"
+                      name="birth_year"
                       type="number"
+                      autoComplete="bday-year"
                       required
                       min={1930}
                       max={2008}
@@ -416,10 +430,12 @@ export default function VerifyModal({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    <label htmlFor="verify-birth-district" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                       Birth / Home District <span className="text-rose-500">*</span>
                     </label>
                     <select
+                      id="verify-birth-district"
+                      name="district"
                       value={districtName}
                       onChange={(e) => setDistrictName(e.target.value)}
                       className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none bg-white transition"
@@ -435,7 +451,7 @@ export default function VerifyModal({
 
                 {/* NID Input */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  <label htmlFor="verify-nid-number" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                     National ID (NID) Number <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative">
@@ -443,7 +459,10 @@ export default function VerifyModal({
                       <FileText className="w-4 h-4" />
                     </div>
                     <input
+                      id="verify-nid-number"
+                      name="nid"
                       type="text"
+                      autoComplete="off"
                       required
                       value={regOrNid}
                       onChange={(e) => setRegOrNid(e.target.value)}
@@ -458,7 +477,7 @@ export default function VerifyModal({
             {/* Phone & Area */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                <label htmlFor="verify-phone" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                   Contact Phone Number <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
@@ -466,7 +485,10 @@ export default function VerifyModal({
                     <Phone className="w-4 h-4" />
                   </div>
                   <input
+                    id="verify-phone"
+                    name="phone"
                     type="tel"
+                    autoComplete="tel"
                     required
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
@@ -477,7 +499,7 @@ export default function VerifyModal({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                <label htmlFor="verify-location" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                   Area / Location <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
@@ -485,7 +507,10 @@ export default function VerifyModal({
                     <MapPin className="w-4 h-4" />
                   </div>
                   <input
+                    id="verify-location"
+                    name="address"
                     type="text"
+                    autoComplete="address-level2"
                     required
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
@@ -498,8 +523,9 @@ export default function VerifyModal({
 
             {/* Confirmation Checkbox */}
             <div className="pt-1">
-              <label className="flex items-start gap-2.5 text-xs text-slate-800 cursor-pointer select-none">
+              <label htmlFor="verify-declaration-check" className="flex items-start gap-2.5 text-xs text-slate-800 cursor-pointer select-none">
                 <input
+                  id="verify-declaration-check"
                   type="checkbox"
                   checked={confirmed}
                   onChange={(e) => setConfirmed(e.target.checked)}
@@ -559,15 +585,23 @@ export default function VerifyModal({
 
             {/* OTP Input Field */}
             <div className="space-y-2 max-w-xs mx-auto">
+              <label htmlFor="verify-email-otp" className="sr-only">
+                6-Digit Verification Code
+              </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                   <KeyRound className="w-5 h-5 text-teal-600" />
                 </div>
                 <input
+                  id="verify-email-otp"
+                  name="one-time-code"
                   type="text"
                   maxLength={6}
                   required
                   autoFocus
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  aria-label="6-Digit Verification Code"
                   value={otpCode}
                   onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
                   placeholder="••••••"

@@ -225,7 +225,7 @@ export default function AuthModal({
 
               {/* Email */}
               <div className="space-y-1">
-                <label className="block text-slate-300 font-bold uppercase">
+                <label htmlFor="auth-login-email" className="block text-slate-300 font-bold uppercase">
                   Email Address <span className="text-rose-400">*</span>
                 </label>
                 <div className="relative">
@@ -233,7 +233,10 @@ export default function AuthModal({
                     <Mail className="w-4 h-4" />
                   </div>
                   <input
+                    id="auth-login-email"
+                    name="email"
                     type="email"
+                    autoComplete="email"
                     required
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
@@ -245,7 +248,7 @@ export default function AuthModal({
 
               {/* Password */}
               <div className="space-y-1">
-                <label className="block text-slate-300 font-bold uppercase">
+                <label htmlFor="auth-login-password" className="block text-slate-300 font-bold uppercase">
                   Password <span className="text-rose-400">*</span>
                 </label>
                 <div className="relative">
@@ -253,7 +256,10 @@ export default function AuthModal({
                     <Lock className="w-4 h-4" />
                   </div>
                   <input
+                    id="auth-login-password"
+                    name="password"
                     type="password"
+                    autoComplete="current-password"
                     required
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
@@ -370,11 +376,14 @@ export default function AuthModal({
 
             {/* Name */}
             <div className="space-y-1">
-              <label className="block text-slate-300 font-bold uppercase">
+              <label htmlFor="auth-reg-name" className="block text-slate-300 font-bold uppercase">
                 {role === 'clinic_charity' ? 'Organization / Clinic Name' : 'Full Name'} <span className="text-rose-400">*</span>
               </label>
               <input
+                id="auth-reg-name"
+                name="name"
                 type="text"
+                autoComplete="name"
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
@@ -386,11 +395,14 @@ export default function AuthModal({
             {/* Email & Password */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="block text-slate-300 font-bold uppercase">
+                <label htmlFor="auth-reg-email" className="block text-slate-300 font-bold uppercase">
                   Email Address <span className="text-rose-400">*</span>
                 </label>
                 <input
+                  id="auth-reg-email"
+                  name="email"
                   type="email"
+                  autoComplete="email"
                   required
                   value={regEmail}
                   onChange={(e) => setRegEmail(e.target.value)}
@@ -400,11 +412,14 @@ export default function AuthModal({
               </div>
 
               <div className="space-y-1">
-                <label className="block text-slate-300 font-bold uppercase">
+                <label htmlFor="auth-reg-password" className="block text-slate-300 font-bold uppercase">
                   Password <span className="text-rose-400">*</span>
                 </label>
                 <input
+                  id="auth-reg-password"
+                  name="password"
                   type="password"
+                  autoComplete="new-password"
                   required
                   value={regPassword}
                   onChange={(e) => setRegPassword(e.target.value)}
@@ -417,11 +432,14 @@ export default function AuthModal({
             {/* Phone & Location */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="block text-slate-300 font-bold uppercase">
+                <label htmlFor="auth-reg-phone" className="block text-slate-300 font-bold uppercase">
                   Phone Number <span className="text-rose-400">*</span>
                 </label>
                 <input
+                  id="auth-reg-phone"
+                  name="tel"
                   type="tel"
+                  autoComplete="tel"
                   required
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
@@ -431,11 +449,14 @@ export default function AuthModal({
               </div>
 
               <div className="space-y-1">
-                <label className="block text-slate-300 font-bold uppercase">
+                <label htmlFor="auth-reg-location" className="block text-slate-300 font-bold uppercase">
                   Location / Area <span className="text-rose-400">*</span>
                 </label>
                 <input
+                  id="auth-reg-location"
+                  name="address"
                   type="text"
+                  autoComplete="address-level2"
                   required
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
@@ -447,11 +468,14 @@ export default function AuthModal({
 
             {/* Optional ID */}
             <div className="space-y-1">
-              <label className="block text-slate-300 font-bold uppercase">
+              <label htmlFor="auth-reg-nid" className="block text-slate-300 font-bold uppercase">
                 {role === 'clinic_charity' ? 'DGHS License (Optional now)' : 'National ID NID (Optional now)'}
               </label>
               <input
+                id="auth-reg-nid"
+                name="nid"
                 type="text"
+                autoComplete="off"
                 value={regOrNid}
                 onChange={(e) => setRegOrNid(e.target.value)}
                 placeholder={role === 'clinic_charity' ? 'e.g. DGHS-1105' : '10, 13, or 17 digit NID'}

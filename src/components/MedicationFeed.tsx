@@ -227,11 +227,18 @@ export default function MedicationFeed({
           
           {/* Instant Search Input with Glowing Focus Ring & ⌘K badge */}
           <div className="md:col-span-7 relative group">
+            <label htmlFor="feed-search-input" className="sr-only">
+              Search medications by brand name, generic drug, or strength
+            </label>
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-teal-600 dark:text-teal-400">
               <Search className="w-4 h-4" />
             </div>
             <input
+              id="feed-search-input"
+              name="feed_search"
               type="text"
+              autoComplete="off"
+              aria-label="Search medications by brand name, generic drug, or strength"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by medicine name, generic drug, or strength (e.g. Napa, Paracetamol, 500mg)..."
@@ -257,10 +264,16 @@ export default function MedicationFeed({
 
           {/* Location Dropdown */}
           <div className="md:col-span-5 relative">
+            <label htmlFor="feed-location-select" className="sr-only">
+              Filter medications by district location
+            </label>
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-teal-600 dark:text-teal-400">
               <MapPin className="w-4 h-4" />
             </div>
             <select
+              id="feed-location-select"
+              name="location_filter"
+              aria-label="Filter medications by district location"
               value={selectedLocation}
               onChange={(e) => setSelectedLocation(e.target.value)}
               className="w-full pl-10 pr-8 py-2.5 text-xs sm:text-sm rounded-xl border border-slate-200/90 dark:border-teal-500/25 bg-slate-50 dark:bg-slate-900/90 text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/30 transition shadow-inner cursor-pointer truncate font-mono"

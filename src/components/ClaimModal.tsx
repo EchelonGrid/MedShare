@@ -334,11 +334,20 @@ export default function ClaimModal({
                 {/* Range Slider + Stepper Controls */}
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
+                    <label htmlFor="claim-qty-slider" className="sr-only">
+                      Claim quantity slider
+                    </label>
                     <input
+                      id="claim-qty-slider"
+                      name="claim_slider"
                       type="range"
                       min={1}
                       max={remainingQty}
                       step={1}
+                      aria-label="Claim quantity slider"
+                      aria-valuemin={1}
+                      aria-valuemax={remainingQty}
+                      aria-valuenow={claimAmount}
                       value={claimAmount}
                       onChange={(e) => setClaimAmount(parseInt(e.target.value, 10) || 1)}
                       className="w-full h-2.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-teal-400"
@@ -348,15 +357,23 @@ export default function ClaimModal({
                     <div className="flex items-center gap-1 shrink-0 bg-slate-900 border border-teal-500/30 rounded-xl p-1">
                       <button
                         type="button"
+                        aria-label="Decrease quantity"
                         onClick={() => setClaimAmount((prev) => Math.max(1, prev - 1))}
                         className="w-6 h-6 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-teal-300 transition"
                       >
                         <Minus className="w-3 h-3" />
                       </button>
+                      <label htmlFor="claim-qty-stepper" className="sr-only">
+                        Claim quantity amount
+                      </label>
                       <input
+                        id="claim-qty-stepper"
+                        name="claim_amount"
                         type="number"
                         min={1}
                         max={remainingQty}
+                        autoComplete="off"
+                        aria-label="Claim quantity amount"
                         value={claimAmount}
                         onChange={(e) => {
                           const val = parseInt(e.target.value, 10);
@@ -366,6 +383,7 @@ export default function ClaimModal({
                       />
                       <button
                         type="button"
+                        aria-label="Increase quantity"
                         onClick={() => setClaimAmount((prev) => Math.min(remainingQty, prev + 1))}
                         className="w-6 h-6 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-teal-300 transition"
                       >
@@ -425,11 +443,14 @@ export default function ClaimModal({
 
                 {/* Doctor Name */}
                 <div className="space-y-1">
-                  <label className="block text-slate-300 font-bold uppercase">
+                  <label htmlFor="claim-doctor-name" className="block text-slate-300 font-bold uppercase">
                     Doctor&apos;s Full Name <span className="text-rose-400">*</span>
                   </label>
                   <input
+                    id="claim-doctor-name"
+                    name="doctor_name"
                     type="text"
+                    autoComplete="name"
                     required
                     value={doctorName}
                     onChange={(e) => setDoctorName(e.target.value)}
@@ -441,7 +462,7 @@ export default function ClaimModal({
                 {/* BMDC Registration with Live Regex Indicator */}
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <label className="block text-slate-300 font-bold uppercase">
+                    <label htmlFor="claim-bmdc-number" className="block text-slate-300 font-bold uppercase">
                       BMDC Registration Number <span className="text-rose-400">*</span>
                     </label>
                     {isBmdcValid ? (
@@ -455,7 +476,10 @@ export default function ClaimModal({
                     ) : null}
                   </div>
                   <input
+                    id="claim-bmdc-number"
+                    name="bmdc_number"
                     type="text"
+                    autoComplete="off"
                     required
                     value={bmdcNumber}
                     onChange={(e) => setBmdcNumber(e.target.value.toUpperCase())}
@@ -467,11 +491,14 @@ export default function ClaimModal({
                 {/* Hospital & Prescription Date Row */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-slate-300 font-bold uppercase mb-1">
+                    <label htmlFor="claim-hospital-name" className="block text-slate-300 font-bold uppercase mb-1">
                       Hospital / Clinic Chamber <span className="text-rose-400">*</span>
                     </label>
                     <input
+                      id="claim-hospital-name"
+                      name="hospital_name"
                       type="text"
+                      autoComplete="organization"
                       required
                       value={hospitalName}
                       onChange={(e) => setHospitalName(e.target.value)}
@@ -481,10 +508,12 @@ export default function ClaimModal({
                   </div>
 
                   <div>
-                    <label className="block text-slate-300 font-bold uppercase mb-1">
+                    <label htmlFor="claim-issue-date" className="block text-slate-300 font-bold uppercase mb-1">
                       Prescription Date <span className="text-rose-400">*</span>
                     </label>
                     <input
+                      id="claim-issue-date"
+                      name="prescription_date"
                       type="date"
                       required
                       max={new Date().toISOString().split('T')[0]}
@@ -497,10 +526,12 @@ export default function ClaimModal({
 
                 {/* Dosage Schedule */}
                 <div>
-                  <label className="block text-slate-300 font-bold uppercase mb-1">
+                  <label htmlFor="claim-dosage-schedule" className="block text-slate-300 font-bold uppercase mb-1">
                     Dosage Schedule <span className="text-rose-400">*</span>
                   </label>
                   <select
+                    id="claim-dosage-schedule"
+                    name="dosage_schedule"
                     value={dosageSchedule}
                     onChange={(e) => setDosageSchedule(e.target.value)}
                     className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-teal-500/30 text-white focus:border-teal-400 outline-none cursor-pointer"
@@ -532,8 +563,9 @@ export default function ClaimModal({
 
             {/* In-Person Inspection Confirmation Checkbox */}
             <div className="bg-amber-950/50 border border-amber-500/30 rounded-2xl p-4 text-xs font-mono text-amber-200">
-              <label className="flex items-start gap-2.5 cursor-pointer select-none">
+              <label htmlFor="claim-inspection-check" className="flex items-start gap-2.5 cursor-pointer select-none">
                 <input
+                  id="claim-inspection-check"
                   type="checkbox"
                   checked={inspectionConfirmed}
                   onChange={(e) => setInspectionConfirmed(e.target.checked)}

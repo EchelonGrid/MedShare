@@ -354,11 +354,18 @@ export default function RequestsBoard({
         {/* Row 2: Search Input & Location Dropdown */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="sm:col-span-2 relative">
+            <label htmlFor="requests-search-input" className="sr-only">
+              Search medicine requests by name, generic drug, or clinic
+            </label>
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-teal-600 dark:text-teal-400">
               <Search className="w-4 h-4" />
             </div>
             <input
+              id="requests-search-input"
+              name="requests_search"
               type="text"
+              autoComplete="off"
+              aria-label="Search medicine requests by name, generic drug, or clinic"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search medicine name, generic drug, strength, or clinic..."
@@ -367,10 +374,16 @@ export default function RequestsBoard({
           </div>
 
           <div className="relative">
+            <label htmlFor="requests-location-select" className="sr-only">
+              Filter requests by district location
+            </label>
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-teal-600 dark:text-teal-400">
               <MapPin className="w-4 h-4" />
             </div>
             <select
+              id="requests-location-select"
+              name="location_filter"
+              aria-label="Filter requests by district location"
               value={selectedLocation}
               onChange={(e) => setSelectedLocation(e.target.value)}
               className="w-full pl-10 pr-8 py-2.5 text-xs sm:text-sm rounded-xl border border-slate-200/90 dark:border-teal-500/25 bg-slate-50 dark:bg-slate-900/90 text-slate-900 dark:text-white focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/30 transition shadow-inner cursor-pointer truncate font-mono"

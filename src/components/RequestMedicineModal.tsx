@@ -268,11 +268,14 @@ export default function RequestMedicineModal({
           
           {/* Medicine Name with Autocomplete */}
           <div className="relative space-y-1">
-            <label className="block text-slate-300 font-bold uppercase">
+            <label htmlFor="request-brand-name" className="block text-slate-300 font-bold uppercase">
               Medicine Brand Name <span className="text-rose-400">*</span>
             </label>
             <input
+              id="request-brand-name"
+              name="brand_name"
               type="text"
+              autoComplete="off"
               required
               value={medicineName}
               onChange={(e) => handleMedicineNameChange(e.target.value)}
@@ -330,11 +333,14 @@ export default function RequestMedicineModal({
           {/* Generic Name & Category */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label className="block text-slate-300 font-bold uppercase mb-1">
+              <label htmlFor="request-generic-name" className="block text-slate-300 font-bold uppercase mb-1">
                 Generic Drug Name
               </label>
               <input
+                id="request-generic-name"
+                name="generic_name"
                 type="text"
+                autoComplete="off"
                 value={genericName}
                 onChange={(e) => setGenericName(e.target.value)}
                 placeholder="e.g. Paracetamol"
@@ -343,10 +349,12 @@ export default function RequestMedicineModal({
             </div>
 
             <div>
-              <label className="block text-slate-300 font-bold uppercase mb-1">
+              <label htmlFor="request-category" className="block text-slate-300 font-bold uppercase mb-1">
                 Therapeutic Category <span className="text-rose-400">*</span>
               </label>
               <select
+                id="request-category"
+                name="category"
                 value={category}
                 onChange={(e) => setCategory(e.target.value as MedicineCategory)}
                 className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-teal-500/30 text-white focus:border-teal-400 outline-none cursor-pointer"
@@ -363,11 +371,14 @@ export default function RequestMedicineModal({
           {/* Strength, Quantity Needed & Urgency Level */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
             <div>
-              <label className="block text-slate-300 font-bold uppercase mb-1">
+              <label htmlFor="request-strength" className="block text-slate-300 font-bold uppercase mb-1">
                 Strength <span className="text-rose-400">*</span>
               </label>
               <input
+                id="request-strength"
+                name="strength"
                 type="text"
+                autoComplete="off"
                 required
                 value={strength}
                 onChange={(e) => setStrength(e.target.value)}
@@ -377,11 +388,14 @@ export default function RequestMedicineModal({
             </div>
 
             <div>
-              <label className="block text-slate-300 font-bold uppercase mb-1">
+              <label htmlFor="request-quantity" className="block text-slate-300 font-bold uppercase mb-1">
                 Quantity Needed <span className="text-rose-400">*</span>
               </label>
               <input
+                id="request-quantity"
+                name="quantity"
                 type="text"
+                autoComplete="off"
                 required
                 value={quantityNeeded}
                 onChange={(e) => setQuantityNeeded(e.target.value)}
@@ -391,10 +405,12 @@ export default function RequestMedicineModal({
             </div>
 
             <div>
-              <label className="block text-slate-300 font-bold uppercase mb-1">
+              <label htmlFor="request-urgency" className="block text-slate-300 font-bold uppercase mb-1">
                 Urgency Level <span className="text-rose-400">*</span>
               </label>
               <select
+                id="request-urgency"
+                name="urgency"
                 value={urgency}
                 onChange={(e) => setUrgency(e.target.value as RequestUrgency)}
                 className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-teal-500/30 text-white focus:border-teal-400 outline-none cursor-pointer"
@@ -409,11 +425,14 @@ export default function RequestMedicineModal({
           {/* Location & Contact Phone */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label className="block text-slate-300 font-bold uppercase mb-1">
+              <label htmlFor="request-location" className="block text-slate-300 font-bold uppercase mb-1">
                 Requester Location <span className="text-rose-400">*</span>
               </label>
               <input
+                id="request-location"
+                name="location"
                 type="text"
+                autoComplete="address-level2"
                 required
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
@@ -423,11 +442,14 @@ export default function RequestMedicineModal({
             </div>
 
             <div>
-              <label className="block text-slate-300 font-bold uppercase mb-1">
+              <label htmlFor="request-phone" className="block text-slate-300 font-bold uppercase mb-1">
                 Contact Phone <span className="text-rose-400">*</span>
               </label>
               <input
+                id="request-phone"
+                name="phone"
                 type="tel"
+                autoComplete="tel"
                 required
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
@@ -439,10 +461,12 @@ export default function RequestMedicineModal({
 
           {/* Clinical Reason or Rx Note */}
           <div className="space-y-1">
-            <label className="block text-slate-300 font-bold uppercase">
+            <label htmlFor="request-clinical-need" className="block text-slate-300 font-bold uppercase">
               Clinical Need / Rx Reference <span className="text-rose-400">*</span>
             </label>
             <textarea
+              id="request-clinical-need"
+              name="clinical_need"
               required
               rows={2}
               value={reasonOrPrescription}
@@ -453,8 +477,9 @@ export default function RequestMedicineModal({
           </div>
 
           {/* Declaration */}
-          <label className="flex items-start gap-2.5 pt-1 text-slate-300 cursor-pointer select-none">
+          <label htmlFor="request-declaration-check" className="flex items-start gap-2.5 pt-1 text-slate-300 cursor-pointer select-none">
             <input
+              id="request-declaration-check"
               type="checkbox"
               checked={declaration}
               onChange={(e) => setDeclaration(e.target.checked)}

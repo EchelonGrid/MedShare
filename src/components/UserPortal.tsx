@@ -965,10 +965,12 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
                     {/* District Selector */}
                     <div>
-                      <label className="block text-slate-300 font-bold uppercase mb-1">
+                      <label htmlFor="portal-district" className="block text-slate-300 font-bold uppercase mb-1">
                         Bangladesh District <span className="text-rose-400">*</span>
                       </label>
                       <select
+                        id="portal-district"
+                        name="district"
                         value={inlineDistrictName}
                         onChange={(e) => setInlineDistrictName(e.target.value)}
                         className="w-full px-3 py-2 rounded-xl bg-slate-950 text-white border border-teal-500/30 focus:border-teal-400 outline-none cursor-pointer"
@@ -983,11 +985,14 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
 
                     {!isClinic ? (
                       <div>
-                        <label className="block text-slate-300 font-bold uppercase mb-1">
+                        <label htmlFor="portal-birth-year" className="block text-slate-300 font-bold uppercase mb-1">
                           Birth Year <span className="text-rose-400">*</span>
                         </label>
                         <input
+                          id="portal-birth-year"
+                          name="birth_year"
                           type="number"
+                          autoComplete="bday-year"
                           min={1930}
                           max={2008}
                           value={inlineBirthYear}
@@ -998,11 +1003,14 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                       </div>
                     ) : (
                       <div>
-                        <label className="block text-slate-300 font-bold uppercase mb-1">
+                        <label htmlFor="portal-org-name" className="block text-slate-300 font-bold uppercase mb-1">
                           Organization / Clinic Name <span className="text-rose-400">*</span>
                         </label>
                         <input
+                          id="portal-org-name"
+                          name="organization"
                           type="text"
+                          autoComplete="organization"
                           value={inlineOrgName}
                           onChange={(e) => setInlineOrgName(e.target.value)}
                           placeholder="e.g. Bogura Rural Health Clinic"
@@ -1013,11 +1021,14 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
 
                     {/* Registration / NID Number */}
                     <div>
-                      <label className="block text-slate-300 font-bold uppercase mb-1">
+                      <label htmlFor="portal-reg-nid" className="block text-slate-300 font-bold uppercase mb-1">
                         {isClinic ? 'DGHS / NGOAB License Reg No.' : 'Bangladeshi National ID (NID)'} <span className="text-rose-400">*</span>
                       </label>
                       <input
+                        id="portal-reg-nid"
+                        name="nid"
                         type="text"
+                        autoComplete="off"
                         value={inlineRegId}
                         onChange={(e) => setInlineRegId(e.target.value)}
                         placeholder={isClinic ? 'e.g. DGHS-1105 or NGO-241' : '10, 13, or 17 digit NID'}
@@ -1027,11 +1038,14 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
 
                     {/* Phone */}
                     <div>
-                      <label className="block text-slate-300 font-bold uppercase mb-1">
+                      <label htmlFor="portal-phone" className="block text-slate-300 font-bold uppercase mb-1">
                         Official Contact Phone <span className="text-rose-400">*</span>
                       </label>
                       <input
+                        id="portal-phone"
+                        name="phone"
                         type="text"
+                        autoComplete="tel"
                         value={inlinePhone}
                         onChange={(e) => setInlinePhone(e.target.value)}
                         placeholder="e.g. +880 1711-234567"
@@ -1041,11 +1055,14 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
 
                     {/* Location */}
                     <div className="sm:col-span-2">
-                      <label className="block text-slate-300 font-bold uppercase mb-1">
+                      <label htmlFor="portal-location" className="block text-slate-300 font-bold uppercase mb-1">
                         Area / Facility Location <span className="text-rose-400">*</span>
                       </label>
                       <input
+                        id="portal-location"
+                        name="address"
                         type="text"
+                        autoComplete="address-level2"
                         value={inlineLocation}
                         onChange={(e) => setInlineLocation(e.target.value)}
                         placeholder="e.g. Bogura SZMCH Campus"
@@ -1055,8 +1072,9 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                   </div>
 
                   {/* Declaration Checkbox */}
-                  <label className="flex items-center gap-2 pt-2 text-slate-300 cursor-pointer select-none">
+                  <label htmlFor="portal-confirm-check" className="flex items-center gap-2 pt-2 text-slate-300 cursor-pointer select-none">
                     <input
+                      id="portal-confirm-check"
                       type="checkbox"
                       checked={inlineConfirmed}
                       onChange={(e) => setInlineConfirmed(e.target.checked)}
@@ -1087,11 +1105,19 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                       <span>STEP 02 // ENTER LIVE 6-DIGIT CRYPTOGRAPHIC EMAIL OTP</span>
                     </span>
 
+                    <label htmlFor="portal-otp-input" className="sr-only">
+                      6-Digit Cryptographic Verification Code
+                    </label>
                     <input
+                      id="portal-otp-input"
+                      name="one-time-code"
                       type="text"
                       maxLength={6}
                       autoFocus
                       required
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      aria-label="6-Digit Cryptographic Email OTP"
                       value={inlineOtpCode}
                       onChange={(e) => setInlineOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                       placeholder="••••••"
@@ -1405,8 +1431,12 @@ export default function UserPortal({ onBackToFeed }: UserPortalProps) {
                           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
                             <input
                               id={`pin-input-${req.claimId}`}
+                              name="pin"
                               type="text"
                               maxLength={4}
+                              inputMode="numeric"
+                              autoComplete="one-time-code"
+                              aria-label="4-Digit Collector Handover PIN"
                               value={pinInputs[req.claimId] || ''}
                               onChange={(e) => handlePinChange(req.claimId, e.target.value)}
                               placeholder="4-digit PIN"
