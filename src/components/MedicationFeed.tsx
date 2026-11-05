@@ -294,8 +294,8 @@ export default function MedicationFeed({
         {/* ========================================================= */}
         {/* SPRING-PHYSICS SLIDING FILTER TABS                        */}
         {/* ========================================================= */}
-        <div className="flex flex-wrap items-center justify-between gap-2.5 pt-3 border-t border-slate-200/80 dark:border-teal-500/15">
-          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-3 border-t border-slate-200/80 dark:border-teal-500/15">
+          <div className="flex items-center sm:flex-wrap gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar scrollbar-none whitespace-nowrap pb-1 sm:pb-0 max-w-full">
             
             {/* Available Tab */}
             <button
@@ -470,7 +470,7 @@ export default function MedicationFeed({
             )}
           </div>
 
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-thin">
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 no-scrollbar scrollbar-none whitespace-nowrap">
             {/* All Categories Pill */}
             <button
               type="button"

@@ -215,35 +215,35 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="fixed top-4 inset-x-0 z-50 mx-auto max-w-7xl px-4 pointer-events-auto">
+      <header className="fixed top-3 sm:top-4 inset-x-0 z-50 mx-auto max-w-7xl px-3 sm:px-4 pointer-events-auto">
         {/* Floating Spatial Glass Command Bar Dock */}
-        <div className="relative rounded-2xl bg-white/85 dark:bg-slate-950/80 backdrop-blur-2xl border border-white/40 dark:border-teal-500/25 shadow-[0_12px_40px_-10px_rgba(15,23,42,0.18)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.45)] px-4 sm:px-5 py-3 transition-all duration-300">
+        <div className="relative rounded-2xl bg-white/85 dark:bg-slate-950/80 backdrop-blur-2xl border border-white/40 dark:border-teal-500/25 shadow-[0_12px_40px_-10px_rgba(15,23,42,0.18)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.45)] px-3 sm:px-5 py-2.5 sm:py-3 transition-all duration-300">
           {/* Specular top-edge shine */}
           <div className="pointer-events-none absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-teal-500/30 dark:via-teal-400/35 to-transparent rounded-t-2xl" />
 
-          <div className="flex items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-center justify-between gap-2 sm:gap-4">
             
             {/* ========================================================= */}
             {/* LEFT ZONE: CLEAN BRAND LOCKUP                             */}
             {/* ========================================================= */}
-            <div className="flex items-center gap-3 shrink-0">
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               <div
                 onClick={handleBrandClick}
-                className="flex items-center gap-2.5 cursor-pointer group/brand select-none"
+                className="flex items-center gap-2 sm:gap-2.5 cursor-pointer group/brand select-none"
               >
                 {/* Refined 3D Gradient Capsule Icon */}
                 <div className="relative">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 text-white shadow-md shadow-teal-500/25 flex items-center justify-center p-2 transition-transform duration-300 group-hover/brand:scale-105">
-                    <Pill className="w-5 h-5 text-white transform -rotate-12 group-hover/brand:rotate-0 transition-transform duration-300 drop-shadow-sm" />
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 text-white shadow-md shadow-teal-500/25 flex items-center justify-center p-1.5 sm:p-2 transition-transform duration-300 group-hover/brand:scale-105">
+                    <Pill className="w-4 h-4 sm:w-5 sm:h-5 text-white transform -rotate-12 group-hover/brand:rotate-0 transition-transform duration-300 drop-shadow-sm" />
                   </div>
                 </div>
 
                 {/* MedShare Wordmark & Micro-Label */}
                 <div className="flex flex-col">
-                  <span className="font-display font-extrabold text-xl tracking-tight text-slate-900 dark:text-white leading-tight">
+                  <span className="font-display font-extrabold text-base sm:text-xl tracking-tight text-slate-900 dark:text-white leading-tight">
                     Med<span className="text-teal-600 dark:text-teal-400">Share</span>
                   </span>
-                  <span className="text-[9px] font-mono font-bold tracking-wider text-teal-700/90 dark:text-teal-400/90 uppercase leading-none mt-0.5">
+                  <span className="hidden sm:block text-[9px] font-mono font-bold tracking-wider text-teal-700/90 dark:text-teal-400/90 uppercase leading-none mt-0.5">
                     BANGLADESH FEFO MED RESCUE
                   </span>
                 </div>
@@ -312,7 +312,7 @@ export default function Navbar() {
             {/* ========================================================= */}
             {/* RIGHT ZONE: THEME, PRIMARY CTA & AUTH CONTROLS            */}
             {/* ========================================================= */}
-            <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
               
               {/* Compact 3D Circular Theme Toggle Button */}
               <motion.button
@@ -320,14 +320,14 @@ export default function Navbar() {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={toggleTheme}
-                className="w-10 h-10 rounded-full flex items-center justify-center transition cursor-pointer border bg-slate-100 hover:bg-slate-200/80 text-slate-700 border-slate-200/90 shadow-xs dark:bg-slate-800 dark:hover:bg-slate-700/80 dark:text-slate-200 dark:border-slate-700/60 shrink-0"
+                className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition cursor-pointer border bg-slate-100 hover:bg-slate-200/80 text-slate-700 border-slate-200/90 shadow-xs dark:bg-slate-800 dark:hover:bg-slate-700/80 dark:text-slate-200 dark:border-slate-700/60 shrink-0"
                 title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Daylight Mode'}
                 aria-label="Toggle daylight or dark mode"
               >
                 {theme === 'light' ? (
-                  <Sun className="w-4 h-4 text-amber-500" />
+                  <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500" />
                 ) : (
-                  <Moon className="w-4 h-4 text-teal-300" />
+                  <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal-300" />
                 )}
               </motion.button>
 
@@ -337,11 +337,12 @@ export default function Navbar() {
                 whileHover={{ scale: 1.03, y: -1 }}
                 whileTap={{ scale: 0.97, y: 1 }}
                 onClick={handleDonateClick}
-                className="whitespace-nowrap inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white shadow-md shadow-teal-600/20 border border-teal-400/30 transition cursor-pointer shrink-0"
+                className="whitespace-nowrap inline-flex items-center gap-1 sm:gap-1.5 px-2.5 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white shadow-md shadow-teal-600/20 border border-teal-400/30 transition cursor-pointer shrink-0"
                 title="Donate unused unexpired medicines"
               >
-                <PlusCircle className="w-4 h-4 text-white shrink-0" />
-                <span>Donate Medicine</span>
+                <PlusCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white shrink-0" />
+                <span className="sm:hidden">+ Donate</span>
+                <span className="hidden sm:inline">Donate Medicine</span>
               </motion.button>
 
               {currentUser && currentRoleMeta ? (
@@ -356,10 +357,10 @@ export default function Navbar() {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => setIsAccountMenuOpen((prev) => !prev)}
-                    className={`w-10 h-10 rounded-full relative flex items-center justify-center font-bold text-sm select-none transition-transform cursor-pointer bg-gradient-to-br from-teal-600 to-emerald-700 text-white shadow-md shadow-teal-900/20 ${
+                    className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full relative flex items-center justify-center font-bold text-xs sm:text-sm select-none transition-transform cursor-pointer bg-gradient-to-br from-teal-600 to-emerald-700 text-white shadow-md shadow-teal-900/20 ${
                       currentUser.isVerified
-                        ? 'ring-2 ring-emerald-500 ring-offset-2 ring-offset-white dark:ring-offset-slate-950'
-                        : 'ring-2 ring-amber-500 ring-offset-2 ring-offset-white dark:ring-offset-slate-950'
+                        ? 'ring-2 ring-emerald-500 ring-offset-1 sm:ring-offset-2 ring-offset-white dark:ring-offset-slate-950'
+                        : 'ring-2 ring-amber-500 ring-offset-1 sm:ring-offset-2 ring-offset-white dark:ring-offset-slate-950'
                     }`}
                     title={`${currentUser.name} (${currentRoleMeta.label})`}
                     aria-label="Open Account Menu"
@@ -369,14 +370,14 @@ export default function Navbar() {
                     {/* Verification Micro-Badge */}
                     {currentUser.isVerified ? (
                       <span
-                        className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-black shadow-xs ring-2 ring-white dark:ring-slate-950"
+                        className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[9px] sm:text-[10px] font-black shadow-xs ring-1 sm:ring-2 ring-white dark:ring-slate-950"
                         title="Verified Bangladeshi Identity / Registry"
                       >
                         ✓
                       </span>
                     ) : (
                       <span
-                        className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center text-[10px] font-black shadow-xs ring-2 ring-white dark:ring-slate-950"
+                        className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center text-[9px] sm:text-[10px] font-black shadow-xs ring-1 sm:ring-2 ring-white dark:ring-slate-950"
                         title="Verification Required"
                       >
                         !
@@ -393,7 +394,7 @@ export default function Navbar() {
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: -8 }}
                         transition={{ duration: 0.16, ease: 'easeOut' }}
-                        className="absolute right-0 top-14 w-80 sm:w-84 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-slate-200/90 dark:border-teal-500/30 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.25)] p-4 z-50 space-y-3.5 select-none text-left"
+                        className="absolute right-0 top-12 sm:top-14 w-72 sm:w-84 max-w-[calc(100vw-2rem)] rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-slate-200/90 dark:border-teal-500/30 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.25)] p-4 z-50 space-y-3.5 select-none text-left"
                       >
                         {/* Specular top-edge highlight */}
                         <div className="pointer-events-none absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-teal-400/50 to-transparent rounded-t-2xl" />
@@ -512,25 +513,36 @@ export default function Navbar() {
                 </div>
               ) : (
                 /* =================================================== */
-                /* LOGGED-OUT: DISTINCT HIGH-CONTRAST BUTTONS          */
+                /* LOGGED-OUT: SLEEK SIGN IN ON MOBILE / DUAL ON SM+   */
                 /* =================================================== */
                 <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                  {/* Ghost / Text Log In Button */}
+                  {/* Single Sleek Sign In button on mobile (< sm) */}
+                  <motion.button
+                    type="button"
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => openAuthModal('login')}
+                    className="sm:hidden whitespace-nowrap px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm transition cursor-pointer"
+                  >
+                    Sign In
+                  </motion.button>
+
+                  {/* Ghost / Text Log In Button (sm and above) */}
                   <button
                     type="button"
                     onClick={() => openAuthModal('login')}
-                    className="whitespace-nowrap text-slate-700 hover:text-teal-700 dark:text-slate-200 dark:hover:text-teal-300 font-semibold px-3 py-2 text-xs sm:text-sm rounded-xl transition cursor-pointer"
+                    className="hidden sm:inline-block whitespace-nowrap text-slate-700 hover:text-teal-700 dark:text-slate-200 dark:hover:text-teal-300 font-semibold px-3 py-2 text-xs sm:text-sm rounded-xl transition cursor-pointer"
                   >
                     Log In
                   </button>
 
-                  {/* High-Contrast Dark Slate Create Account Button */}
+                  {/* High-Contrast Dark Slate Create Account Button (sm and above) */}
                   <motion.button
                     type="button"
                     whileHover={{ scale: 1.03, y: -1 }}
                     whileTap={{ scale: 0.97, y: 1 }}
                     onClick={() => openAuthModal('register')}
-                    className="whitespace-nowrap bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 font-semibold rounded-xl px-3.5 sm:px-4 py-2 text-xs sm:text-sm shadow-sm transition cursor-pointer"
+                    className="hidden sm:inline-block whitespace-nowrap bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 font-semibold rounded-xl px-3.5 sm:px-4 py-2 text-xs sm:text-sm shadow-sm transition cursor-pointer"
                   >
                     Create Account
                   </motion.button>

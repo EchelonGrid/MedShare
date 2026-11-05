@@ -310,15 +310,15 @@ export default function HomePage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5 }}
-                  className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-950/80 border border-teal-500/35 text-teal-300 text-xs font-mono font-medium shadow-[0_0_15px_rgba(20,184,166,0.15)]"
+                  className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 rounded-full bg-teal-950/80 border border-teal-500/35 text-teal-300 text-[10px] sm:text-xs font-mono font-medium shadow-[0_0_15px_rgba(20,184,166,0.15)] leading-tight max-w-full"
                 >
-                  <span className="relative flex h-2 w-2">
+                  <span className="relative flex h-2 w-2 shrink-0">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-400"></span>
                   </span>
-                  <span>VERIFIED FEFO MEDICATION REDISTRIBUTION</span>
-                  <span className="text-teal-500/60 font-bold">•</span>
-                  <span className="text-teal-200">BANGLADESH</span>
+                  <span className="truncate">VERIFIED FEFO MEDICATION REDISTRIBUTION</span>
+                  <span className="text-teal-500/60 font-bold shrink-0">•</span>
+                  <span className="text-teal-200 shrink-0">BANGLADESH</span>
                 </motion.div>
 
                 {/* Main Spatial Editorial Heading */}
@@ -328,7 +328,7 @@ export default function HomePage() {
                   transition={{ duration: 0.6, delay: 0.1 }}
                   className="space-y-3"
                 >
-                  <h1 className="font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.1]">
+                  <h1 className="font-display text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.1]">
                     Bridge the Gap Between{' '}
                     <span className="bg-gradient-to-r from-teal-200 via-teal-400 to-emerald-300 bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(45,212,191,0.25)]">
                       Surplus Medicine
@@ -368,14 +368,14 @@ export default function HomePage() {
                   initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.3 }}
-                  className="flex flex-wrap items-center gap-4 pt-2"
+                  className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 pt-2"
                 >
                   <motion.button
                     type="button"
                     whileHover={{ scale: 1.03, y: -2 }}
                     whileTap={{ scale: 0.97, y: 1 }}
                     onClick={handleDonateClick}
-                    className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-teal-400 via-teal-500 to-emerald-500 text-slate-950 font-bold text-sm shadow-[0_10px_25px_rgba(20,184,166,0.35),inset_0_1px_0_rgba(255,255,255,0.6)] border border-teal-200/50 transition cursor-pointer"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-teal-400 via-teal-500 to-emerald-500 text-slate-950 font-bold text-sm shadow-[0_10px_25px_rgba(20,184,166,0.35),inset_0_1px_0_rgba(255,255,255,0.6)] border border-teal-200/50 transition cursor-pointer"
                   >
                     <PlusCircle className="w-4 h-4 text-slate-950" />
                     <span>Donate Surplus Medicine</span>
@@ -386,7 +386,7 @@ export default function HomePage() {
                     whileHover={{ scale: 1.03, y: -2 }}
                     whileTap={{ scale: 0.97, y: 1 }}
                     onClick={scrollToContent}
-                    className="inline-flex items-center gap-2 px-5 py-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 text-teal-200 hover:text-white font-semibold text-sm border border-teal-500/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] transition cursor-pointer group"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 text-teal-200 hover:text-white font-semibold text-sm border border-teal-500/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] transition cursor-pointer group"
                   >
                     <span>Explore Rescue Feed</span>
                     <ArrowRight className="w-4 h-4 text-teal-400 group-hover:translate-x-1 transition-transform" />
@@ -404,44 +404,45 @@ export default function HomePage() {
             </div>
 
             {/* ========================================================= */}
-            {/* 4 HERO STAT BOXES: 3D TELEMETRY BENTO MODULES             */}
+            {/* 4 HERO STAT BOXES: 3D TELEMETRY BENTO MODULES (2x2 Mobile) */}
             {/* ========================================================= */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 mt-10 sm:mt-12">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 mt-10 sm:mt-12">
               
               {/* Stat 1: Available Medicines */}
               <TiltSpotlightCard
                 spotlightColor="rgba(20, 184, 166, 0.22)"
                 onClick={() => handleStatCardClick('available')}
-                className="p-5 sm:p-6 bg-white/95 border border-slate-200/90 shadow-[0_15px_40px_-10px_rgba(15,23,42,0.12)] dark:bg-slate-900/80 dark:border-teal-500/20 cursor-pointer group/stat transition-all duration-200 hover:-translate-y-0.5"
+                className="p-3.5 sm:p-6 bg-white/95 border border-slate-200/90 shadow-[0_15px_40px_-10px_rgba(15,23,42,0.12)] dark:bg-slate-900/80 dark:border-teal-500/20 cursor-pointer group/stat transition-all duration-200 hover:-translate-y-0.5"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                    Available Medicines
+                  <span className="text-[11px] sm:text-xs font-mono font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider truncate">
+                    Available Meds
                   </span>
-                  <div className="w-9 h-9 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-600 dark:bg-teal-500/15 dark:border-teal-400/30 dark:text-teal-300 flex items-center justify-center shadow-xs">
-                    <Pill className="w-4 h-4" />
+                  <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-600 dark:bg-teal-500/15 dark:border-teal-400/30 dark:text-teal-300 flex items-center justify-center shadow-xs shrink-0">
+                    <Pill className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
                 </div>
 
-                <div className="mt-4 flex items-baseline gap-2 transform transition-transform duration-300 group-hover:translate-z-6">
-                  <span className="font-mono text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                <div className="mt-2.5 sm:mt-4 flex items-baseline gap-1.5 sm:gap-2 transform transition-transform duration-300 group-hover:translate-z-6">
+                  <span className="font-mono text-2xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                     {availableCount}
                   </span>
-                  <span className="text-xs font-mono text-slate-500 dark:text-slate-400 font-medium">in inventory</span>
+                  <span className="text-[10px] sm:text-xs font-mono text-slate-500 dark:text-slate-400 font-medium">in stock</span>
                 </div>
 
-                <p className="text-xs text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
+                <p className="line-clamp-2 text-[11px] sm:text-xs text-slate-600 dark:text-slate-400 mt-1 sm:mt-2 leading-snug sm:leading-relaxed">
                   Unopened, valid medications ready for clinic or patient claiming.
                 </p>
 
                 {/* Mini Segmented Indicator */}
-                <div className="mt-4 pt-3 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between text-[10px] font-mono text-slate-500 dark:text-slate-400">
-                  <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1.5">
+                <div className="mt-3 sm:mt-4 pt-2.5 sm:pt-3 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between text-[9px] sm:text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                  <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1 sm:gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
-                    LIVE TELEMETRY
+                    <span className="hidden sm:inline">LIVE TELEMETRY</span>
+                    <span className="sm:hidden">LIVE</span>
                   </span>
-                  <span className="text-teal-700 dark:text-teal-400 font-bold group-hover/stat:translate-x-0.5 transition-transform flex items-center gap-1">
-                    Filter Feed &rarr;
+                  <span className="text-teal-700 dark:text-teal-400 font-bold group-hover/stat:translate-x-0.5 transition-transform flex items-center gap-0.5 sm:gap-1">
+                    <span>Filter &rarr;</span>
                   </span>
                 </div>
               </TiltSpotlightCard>
@@ -450,36 +451,36 @@ export default function HomePage() {
               <TiltSpotlightCard
                 spotlightColor="rgba(245, 158, 11, 0.22)"
                 onClick={() => handleStatCardClick('expiring_soon')}
-                className="p-5 sm:p-6 bg-white/95 border border-slate-200/90 shadow-[0_15px_40px_-10px_rgba(15,23,42,0.12)] dark:bg-slate-900/80 dark:border-teal-500/20 cursor-pointer group/stat transition-all duration-200 hover:-translate-y-0.5"
+                className="p-3.5 sm:p-6 bg-white/95 border border-slate-200/90 shadow-[0_15px_40px_-10px_rgba(15,23,42,0.12)] dark:bg-slate-900/80 dark:border-teal-500/20 cursor-pointer group/stat transition-all duration-200 hover:-translate-y-0.5"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                    Expiring Soon (&le; 60d)
+                  <span className="text-[11px] sm:text-xs font-mono font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider truncate">
+                    Expiring Soon
                   </span>
-                  <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:bg-amber-500/15 dark:border-amber-400/30 dark:text-amber-300 flex items-center justify-center shadow-xs">
-                    <AlertTriangle className="w-4 h-4" />
+                  <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:bg-amber-500/15 dark:border-amber-400/30 dark:text-amber-300 flex items-center justify-center shadow-xs shrink-0">
+                    <AlertTriangle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
                 </div>
 
-                <div className="mt-4 flex items-baseline gap-2 transform transition-transform duration-300 group-hover:translate-z-6">
-                  <span className="font-mono text-4xl font-extrabold text-amber-600 dark:text-amber-400 tracking-tight">
+                <div className="mt-2.5 sm:mt-4 flex items-baseline gap-1.5 sm:gap-2 transform transition-transform duration-300 group-hover:translate-z-6">
+                  <span className="font-mono text-2xl sm:text-4xl font-extrabold text-amber-600 dark:text-amber-400 tracking-tight">
                     {expiringSoonCount}
                   </span>
-                  <span className="text-xs font-mono text-slate-500 dark:text-slate-400 font-medium">priority items</span>
+                  <span className="text-[10px] sm:text-xs font-mono text-slate-500 dark:text-slate-400 font-medium">priority</span>
                 </div>
 
-                <p className="text-xs text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
+                <p className="line-clamp-2 text-[11px] sm:text-xs text-slate-600 dark:text-slate-400 mt-1 sm:mt-2 leading-snug sm:leading-relaxed">
                   Nearing expiry window requiring immediate allocation to prevent waste.
                 </p>
 
                 {/* Mini Alert Radar Indicator */}
-                <div className="mt-4 pt-3 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between text-[10px] font-mono text-slate-500 dark:text-slate-400">
-                  <span className="text-amber-600 dark:text-amber-400 font-semibold flex items-center gap-1.5">
+                <div className="mt-3 sm:mt-4 pt-2.5 sm:pt-3 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between text-[9px] sm:text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                  <span className="text-amber-600 dark:text-amber-400 font-semibold flex items-center gap-1 sm:gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                    URGENT WINDOW
+                    <span>&le; 60D</span>
                   </span>
-                  <span className="text-amber-700 dark:text-amber-400 font-bold group-hover/stat:translate-x-0.5 transition-transform flex items-center gap-1">
-                    Filter Feed &rarr;
+                  <span className="text-amber-700 dark:text-amber-400 font-bold group-hover/stat:translate-x-0.5 transition-transform flex items-center gap-0.5 sm:gap-1">
+                    <span>Filter &rarr;</span>
                   </span>
                 </div>
               </TiltSpotlightCard>
@@ -488,36 +489,37 @@ export default function HomePage() {
               <TiltSpotlightCard
                 spotlightColor="rgba(244, 63, 94, 0.22)"
                 onClick={() => handleStatCardClick('requests')}
-                className="p-5 sm:p-6 bg-white/95 border border-slate-200/90 shadow-[0_15px_40px_-10px_rgba(15,23,42,0.12)] dark:bg-slate-900/80 dark:border-teal-500/20 cursor-pointer group/stat transition-all duration-200 hover:-translate-y-0.5"
+                className="p-3.5 sm:p-6 bg-white/95 border border-slate-200/90 shadow-[0_15px_40px_-10px_rgba(15,23,42,0.12)] dark:bg-slate-900/80 dark:border-teal-500/20 cursor-pointer group/stat transition-all duration-200 hover:-translate-y-0.5"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                  <span className="text-[11px] sm:text-xs font-mono font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider truncate">
                     Urgent Requests
                   </span>
-                  <div className="w-9 h-9 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:bg-rose-500/15 dark:border-rose-400/30 dark:text-rose-300 flex items-center justify-center shadow-xs">
-                    <HeartHandshake className="w-4 h-4" />
+                  <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:bg-rose-500/15 dark:border-rose-400/30 dark:text-rose-300 flex items-center justify-center shadow-xs shrink-0">
+                    <HeartHandshake className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
                 </div>
 
-                <div className="mt-4 flex items-baseline gap-2 transform transition-transform duration-300 group-hover:translate-z-6">
-                  <span className="font-mono text-4xl font-extrabold text-rose-600 dark:text-rose-400 tracking-tight">
+                <div className="mt-2.5 sm:mt-4 flex items-baseline gap-1.5 sm:gap-2 transform transition-transform duration-300 group-hover:translate-z-6">
+                  <span className="font-mono text-2xl sm:text-4xl font-extrabold text-rose-600 dark:text-rose-400 tracking-tight">
                     {openRequestsCount}
                   </span>
-                  <span className="text-xs font-mono text-slate-500 dark:text-slate-400 font-medium">open shortages</span>
+                  <span className="text-[10px] sm:text-xs font-mono text-slate-500 dark:text-slate-400 font-medium">needed</span>
                 </div>
 
-                <p className="text-xs text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
+                <p className="line-clamp-2 text-[11px] sm:text-xs text-slate-600 dark:text-slate-400 mt-1 sm:mt-2 leading-snug sm:leading-relaxed">
                   Shortages posted by rural clinics and patients waiting for donors.
                 </p>
 
                 {/* Clickable indicator */}
-                <div className="mt-4 pt-3 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between text-[10px] font-mono text-slate-500 dark:text-slate-400">
-                  <span className="text-rose-600 dark:text-rose-400 font-semibold flex items-center gap-1.5">
+                <div className="mt-3 sm:mt-4 pt-2.5 sm:pt-3 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between text-[9px] sm:text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                  <span className="text-rose-600 dark:text-rose-400 font-semibold flex items-center gap-1 sm:gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" />
-                    VIEW SHORTAGES
+                    <span className="hidden sm:inline">VIEW SHORTAGES</span>
+                    <span className="sm:hidden">RADAR</span>
                   </span>
-                  <span className="text-rose-700 dark:text-rose-400 font-bold group-hover/stat:translate-x-0.5 transition-transform flex items-center gap-1">
-                    View Board &rarr;
+                  <span className="text-rose-700 dark:text-rose-400 font-bold group-hover/stat:translate-x-0.5 transition-transform flex items-center gap-0.5 sm:gap-1">
+                    <span>Board &rarr;</span>
                   </span>
                 </div>
               </TiltSpotlightCard>
@@ -526,36 +528,37 @@ export default function HomePage() {
               <TiltSpotlightCard
                 spotlightColor="rgba(6, 182, 212, 0.22)"
                 onClick={() => handleStatCardClick('claimed_collected')}
-                className="p-5 sm:p-6 bg-white/95 border border-slate-200/90 shadow-[0_15px_40px_-10px_rgba(15,23,42,0.12)] dark:bg-slate-900/80 dark:border-teal-500/20 cursor-pointer group/stat transition-all duration-200 hover:-translate-y-0.5"
+                className="p-3.5 sm:p-6 bg-white/95 border border-slate-200/90 shadow-[0_15px_40px_-10px_rgba(15,23,42,0.12)] dark:bg-slate-900/80 dark:border-teal-500/20 cursor-pointer group/stat transition-all duration-200 hover:-translate-y-0.5"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                    Medicines Collected
+                  <span className="text-[11px] sm:text-xs font-mono font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider truncate">
+                    Collected
                   </span>
-                  <div className="w-9 h-9 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-700 dark:bg-cyan-500/15 dark:border-cyan-400/30 dark:text-cyan-300 flex items-center justify-center shadow-xs">
-                    <CheckCircle2 className="w-4 h-4" />
+                  <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-700 dark:bg-cyan-500/15 dark:border-cyan-400/30 dark:text-cyan-300 flex items-center justify-center shadow-xs shrink-0">
+                    <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
                 </div>
 
-                <div className="mt-4 flex items-baseline gap-2 transform transition-transform duration-300 group-hover:translate-z-6">
-                  <span className="font-mono text-4xl font-extrabold text-teal-700 dark:text-teal-300 tracking-tight">
+                <div className="mt-2.5 sm:mt-4 flex items-baseline gap-1.5 sm:gap-2 transform transition-transform duration-300 group-hover:translate-z-6">
+                  <span className="font-mono text-2xl sm:text-4xl font-extrabold text-teal-700 dark:text-teal-300 tracking-tight">
                     {collectedCount}
                   </span>
-                  <span className="text-xs font-mono text-slate-500 dark:text-slate-400 font-medium">redistributed</span>
+                  <span className="text-[10px] sm:text-xs font-mono text-slate-500 dark:text-slate-400 font-medium">rescued</span>
                 </div>
 
-                <p className="text-xs text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
+                <p className="line-clamp-2 text-[11px] sm:text-xs text-slate-600 dark:text-slate-400 mt-1 sm:mt-2 leading-snug sm:leading-relaxed">
                   Successfully handed over to clinics, charities, or patients.
                 </p>
 
                 {/* Redistribution stamp */}
-                <div className="mt-4 pt-3 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between text-[10px] font-mono text-slate-500 dark:text-slate-400">
-                  <span className="text-teal-700 dark:text-cyan-400 font-semibold flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 dark:text-cyan-400" />
-                    VERIFIED HANDOVER
+                <div className="mt-3 sm:mt-4 pt-2.5 sm:pt-3 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between text-[9px] sm:text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                  <span className="text-teal-700 dark:text-cyan-400 font-semibold flex items-center gap-1 sm:gap-1.5">
+                    <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-teal-600 dark:text-cyan-400" />
+                    <span className="hidden sm:inline">VERIFIED</span>
+                    <span className="sm:hidden">SAFE</span>
                   </span>
-                  <span className="text-cyan-700 dark:text-cyan-400 font-bold group-hover/stat:translate-x-0.5 transition-transform flex items-center gap-1">
-                    Filter Feed &rarr;
+                  <span className="text-cyan-700 dark:text-cyan-400 font-bold group-hover/stat:translate-x-0.5 transition-transform flex items-center gap-0.5 sm:gap-1">
+                    <span>Filter &rarr;</span>
                   </span>
                 </div>
               </TiltSpotlightCard>
@@ -614,7 +617,7 @@ export default function HomePage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/85 dark:bg-slate-950/85 backdrop-blur-2xl border border-slate-200/90 dark:border-teal-500/25 p-2 rounded-2xl shadow-[0_12px_40px_rgba(15,23,42,0.06)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.4)]">
               
               {/* Segmented Dock Tabs with Physical Spring Indicator */}
-              <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto p-1">
+              <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar scrollbar-none whitespace-nowrap p-1 max-w-full">
                 
                 {/* TAB 1: Live Medicine Feed */}
                 <button

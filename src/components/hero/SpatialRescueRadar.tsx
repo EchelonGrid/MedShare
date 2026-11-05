@@ -271,7 +271,7 @@ export default function SpatialRescueRadar() {
             </div>
 
             {/* 4 Mini Laser-Etched Monospace PIN Boxes */}
-            <div className="bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-teal-500/20 flex items-center justify-between">
+            <div className="bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-teal-500/20 flex flex-wrap items-center justify-between gap-1.5 sm:gap-2">
               <span className="text-[10px] font-mono font-bold text-slate-600 dark:text-slate-400 uppercase">
                 HANDOVER PIN:
               </span>
@@ -285,7 +285,7 @@ export default function SpatialRescueRadar() {
                   </span>
                 ))}
               </div>
-              <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400">
+              <span className="whitespace-nowrap inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
                 ✓ VERIFIED
               </span>
             </div>
