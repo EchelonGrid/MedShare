@@ -341,7 +341,7 @@ export default function Navbar() {
                 title="Donate unused unexpired medicines"
               >
                 <PlusCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white shrink-0" />
-                <span className="sm:hidden">+ Donate</span>
+                <span className="sm:hidden">Donate</span>
                 <span className="hidden sm:inline">Donate Medicine</span>
               </motion.button>
 

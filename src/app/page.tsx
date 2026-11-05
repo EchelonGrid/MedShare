@@ -316,9 +316,10 @@ export default function HomePage() {
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-400"></span>
                   </span>
-                  <span className="truncate">VERIFIED FEFO MEDICATION REDISTRIBUTION</span>
+                  <span className="sm:hidden font-bold">VERIFIED FEFO MED RESCUE</span>
+                  <span className="hidden sm:inline">VERIFIED FEFO MEDICATION REDISTRIBUTION</span>
                   <span className="text-teal-500/60 font-bold shrink-0">•</span>
-                  <span className="text-teal-200 shrink-0">BANGLADESH</span>
+                  <span className="text-teal-200 shrink-0 font-bold">BANGLADESH</span>
                 </motion.div>
 
                 {/* Main Spatial Editorial Heading */}
@@ -415,7 +416,7 @@ export default function HomePage() {
                 className="p-3.5 sm:p-6 bg-white/95 border border-slate-200/90 shadow-[0_15px_40px_-10px_rgba(15,23,42,0.12)] dark:bg-slate-900/80 dark:border-teal-500/20 cursor-pointer group/stat transition-all duration-200 hover:-translate-y-0.5"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] sm:text-xs font-mono font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider truncate">
+                  <span className="text-[10px] sm:text-xs font-mono font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider truncate">
                     Available Meds
                   </span>
                   <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-600 dark:bg-teal-500/15 dark:border-teal-400/30 dark:text-teal-300 flex items-center justify-center shadow-xs shrink-0">
@@ -454,7 +455,7 @@ export default function HomePage() {
                 className="p-3.5 sm:p-6 bg-white/95 border border-slate-200/90 shadow-[0_15px_40px_-10px_rgba(15,23,42,0.12)] dark:bg-slate-900/80 dark:border-teal-500/20 cursor-pointer group/stat transition-all duration-200 hover:-translate-y-0.5"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] sm:text-xs font-mono font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider truncate">
+                  <span className="text-[10px] sm:text-xs font-mono font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider truncate">
                     Expiring Soon
                   </span>
                   <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:bg-amber-500/15 dark:border-amber-400/30 dark:text-amber-300 flex items-center justify-center shadow-xs shrink-0">
@@ -492,8 +493,8 @@ export default function HomePage() {
                 className="p-3.5 sm:p-6 bg-white/95 border border-slate-200/90 shadow-[0_15px_40px_-10px_rgba(15,23,42,0.12)] dark:bg-slate-900/80 dark:border-teal-500/20 cursor-pointer group/stat transition-all duration-200 hover:-translate-y-0.5"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] sm:text-xs font-mono font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider truncate">
-                    Urgent Requests
+                  <span className="text-[10px] sm:text-xs font-mono font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider truncate">
+                    Urgent Need
                   </span>
                   <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:bg-rose-500/15 dark:border-rose-400/30 dark:text-rose-300 flex items-center justify-center shadow-xs shrink-0">
                     <HeartHandshake className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -531,7 +532,7 @@ export default function HomePage() {
                 className="p-3.5 sm:p-6 bg-white/95 border border-slate-200/90 shadow-[0_15px_40px_-10px_rgba(15,23,42,0.12)] dark:bg-slate-900/80 dark:border-teal-500/20 cursor-pointer group/stat transition-all duration-200 hover:-translate-y-0.5"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] sm:text-xs font-mono font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider truncate">
+                  <span className="text-[10px] sm:text-xs font-mono font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider truncate">
                     Collected
                   </span>
                   <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-700 dark:bg-cyan-500/15 dark:border-cyan-400/30 dark:text-cyan-300 flex items-center justify-center shadow-xs shrink-0">
@@ -623,7 +624,7 @@ export default function HomePage() {
                 <button
                   type="button"
                   onClick={() => setActiveMainTab('feed')}
-                  className={`relative px-4 py-2 text-xs sm:text-sm font-bold flex items-center gap-2 rounded-xl transition duration-200 cursor-pointer shrink-0 ${
+                  className={`relative px-3 sm:px-4 py-2 text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 rounded-xl transition duration-200 cursor-pointer shrink-0 ${
                     activeMainTab === 'feed'
                       ? 'text-slate-950'
                       : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100/60 dark:hover:bg-white/[0.04]'
@@ -636,11 +637,12 @@ export default function HomePage() {
                       transition={{ type: 'spring', stiffness: 420, damping: 32 }}
                     />
                   )}
-                  <span className="relative z-10 flex items-center gap-2">
-                    <Pill className="w-4 h-4" />
-                    <span>Live Medicine Feed</span>
+                  <span className="relative z-10 flex items-center gap-1.5 sm:gap-2">
+                    <Pill className="w-4 h-4 shrink-0" />
+                    <span className="sm:hidden">Live Feed</span>
+                    <span className="hidden sm:inline">Live Medicine Feed</span>
                     <span
-                      className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
+                      className={`text-[10px] font-mono px-1.5 sm:px-2 py-0.5 rounded-full font-bold ${
                         activeMainTab === 'feed'
                           ? 'bg-slate-950/20 text-slate-950 font-black'
                           : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-teal-300'
@@ -655,7 +657,7 @@ export default function HomePage() {
                 <button
                   type="button"
                   onClick={() => setActiveMainTab('requests')}
-                  className={`relative px-4 py-2 text-xs sm:text-sm font-bold flex items-center gap-2 rounded-xl transition duration-200 cursor-pointer shrink-0 ${
+                  className={`relative px-3 sm:px-4 py-2 text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 rounded-xl transition duration-200 cursor-pointer shrink-0 ${
                     activeMainTab === 'requests'
                       ? 'text-white'
                       : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100/60 dark:hover:bg-white/[0.04]'
@@ -668,11 +670,12 @@ export default function HomePage() {
                       transition={{ type: 'spring', stiffness: 420, damping: 32 }}
                     />
                   )}
-                  <span className="relative z-10 flex items-center gap-2">
-                    <HeartHandshake className="w-4 h-4" />
-                    <span>Urgent Requests Board</span>
+                  <span className="relative z-10 flex items-center gap-1.5 sm:gap-2">
+                    <HeartHandshake className="w-4 h-4 shrink-0" />
+                    <span className="sm:hidden">Urgent Board</span>
+                    <span className="hidden sm:inline">Urgent Requests Board</span>
                     <span
-                      className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
+                      className={`text-[10px] font-mono px-1.5 sm:px-2 py-0.5 rounded-full font-bold ${
                         activeMainTab === 'requests'
                           ? 'bg-black/25 text-white font-black'
                           : 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30'
@@ -688,7 +691,7 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={() => setActiveMainTab('portal')}
-                    className={`relative px-4 py-2 text-xs sm:text-sm font-bold flex items-center gap-2 rounded-xl transition duration-200 cursor-pointer shrink-0 ${
+                    className={`relative px-3 sm:px-4 py-2 text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 rounded-xl transition duration-200 cursor-pointer shrink-0 ${
                       activeMainTab === 'portal'
                         ? 'text-slate-950'
                         : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100/60 dark:hover:bg-white/[0.04]'
@@ -701,11 +704,12 @@ export default function HomePage() {
                         transition={{ type: 'spring', stiffness: 420, damping: 32 }}
                       />
                     )}
-                    <span className="relative z-10 flex items-center gap-2">
-                      <LayoutDashboard className="w-4 h-4" />
-                      <span>{currentUser.role === 'admin' ? 'Admin Moderator Desk' : 'Collector & Donor Portal'}</span>
+                    <span className="relative z-10 flex items-center gap-1.5 sm:gap-2">
+                      <LayoutDashboard className="w-4 h-4 shrink-0" />
+                      <span className="sm:hidden">Portal</span>
+                      <span className="hidden sm:inline">{currentUser.role === 'admin' ? 'Admin Moderator Desk' : 'Collector & Donor Portal'}</span>
                       <span
-                        className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
+                        className={`text-[10px] font-mono px-1.5 sm:px-2 py-0.5 rounded-full font-bold ${
                           activeMainTab === 'portal'
                             ? 'bg-slate-950/20 text-slate-950 font-black'
                             : 'bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300 border border-teal-200 dark:border-teal-500/30'
@@ -761,17 +765,6 @@ export default function HomePage() {
                     <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">
                       Browse available unexpired medicines sorted first-to-expire (FEFO). Filter by urgency or nearby location.
                     </p>
-                  </div>
-
-                  <div className="sm:hidden">
-                    <button
-                      type="button"
-                      onClick={handleDonateClick}
-                      className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-600 text-slate-950 font-bold text-xs shadow-md transition cursor-pointer"
-                    >
-                      <PlusCircle className="w-4 h-4 text-slate-950" />
-                      <span>Donate Medicine</span>
-                    </button>
                   </div>
                 </div>
 

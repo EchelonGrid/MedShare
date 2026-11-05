@@ -295,13 +295,13 @@ export default function MedicationFeed({
         {/* SPRING-PHYSICS SLIDING FILTER TABS                        */}
         {/* ========================================================= */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-3 border-t border-slate-200/80 dark:border-teal-500/15">
-          <div className="flex items-center sm:flex-wrap gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar scrollbar-none whitespace-nowrap pb-1 sm:pb-0 max-w-full">
+          <div className="grid grid-cols-2 sm:flex sm:items-center sm:flex-wrap gap-2 w-full sm:w-auto">
             
             {/* Available Tab */}
             <button
               type="button"
               onClick={() => setActiveTab('available')}
-              className={`relative px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition duration-200 flex items-center gap-2 cursor-pointer ${
+              className={`relative px-3 sm:px-3.5 py-2 sm:py-1.5 rounded-xl text-xs sm:text-sm font-bold transition duration-200 flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 cursor-pointer w-full sm:w-auto ${
                 activeTab === 'available'
                   ? 'text-slate-950 font-black'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-900'
@@ -332,7 +332,7 @@ export default function MedicationFeed({
             <button
               type="button"
               onClick={() => setActiveTab('expiring_soon')}
-              className={`relative px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition duration-200 flex items-center gap-2 cursor-pointer ${
+              className={`relative px-2.5 sm:px-3.5 py-2 sm:py-1.5 rounded-xl text-xs sm:text-sm font-bold transition duration-200 flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 cursor-pointer w-full sm:w-auto ${
                 activeTab === 'expiring_soon'
                   ? 'text-slate-950 font-black'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-900'
@@ -346,8 +346,9 @@ export default function MedicationFeed({
                 />
               )}
               <span className="relative z-10 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5" />
-                <span>Expiring Soon (≤ 60d)</span>
+                <Clock className="w-3.5 h-3.5 shrink-0" />
+                <span className="sm:hidden">Expiring (≤60d)</span>
+                <span className="hidden sm:inline">Expiring Soon (≤ 60d)</span>
                 <span
                   className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
                     activeTab === 'expiring_soon'
@@ -364,7 +365,7 @@ export default function MedicationFeed({
             <button
               type="button"
               onClick={() => setActiveTab('urgent')}
-              className={`relative px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition duration-200 flex items-center gap-2 cursor-pointer ${
+              className={`relative px-2.5 sm:px-3.5 py-2 sm:py-1.5 rounded-xl text-xs sm:text-sm font-bold transition duration-200 flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 cursor-pointer w-full sm:w-auto ${
                 activeTab === 'urgent'
                   ? 'text-white font-black'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-900'
@@ -378,7 +379,7 @@ export default function MedicationFeed({
                 />
               )}
               <span className="relative z-10 flex items-center gap-1.5">
-                <AlertCircle className="w-3.5 h-3.5" />
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                 <span>Urgent (≤ 30d)</span>
                 <span
                   className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
@@ -396,7 +397,7 @@ export default function MedicationFeed({
             <button
               type="button"
               onClick={() => setActiveTab('claimed_collected')}
-              className={`relative px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition duration-200 flex items-center gap-2 cursor-pointer ${
+              className={`relative px-2.5 sm:px-3.5 py-2 sm:py-1.5 rounded-xl text-xs sm:text-sm font-bold transition duration-200 flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 cursor-pointer w-full sm:w-auto ${
                 activeTab === 'claimed_collected'
                   ? 'text-slate-950 font-black'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-900'
@@ -410,7 +411,8 @@ export default function MedicationFeed({
                 />
               )}
               <span className="relative z-10 flex items-center gap-1.5">
-                <span>Claimed &amp; Collected</span>
+                <span className="sm:hidden">Claimed</span>
+                <span className="hidden sm:inline">Claimed &amp; Collected</span>
                 <span
                   className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
                     activeTab === 'claimed_collected'
@@ -428,7 +430,7 @@ export default function MedicationFeed({
               <button
                 type="button"
                 onClick={() => setActiveTab('expired')}
-                className={`relative px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition duration-200 flex items-center gap-2 cursor-pointer ${
+                className={`relative col-span-2 sm:col-auto w-full sm:w-auto px-3.5 py-2 sm:py-1.5 rounded-xl text-xs sm:text-sm font-bold transition duration-200 flex items-center justify-center sm:justify-start gap-2 cursor-pointer ${
                   activeTab === 'expired'
                     ? 'text-white bg-slate-800 font-black'
                     : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-900'

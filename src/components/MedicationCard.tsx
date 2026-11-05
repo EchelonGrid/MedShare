@@ -139,9 +139,9 @@ export default function MedicationCard({
         {/* ========================================================= */}
         {/* TOP TELEMETRY HEADER: CIRCULAR SVG FEFO COUNTDOWN DIAL    */}
         {/* ========================================================= */}
-        <div className="flex items-center justify-between gap-3 pb-3.5 border-b border-slate-200/80 dark:border-teal-500/15">
+        <div className="flex flex-wrap items-start justify-between gap-2 sm:gap-3 pb-3.5 border-b border-slate-200/80 dark:border-teal-500/15">
           {/* Circular SVG Progress Ring + Monospace Countdown Readout */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2 sm:gap-2.5">
             <div className="relative w-9 h-9 flex items-center justify-center shrink-0">
               <svg className="w-9 h-9 transform -rotate-90 origin-center" viewBox="0 0 36 36">
                 {/* Background Track */}
@@ -186,66 +186,66 @@ export default function MedicationCard({
             </div>
 
             {/* Monospace Countdown Label */}
-            <div className="font-mono leading-tight">
+            <div className="font-mono leading-tight shrink-0">
               {daysRemaining !== null && daysRemaining <= 0 ? (
-                <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 whitespace-nowrap">
                   EXPIRED • DISPOSAL
                 </div>
               ) : urgency === 'critical' ? (
                 <div>
-                  <div className="text-xs font-extrabold text-rose-600 dark:text-rose-400 flex items-center gap-1">
+                  <div className="text-xs font-extrabold text-rose-600 dark:text-rose-400 flex items-center gap-1.5 whitespace-nowrap">
                     <span>{daysRemaining}d LEFT</span>
-                    <span className="text-[9px] uppercase px-1 py-0.2 rounded bg-rose-100 text-rose-800 border border-rose-200 dark:bg-rose-500/20 dark:text-rose-300 dark:border-rose-500/30 font-bold">
+                    <span className="text-[9px] uppercase px-1 py-0.2 rounded bg-rose-100 text-rose-800 border border-rose-200 dark:bg-rose-500/20 dark:text-rose-300 dark:border-rose-500/30 font-bold shrink-0">
                       CRITICAL
                     </span>
                   </div>
-                  <div className="text-[10px] text-rose-700/80 dark:text-rose-300/80 font-medium">Urgent FEFO Priority</div>
+                  <div className="text-[10px] text-rose-700/80 dark:text-rose-300/80 font-medium whitespace-nowrap">Urgent FEFO Priority</div>
                 </div>
               ) : urgency === 'priority' ? (
                 <div>
-                  <div className="text-xs font-bold text-amber-700 dark:text-amber-300 flex items-center gap-1">
+                  <div className="text-xs font-bold text-amber-700 dark:text-amber-300 flex items-center gap-1.5 whitespace-nowrap">
                     <span>{daysRemaining}d LEFT</span>
-                    <span className="text-[9px] uppercase px-1 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/30 font-bold">
+                    <span className="text-[9px] uppercase px-1 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/30 font-bold shrink-0">
                       PRIORITY
                     </span>
                   </div>
-                  <div className="text-[10px] text-amber-700/80 dark:text-amber-200/70 font-medium">Urgent Allocation</div>
+                  <div className="text-[10px] text-amber-700/80 dark:text-amber-200/70 font-medium whitespace-nowrap">Urgent Allocation</div>
                 </div>
               ) : (
                 <div>
-                  <div className="text-xs font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                  <div className="text-xs font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5 whitespace-nowrap">
                     <span>{daysRemaining ?? '--'}d LEFT</span>
-                    <span className="text-[9px] uppercase px-1 py-0.2 rounded bg-emerald-100 text-emerald-800 border border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/30 font-bold">
+                    <span className="text-[9px] uppercase px-1 py-0.2 rounded bg-emerald-100 text-emerald-800 border border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/30 font-bold shrink-0">
                       FEFO
                     </span>
                   </div>
-                  <div className="text-[10px] text-teal-700/80 dark:text-teal-200/70 font-medium">Standard Window</div>
+                  <div className="text-[10px] text-teal-700/80 dark:text-teal-200/70 font-medium whitespace-nowrap">Standard Window</div>
                 </div>
               )}
             </div>
           </div>
 
           {/* Right Header: Lifecycle Status & Laser-Etched Strength Badge */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {medication.status === 'available' ? (
-              <span className="inline-flex items-center gap-1.5 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/30 shadow-xs">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/30 shadow-xs whitespace-nowrap">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse shrink-0" />
                 AVAILABLE
               </span>
             ) : medication.status === 'claimed' ? (
-              <span className="inline-flex items-center gap-1.5 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-sky-50 text-sky-800 border border-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:border-sky-500/30">
-                <span className="w-1.5 h-1.5 rounded-full bg-sky-500 dark:bg-sky-400" />
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-sky-50 text-sky-800 border border-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:border-sky-500/30 whitespace-nowrap">
+                <span className="w-1.5 h-1.5 rounded-full bg-sky-500 dark:bg-sky-400 shrink-0" />
                 CLAIMED
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200 dark:bg-teal-500/10 dark:text-teal-300 dark:border-teal-500/30">
-                <CheckCircle2 className="w-3 h-3 text-teal-600 dark:text-teal-400" />
+              <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200 dark:bg-teal-500/10 dark:text-teal-300 dark:border-teal-500/30 whitespace-nowrap">
+                <CheckCircle2 className="w-3 h-3 text-teal-600 dark:text-teal-400 shrink-0" />
                 COLLECTED
               </span>
             )}
 
             {/* Laser-Etched Metallic Strength Badge */}
-            <span className="shrink-0 text-xs font-mono font-bold px-2.5 py-1 rounded-md bg-slate-100 text-teal-800 border border-teal-600/25 shadow-xs dark:bg-slate-950 dark:text-teal-300 dark:border-teal-500/35 dark:shadow-[inset_0_1px_3px_rgba(0,0,0,0.8)]">
+            <span className="shrink-0 text-xs font-mono font-bold px-2.5 py-1 rounded-md bg-slate-100 text-teal-800 border border-teal-600/25 shadow-xs dark:bg-slate-950 dark:text-teal-300 dark:border-teal-500/35 dark:shadow-[inset_0_1px_3px_rgba(0,0,0,0.8)] whitespace-nowrap">
               {medication.strength}
             </span>
           </div>
@@ -296,13 +296,13 @@ export default function MedicationCard({
         {/* INTERACTIVE STOCK DEPLETION METER (Blister Strip Telemetry)*/}
         {/* ========================================================= */}
         <div className="mt-5 p-3 rounded-xl bg-slate-50 border border-slate-200/80 dark:bg-slate-950/70 dark:border-teal-500/20 space-y-2">
-          <div className="flex items-center justify-between text-[11px] font-mono">
-            <span className="font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1">
-              <Package className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+          <div className="flex items-center justify-between text-[11px] font-mono gap-2">
+            <span className="font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1 whitespace-nowrap shrink-0">
+              <Package className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
               <span>BATCH INVENTORY</span>
             </span>
-            <span className="text-teal-700 dark:text-teal-300 font-bold">
-              <span className="text-slate-900 dark:text-white font-extrabold">{remainingQty}</span> of {totalQty} {unitName} available
+            <span className="text-teal-700 dark:text-teal-300 font-bold whitespace-nowrap text-right">
+              <span className="text-slate-900 dark:text-white font-extrabold">{remainingQty}</span> of {totalQty} {unitName}
             </span>
           </div>
 
